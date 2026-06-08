@@ -5,8 +5,12 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "cli")]
 use clap::ValueEnum;
 
+/// Show every outcome when the support is this small or smaller.
 const PMF_FULL_MAX: usize = 64;
-const PMF_MIDDLE_KEEP: usize = 62;
+/// Tail prefix/suffix whose total mass is below this is one row (e.g. rare open-ended extremes).
+const PMF_TAIL_MAX_SUM: f64 = 0.005;
+/// Single outcomes below this are folded into tail bands instead of listed alone.
+const PMF_INSIGNIFICANT: f64 = 0.001;
 const FRACTION_MAX_DENOM: u64 = 10_000;
 const PROB_MATCH_EPS: f64 = 1e-6;
 
@@ -190,7 +194,212 @@ fn format_probability_fraction(p: f64) -> String {
 }
 
 fn outcome_is_numeric_label(label: &str) -> bool {
-    label.parse::<i64>().is_ok() || label.starts_with('<') || label.starts_with('>')
+    label.parse::<i64>().is_ok()
+        || label.starts_with('<')
+        || label.starts_with('>')
+        || label.contains("..")
+}
+
+fn format_value_band(lo: i64, hi: i64) -> String {
+    if lo == hi {
+        lo.to_string()
+    } else {
+        format!("{lo}..{hi}")
+    }
+}
+
+fn probs_match(a: f64, b: f64) -> bool {
+    (a - b).abs() <= PROB_MATCH_EPS
+}
+
+/// How many leading entries to fold into one negligible tail row (total mass &lt; 0.5%).
+fn take_low_tail(entries: &[(i64, f64)]) -> (usize, Option<(String, f64)>) {
+    let n = entries.len();
+    let mut i = 0;
+    let mut sum = 0.0;
+    while i < n {
+        let p = entries[i].1;
+        if sum + p < PMF_TAIL_MAX_SUM {
+            sum += p;
+            i += 1;
+        } else {
+            break;
+        }
+    }
+    if i == 0 {
+        return (0, None);
+    }
+    let lo = entries[0].0;
+    let hi = entries[i - 1].0;
+    let label = if i < n && hi + 1 == entries[i].0 {
+        format!("<{}", entries[i].0)
+    } else {
+        format_value_band(lo, hi)
+    };
+    (i, Some((label, sum)))
+}
+
+/// How many trailing entries to fold into one negligible tail row (total mass &lt; 0.5%).
+fn take_high_tail(entries: &[(i64, f64)]) -> (usize, Option<(String, f64)>) {
+    let n = entries.len();
+    let mut i = 0;
+    let mut sum = 0.0;
+    while i < n {
+        let p = entries[n - 1 - i].1;
+        if sum + p < PMF_TAIL_MAX_SUM {
+            sum += p;
+            i += 1;
+        } else {
+            break;
+        }
+    }
+    if i == 0 {
+        return (0, None);
+    }
+    let hi = entries[n - 1].0;
+    let lo = entries[n - i].0;
+    let label = if i < n && lo == entries[n - i - 1].0 + 1 {
+        format!(">{}", entries[n - i - 1].0)
+    } else {
+        format_value_band(lo, hi)
+    };
+    (i, Some((label, sum)))
+}
+
+fn parse_band_bounds(label: &str) -> (Option<i64>, Option<i64>) {
+    if let Ok(v) = label.parse::<i64>() {
+        return (Some(v), Some(v));
+    }
+    if let Some(rest) = label.strip_prefix('<') {
+        let bound: Option<i64> = rest.parse().ok();
+        return (None, bound.map(|b| b - 1));
+    }
+    if let Some(rest) = label.strip_prefix('>') {
+        let bound: Option<i64> = rest.parse().ok();
+        return (bound.map(|b| b + 1), None);
+    }
+    if let Some((lo, hi)) = label.split_once("..") {
+        return (lo.parse().ok(), hi.parse().ok());
+    }
+    (None, None)
+}
+
+/// Open-ended labels on the first/last row when a gap separates them from the neighbor band.
+fn polish_adjacent_band_labels(rows: &mut [(String, f64)]) {
+    if rows.len() < 2 {
+        return;
+    }
+    let (_, hi_0) = parse_band_bounds(&rows[0].0);
+    let (lo_1, _) = parse_band_bounds(&rows[1].0);
+    if let (Some(hi), Some(next_lo)) = (hi_0, lo_1) {
+        if hi + 1 < next_lo {
+            rows[0].0 = format!("<{next_lo}");
+        }
+    }
+    let last = rows.len() - 1;
+    let (_, hi_prev) = parse_band_bounds(&rows[last - 1].0);
+    let (lo_last, _) = parse_band_bounds(&rows[last].0);
+    if let (Some(prev_hi), Some(lo)) = (hi_prev, lo_last) {
+        if prev_hi + 1 < lo {
+            rows[last].0 = format!(">{}", lo - 1);
+        }
+    }
+}
+
+/// Chunk consecutive low-mass outcomes so each row is at most [`PMF_TAIL_MAX_SUM`].
+fn push_insignificant_chunk(
+    out: &mut Vec<(String, f64)>,
+    mid: &[(i64, f64)],
+    start: usize,
+) -> usize {
+    let lo = mid[start].0;
+    let mut sum = 0.0;
+    let mut hi = lo;
+    let mut j = start;
+    while j < mid.len() && mid[j].1 < PMF_INSIGNIFICANT {
+        let p = mid[j].1;
+        if sum + p >= PMF_TAIL_MAX_SUM && sum > 0.0 {
+            break;
+        }
+        sum += p;
+        hi = mid[j].0;
+        j += 1;
+    }
+    if j > start {
+        out.push((format_value_band(lo, hi), sum));
+    }
+    j
+}
+
+/// Equal-probability bands for the midrange; negligible outcomes in capped chunks.
+fn compress_mid_bands(mid: &[(i64, f64)]) -> Vec<(String, f64)> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < mid.len() {
+        let (v0, p0) = mid[i];
+        if p0 < PMF_INSIGNIFICANT {
+            i = push_insignificant_chunk(&mut out, mid, i);
+            continue;
+        }
+        let mut hi = v0;
+        let mut sum = p0;
+        let mut j = i + 1;
+        while j < mid.len() {
+            let (v, p) = mid[j];
+            if p < PMF_INSIGNIFICANT {
+                break;
+            }
+            if v == hi + 1 && probs_match(p, p0) {
+                hi = v;
+                sum += p;
+                j += 1;
+            } else {
+                break;
+            }
+        }
+        out.push((format_value_band(v0, hi), sum));
+        i = j;
+    }
+    out
+}
+
+/// Compress a numeric PMF for tables and charts: insignificant tails, then equal-probability bands.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::DieRoll;
+/// use dice_playground::engine::compress_pmf_for_display;
+/// let oe = DieRoll::open_ended_d100(8).unwrap();
+/// let rows = compress_pmf_for_display(&oe.entries());
+/// assert!(rows.iter().any(|(label, _)| label == "6..95"));
+/// # Ok::<(), anyhow::Error>(())
+/// ```
+pub fn compress_pmf_for_display(entries: &[(i64, f64)]) -> Vec<(String, f64)> {
+    if entries.is_empty() {
+        return Vec::new();
+    }
+    if entries.len() <= PMF_FULL_MAX {
+        return entries.iter().map(|&(v, p)| (v.to_string(), p)).collect();
+    }
+    let (lo_skip, lo_row) = take_low_tail(entries);
+    let (hi_skip, hi_row) = take_high_tail(entries);
+    let mid_end = entries.len().saturating_sub(hi_skip);
+    let mid = if lo_skip < mid_end {
+        &entries[lo_skip..mid_end]
+    } else {
+        &[][..]
+    };
+    let mut rows = Vec::new();
+    if let Some(r) = lo_row {
+        rows.push(r);
+    }
+    rows.extend(compress_mid_bands(mid));
+    if let Some(r) = hi_row {
+        rows.push(r);
+    }
+    polish_adjacent_band_labels(&mut rows);
+    rows
 }
 
 fn pad_left(s: &str, width: usize) -> String {
@@ -343,40 +552,11 @@ pub fn format_dist_pmf_text(
 }
 
 fn write_pmf_body(out: &mut String, entries: &[(i64, f64)], shared_sample_denom: Option<u64>) {
-    let n = entries.len();
-    if n == 0 {
+    if entries.is_empty() {
         return;
     }
     let sample_denom = shared_sample_denom.or_else(|| infer_sample_space_denominator(entries));
-    let mut rows: Vec<(String, f64)> = Vec::new();
-
-    if n <= PMF_FULL_MAX {
-        for &(value, p) in entries {
-            rows.push((value.to_string(), p));
-        }
-        append_distribution_table(out, &rows, sample_denom);
-        return;
-    }
-
-    let keep = PMF_MIDDLE_KEEP;
-    let skip = (n - keep) / 2;
-    let first_shown = entries[skip].0;
-    let last_shown = entries[skip + keep - 1].0;
-
-    let low_mass: f64 = entries[..skip].iter().map(|(_, p)| p).sum();
-    if low_mass > 0.0 {
-        rows.push((format!("<{first_shown}"), low_mass));
-    }
-
-    for &(value, p) in &entries[skip..skip + keep] {
-        rows.push((value.to_string(), p));
-    }
-
-    let high_mass: f64 = entries[skip + keep..].iter().map(|(_, p)| p).sum();
-    if high_mass > 0.0 {
-        rows.push((format!(">{last_shown}"), high_mass));
-    }
-
+    let rows = compress_pmf_for_display(entries);
     append_distribution_table(out, &rows, sample_denom);
 }
 
@@ -472,17 +652,36 @@ mod tests {
     }
 
     #[test]
-    fn large_dist_middle_and_tails() {
+    fn large_uniform_dist_one_band() {
         let entries = uniform(100);
-        let text = format_dist_pmf_text("big", &entries, 49.5, ProbFormat::Decimal, None);
-        let data_lines: Vec<_> = text
-            .lines()
-            .filter(|l| l.starts_with("  ") && l.contains('|') && !l.contains("X/"))
-            .collect();
-        assert_eq!(data_lines.len(), 64);
-        assert!(text.contains('<'));
-        assert!(text.contains('>'));
-        let total: f64 = entries.iter().map(|(_, p)| p).sum();
-        assert!((total - 1.0).abs() < 1e-9);
+        let rows = compress_pmf_for_display(&entries);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].0, "0..99");
+        assert!((rows[0].1 - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn open_ended_d100_compresses_flat_midrange() {
+        use crate::engine::DieRoll;
+        let oe = DieRoll::open_ended_d100(8).unwrap();
+        let rows = compress_pmf_for_display(&oe.entries());
+        assert!(
+            rows.iter()
+                .any(|(label, p)| label == "6..95" && (*p - 0.90).abs() < 1e-9),
+            "rows: {rows:?}"
+        );
+        for (label, p) in &rows {
+            if label.starts_with('<') || label.starts_with('>') {
+                assert!(
+                    *p < PMF_TAIL_MAX_SUM + 1e-9,
+                    "tail row {label} mass {p} should be under {PMF_TAIL_MAX_SUM}"
+                );
+            }
+        }
+        assert!(
+            rows.len() < 120,
+            "expected far fewer than {} rows",
+            oe.support_size()
+        );
     }
 }

@@ -1,6 +1,6 @@
 //! Bar-chart view of `output()` PMFs from eval results.
 
-use crate::engine::OutputEntry;
+use crate::engine::{compress_pmf_for_display, OutputEntry};
 use leptos::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -19,20 +19,41 @@ struct ChartSection {
     rows: Vec<BarRow>,
 }
 
+fn parse_label_low_bound(label: &str) -> Option<i64> {
+    if let Ok(v) = label.parse::<i64>() {
+        return Some(v);
+    }
+    if let Some(rest) = label.strip_prefix('<') {
+        return rest.parse().ok();
+    }
+    if let Some(rest) = label.strip_prefix('>') {
+        return rest.parse::<i64>().ok().map(|v: i64| v.saturating_add(1));
+    }
+    if let Some((lo, _)) = label.split_once("..") {
+        return lo.parse().ok();
+    }
+    None
+}
+
 fn rows_from_dist_entries(entries: &[(i64, f64)]) -> Vec<BarRow> {
+    let compressed = compress_pmf_for_display(entries);
     let total: f64 = entries.iter().map(|(_, p)| *p).sum();
-    entries
-        .iter()
-        .map(|(v, p)| {
-            let p_at_least: f64 = entries
-                .iter()
-                .filter(|(k, _)| *k >= *v)
-                .map(|(_, prob)| *prob)
-                .sum();
+    compressed
+        .into_iter()
+        .map(|(label, p)| {
+            let p_at_least = parse_label_low_bound(&label)
+                .map(|bound| {
+                    entries
+                        .iter()
+                        .filter(|(k, _)| *k >= bound)
+                        .map(|(_, prob)| *prob)
+                        .sum()
+                })
+                .unwrap_or(p);
             BarRow {
-                label: v.to_string(),
-                prob: *p,
-                pct_of_total: share_percent(*p, total),
+                label,
+                prob: p,
+                pct_of_total: share_percent(p, total),
                 p_at_least,
             }
         })

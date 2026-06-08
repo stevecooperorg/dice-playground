@@ -23,6 +23,7 @@ pub use eval::{
 pub use int_band_value::StarlarkIntBand;
 pub use outcomes_value::StarlarkOutcomes;
 pub use output_format::{
-    format_probability, format_probability_with_denom, infer_sample_space_denominator, ProbFormat,
+    compress_pmf_for_display, format_probability, format_probability_with_denom,
+    infer_sample_space_denominator, ProbFormat,
 };
 pub use scale_value::StarlarkScale;
