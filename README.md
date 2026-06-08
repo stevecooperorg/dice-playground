@@ -74,6 +74,29 @@ To build `dist/` without uploading (S3, GitHub Pages, Azure, etc.): `make releas
 - [Tutorial / user guide](docs/README.md) (source for the hosted `/docs/`)
 - [Agent / architecture notes](docs/AGENT.md)
 
+## CLI
+
+Build the native `dice` binary (requires the default `cli` feature):
+
+```bash
+make cli
+# or: cargo build --release --bin dice
+```
+
+Evaluate a script and print results (default: text on stdout):
+
+```bash
+cargo run --bin dice -- eval examples/tutorial/01-one-die.dice
+```
+
+Re-run whenever the file changes (evaluates once immediately, then on each save):
+
+```bash
+cargo run --bin dice -- eval --watch path/to/script.dice
+```
+
+Other subcommands: `docs`, `table-2d10`, `lsp` — see `cargo run --bin dice -- --help`.
+
 ## License
 
 [MIT](LICENSE) — fork, modify, and deploy as you like; keep the copyright notice in distributions.

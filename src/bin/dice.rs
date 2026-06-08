@@ -29,6 +29,9 @@ enum Command {
         /// How to print probabilities in text output (decimal, percent, or fraction).
         #[arg(long, value_enum, default_value_t = ProbFormat::Decimal)]
         prob_format: ProbFormat,
+        /// Re-run evaluation whenever the script file changes (runs once immediately).
+        #[arg(long)]
+        watch: bool,
     },
     /// Print a 2d10 + modifier success table (CSV).
     Table2d10,
@@ -62,7 +65,14 @@ fn main() -> anyhow::Result<()> {
             path,
             format,
             prob_format,
-        } => run_eval(&path, format, prob_format),
+            watch,
+        } => {
+            if watch {
+                run_eval_watch(&path, format, prob_format)
+            } else {
+                run_eval(&path, format, prob_format)
+            }
+        }
         Command::Table2d10 => run_table_2d10(),
         Command::Docs { out } => run_docs(out.as_deref()),
         Command::Lsp => dice_playground::engine::lsp::run_stdio(),
@@ -83,6 +93,49 @@ fn run_docs(out: Option<&std::path::Path>) -> anyhow::Result<()> {
         None => print!("{md}"),
     }
     Ok(())
+}
+
+fn run_eval_watch(
+    path: &std::path::Path,
+    format: Format,
+    prob_format: ProbFormat,
+) -> anyhow::Result<()> {
+    use dice_playground::cli::file_watcher::FileWatcher;
+
+    let watch_root = path
+        .parent()
+        .map(|p| p.to_path_buf())
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| PathBuf::from("."));
+
+    let mut watcher = FileWatcher::new(watch_root)?;
+    watcher.watch_path(path, false)?;
+
+    run_eval(path, format, prob_format)?;
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("create tokio runtime for watch mode")?;
+
+    runtime.block_on(async {
+        loop {
+            watcher
+                .wait_for_change_matching(|changed| paths_same_file(changed, path))
+                .await?;
+            // Coalesce rapid save/rename events from editors.
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            eprintln!("--- {} changed, re-evaluating ---", path.display());
+            run_eval(path, format, prob_format)?;
+        }
+    })
+}
+
+fn paths_same_file(a: &std::path::Path, b: &std::path::Path) -> bool {
+    match (a.canonicalize(), b.canonicalize()) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => a == b,
+    }
 }
 
 fn run_eval(path: &std::path::Path, format: Format, prob_format: ProbFormat) -> anyhow::Result<()> {
