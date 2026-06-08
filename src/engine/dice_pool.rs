@@ -1,4 +1,8 @@
-//! Independent dice pools (not summed until collapsed).
+//! Several independent dice rolled together before summing or keep/drop rules.
+//!
+//! Tabletop notation like `4d6dl1` is implemented by enumerating all `4d6` face tuples,
+//! dropping the lowest die, then summing the rest. [`DicePool`] is the intermediate object
+//! when you need per-die information (highest die, success counts, order statistics).
 
 use std::collections::BTreeMap;
 
@@ -7,20 +11,46 @@ use anyhow::{bail, Result};
 use super::die_roll::DieRoll;
 use super::enumerate::for_each_pool_joint;
 
+/// Independent dice that have not yet been combined into a single [`DieRoll`].
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::DicePool;
+/// let pool = DicePool::from_count(4, 6).unwrap();
+/// let four_d6_drop_lowest = pool.apply_pool_op(1, dice_playground::engine::PoolOp::DropLowestSum).unwrap();
+/// assert!((four_d6_drop_lowest.mean() - 12.244598765432098).abs() < 1e-6);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct DicePool {
     dice: Vec<DieRoll>,
 }
 
+/// How to collapse a pool to one total after sorting faces (drop/keep lowest or highest).
 #[derive(Clone, Copy, Debug)]
 pub enum PoolOp {
+    /// Sort ascending, drop the lowest `param` faces, sum the rest (`4d6dl1`).
     DropLowestSum,
+    /// Sort ascending, drop the highest `param` faces, sum the rest.
     DropHighestSum,
+    /// Sort descending, keep the highest `param` faces, sum them (`3d6kh2`).
     KeepHighestSum,
+    /// Sort ascending, keep the lowest `param` faces, sum them.
     KeepLowestSum,
 }
 
 impl DicePool {
+    /// Build a pool from one [`DieRoll`] per die (each may differ).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, DieRoll};
+    /// let pool = DicePool::from_dice(vec![DieRoll::die(6).unwrap(), DieRoll::die(8).unwrap()]).unwrap();
+    /// assert_eq!(pool.dice().len(), 2);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn from_dice(dice: Vec<DieRoll>) -> Result<Self> {
         if dice.is_empty() {
             bail!("roll pool must contain at least one die");
@@ -28,6 +58,16 @@ impl DicePool {
         Ok(Self { dice })
     }
 
+    /// `count` copies of a fair `1..=sides` die (tabletop `count`d`sides` before modifiers).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DicePool;
+    /// let three_d6 = DicePool::from_count(3, 6).unwrap();
+    /// assert_eq!(three_d6.dice().len(), 3);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn from_count(count: usize, sides: i64) -> Result<Self> {
         if count == 0 {
             bail!("roll pool count must be >= 1");
@@ -38,6 +78,15 @@ impl DicePool {
         })
     }
 
+    /// Slice of per-die distributions in roll order.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DicePool;
+    /// let pool = DicePool::from_count(2, 6).unwrap();
+    /// assert_eq!(pool.dice().len(), 2);
+    /// ```
     pub fn dice(&self) -> &[DieRoll] {
         &self.dice
     }
@@ -68,6 +117,16 @@ impl DicePool {
         Some((self.dice.len(), sides))
     }
 
+    /// Distribution of the **sum** of all dice (independent convolution), e.g. `3d6` total.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DicePool;
+    /// let total = DicePool::from_count(2, 6).unwrap().sum().unwrap();
+    /// assert!((total.mean() - 7.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn sum(&self) -> Result<DieRoll> {
         if let Some((n, sides)) = self.uniform_fair_params() {
             return DieRoll::pool_sum(n, sides);
@@ -82,6 +141,17 @@ impl DicePool {
         Ok(die)
     }
 
+    /// Apply keep/drop-then-sum rules via [`PoolOp`] (see `drop_lowest`, `keep_highest`, etc. in Starlark).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, PoolOp};
+    /// let dist = DicePool::from_count(4, 6).unwrap()
+    ///     .apply_pool_op(1, PoolOp::DropLowestSum).unwrap();
+    /// assert_eq!(dist.min(), Some(3));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn apply_pool_op(&self, param: usize, op: PoolOp) -> Result<DieRoll> {
         let n = self.dice.len();
         let mut mass = BTreeMap::new();
@@ -115,7 +185,16 @@ impl DicePool {
         Ok(die)
     }
 
-    /// Distribution of how many faces are `>= threshold`.
+    /// Distribution of how many dice show **at least** `threshold` (success-count pools).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DicePool;
+    /// let hits = DicePool::from_count(3, 6).unwrap().count_ge(5).unwrap();
+    /// assert!((hits.pmf(3) - 1.0 / 27.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn count_ge(&self, threshold: i64) -> Result<DieRoll> {
         if let Some((n, sides)) = self.uniform_fair_params() {
             let hits = (1..=sides).filter(|&f| f >= threshold).count();
@@ -132,7 +211,16 @@ impl DicePool {
         Ok(die)
     }
 
-    /// Distribution of how many faces appear in `values`.
+    /// Distribution of how many dice land on a face in `values`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DicePool;
+    /// let evens = DicePool::from_count(2, 6).unwrap().count_in(&[2, 4, 6]).unwrap();
+    /// assert!((evens.pmf(2) - 0.25).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn count_in(&self, values: &[i64]) -> Result<DieRoll> {
         if let Some((n, sides)) = self.uniform_fair_params() {
             let hits = (1..=sides).filter(|&f| values.contains(&f)).count();
@@ -149,7 +237,17 @@ impl DicePool {
         Ok(die)
     }
 
-    /// `k=1` is the highest face in the sorted pool.
+    /// Distribution of the `k`th highest face (`k = 1` is the maximum die).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, DieRoll};
+    /// let hi = DicePool::from_count(3, 6).unwrap().order_stat(1).unwrap();
+    /// let keep = DieRoll::pool_keep_highest(3, 6, 1).unwrap();
+    /// assert!((hi.pmf(6) - keep.pmf(6)).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn order_stat(&self, k: usize) -> Result<DieRoll> {
         let n = self.dice.len();
         if k == 0 || k > n {
@@ -167,6 +265,17 @@ impl DicePool {
         Ok(die)
     }
 
+    /// Map each joint face tuple through `f` and accumulate a PMF over the resulting integers.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DicePool;
+    /// let max_face = DicePool::from_count(2, 6).unwrap()
+    ///     .map_joint(|faces| *faces.iter().max().unwrap()).unwrap();
+    /// assert!((max_face.pmf(6) - 11.0 / 36.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn map_joint(&self, mut f: impl FnMut(&[i64]) -> i64) -> Result<DieRoll> {
         let mut mass = BTreeMap::new();
         for_each_pool_joint(self, |faces, p| {
@@ -178,6 +287,17 @@ impl DicePool {
         Ok(die)
     }
 
+    /// Sum the middle `keep` faces after sorting (used by some house rules).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DicePool;
+    /// let mid = DicePool::from_count(3, 6).unwrap().middle_of(1).unwrap();
+    /// assert_eq!(mid.min(), Some(1));
+    /// assert_eq!(mid.max(), Some(6));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn middle_of(&self, keep: usize) -> Result<DieRoll> {
         let n = self.dice.len();
         if keep == 0 || keep > n {

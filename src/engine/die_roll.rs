@@ -1,23 +1,56 @@
 //! Exact chances for numeric roll totals (`1d6`, `2d6`, `4d6dl1`, modifiers).
+//!
+//! A [`DieRoll`] stores a **probability mass function** (PMF): each possible integer
+//! outcome maps to a probability, and the values sum to 1. Independent rolls add via
+//! [**convolution**](https://en.wikipedia.org/wiki/Probability_distribution#Algebra_of_random_variables)
+//! ([`convolve`]); flat bonuses shift every outcome ([`shift`]).
 
 use std::collections::BTreeMap;
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 
-/// Sparse PMF over signed integer outcomes (supports shifted rolls and modifiers).
+/// Exact distribution over integer roll totals (supports modifiers and negative outcomes).
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::DieRoll;
+/// let two_d6 = DieRoll::pool_sum(2, 6).unwrap();
+/// assert!((two_d6.pmf(7) - 6.0 / 36.0).abs() < 1e-12);
+/// assert!((two_d6.mean() - 7.0).abs() < 1e-9);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DieRoll {
     pub(crate) mass: BTreeMap<i64, f64>,
 }
 
 impl DieRoll {
+    /// Empty distribution (use [`DieRoll::die`] or [`DieRoll::constant`] to build rolls).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// assert_eq!(DieRoll::new().support_size(), 0);
+    /// ```
     pub fn new() -> Self {
         Self {
             mass: BTreeMap::new(),
         }
     }
 
+    /// Fair die showing `1..=sides` with equal probability (tabletop `1d{sides}`).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let d20 = DieRoll::die(20).unwrap();
+    /// assert!((d20.pmf(20) - 0.05).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     #[allow(clippy::self_named_constructors)]
     pub fn die(sides: i64) -> Result<Self> {
         if sides < 1 {
@@ -31,7 +64,16 @@ impl DieRoll {
         Ok(Self { mass })
     }
 
-    /// Fair die from an explicit face list (multiplicity = weight).
+    /// Fair die from an explicit face list (repeated faces increase weight).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let fudge = DieRoll::from_faces(&[-1, 0, 1]).unwrap();
+    /// assert!((fudge.pmf(0) - 1.0 / 3.0).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn from_faces(faces: &[i64]) -> Result<Self> {
         if faces.is_empty() {
             bail!("from_faces: need at least one face");
@@ -44,28 +86,84 @@ impl DieRoll {
         Ok(Self { mass })
     }
 
+    /// Degenerate roll that always shows `value` (modifiers, fixed damage).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let plus_five = DieRoll::constant(5);
+    /// assert_eq!(plus_five.pmf(5), 1.0);
+    /// ```
     pub fn constant(value: i64) -> Self {
         let mut mass = BTreeMap::new();
         mass.insert(value, 1.0);
         Self { mass }
     }
 
+    /// Number of outcomes with positive probability.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// assert_eq!(DieRoll::die(6).unwrap().support_size(), 6);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn support_size(&self) -> usize {
         self.mass.len()
     }
 
+    /// Smallest outcome with positive probability, if any.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// assert_eq!(DieRoll::die(6).unwrap().min(), Some(1));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn min(&self) -> Option<i64> {
         self.mass.keys().next().copied()
     }
 
+    /// Largest outcome with positive probability, if any.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// assert_eq!(DieRoll::die(6).unwrap().max(), Some(6));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn max(&self) -> Option<i64> {
         self.mass.keys().next_back().copied()
     }
 
+    /// Probability of exactly `value` (0 if impossible).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let d6 = DieRoll::die(6).unwrap();
+    /// assert!((d6.pmf(4) - 1.0 / 6.0).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn pmf(&self, value: i64) -> f64 {
         self.mass.get(&value).copied().unwrap_or(0.0)
     }
 
+    /// Cumulative probability **P(X ≤ value)**.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let d6 = DieRoll::die(6).unwrap();
+    /// assert!((d6.cdf(3) - 0.5).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn cdf(&self, value: i64) -> f64 {
         self.mass
             .iter()
@@ -74,6 +172,16 @@ impl DieRoll {
             .sum()
     }
 
+    /// Probability of rolling **at least** `value` (common for DC checks).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let d20 = DieRoll::die(20).unwrap();
+    /// assert!((d20.p_ge(15) - 6.0 / 20.0).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn p_ge(&self, value: i64) -> f64 {
         self.mass
             .iter()
@@ -82,18 +190,55 @@ impl DieRoll {
             .sum()
     }
 
+    /// Expected value (average total over many rolls).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// assert!((DieRoll::die(6).unwrap().mean() - 3.5).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn mean(&self) -> f64 {
         self.mass.iter().map(|(k, p)| *k as f64 * p).sum()
     }
 
+    /// Sum of stored probabilities (1.0 for normalized distributions).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// assert!((DieRoll::die(6).unwrap().total_mass() - 1.0).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn total_mass(&self) -> f64 {
         self.mass.values().sum()
     }
 
+    /// `(outcome, probability)` pairs sorted by outcome.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// assert_eq!(DieRoll::constant(7).entries(), vec![(7, 1.0)]);
+    /// ```
     pub fn entries(&self) -> Vec<(i64, f64)> {
         self.mass.iter().map(|(&k, &p)| (k, p)).collect()
     }
 
+    /// Build from a raw mass map (callers should normalize when importing external data).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// use std::collections::BTreeMap;
+    /// let mut mass = BTreeMap::new();
+    /// mass.insert(0, 1.0);
+    /// assert_eq!(DieRoll::from_mass(mass).pmf(0), 1.0);
+    /// ```
     pub fn from_mass(mass: BTreeMap<i64, f64>) -> Self {
         Self { mass }
     }
@@ -111,11 +256,37 @@ impl DieRoll {
         Ok(())
     }
 
+    /// Independent subtraction: each pair of outcomes from `self` and `other` is differenced.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let a = DieRoll::pool_sum(2, 10).unwrap();
+    /// let b = DieRoll::pool_sum(3, 6).unwrap();
+    /// assert!((a.difference(&b).unwrap().mean() - 0.5).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn difference(&self, other: &Self) -> Result<Self> {
         let neg_other = other.map_outcomes(|k| -k)?;
         self.convolve(&neg_other)
     }
 
+    /// Combine two **independent** numeric rolls by adding outcomes (convolution of PMFs).
+    ///
+    /// This is how `2d6` works: convolve one d6 with another. Probabilities multiply
+    /// for each face pair; totals are summed.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let d6 = DieRoll::die(6).unwrap();
+    /// let two_d6 = d6.convolve(&d6).unwrap();
+    /// assert_eq!(two_d6.min(), Some(2));
+    /// assert_eq!(two_d6.max(), Some(12));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn convolve(&self, other: &Self) -> Result<Self> {
         if self.mass.is_empty() || other.mass.is_empty() {
             bail!("cannot convolve empty distribution");
@@ -131,6 +302,17 @@ impl DieRoll {
         Ok(dist)
     }
 
+    /// Add a flat modifier to every outcome (`+3` on the character sheet).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let d20 = DieRoll::die(20).unwrap();
+    /// let with_bonus = d20.shift(5).unwrap();
+    /// assert!((with_bonus.p_ge(20) - d20.p_ge(15)).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn shift(&self, delta: i64) -> Result<Self> {
         if self.mass.is_empty() {
             bail!("cannot shift empty distribution");
@@ -139,6 +321,17 @@ impl DieRoll {
         Ok(Self { mass })
     }
 
+    /// Apply `f` to each outcome, merging masses when different faces collide.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let d6 = DieRoll::die(6).unwrap();
+    /// let neg = d6.map_outcomes(|x| -x).unwrap();
+    /// assert_eq!(neg.pmf(-1), d6.pmf(1));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn map_outcomes(&self, mut f: impl FnMut(i64) -> i64) -> Result<Self> {
         if self.mass.is_empty() {
             bail!("cannot map empty distribution");
@@ -152,7 +345,16 @@ impl DieRoll {
         Ok(dist)
     }
 
-    /// Multiply every outcome by `factor` (e.g. `d(4) * 10` for ten d4 pips).
+    /// Multiply every outcome by `factor` (e.g. tens die reading `d4 * 10`).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let scaled = DieRoll::die(4).unwrap().scale_outcomes(10).unwrap();
+    /// assert_eq!(scaled.min(), Some(10));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn scale_outcomes(&self, factor: i64) -> Result<Self> {
         if factor <= 0 {
             bail!("scale factor must be positive, got {factor}");
@@ -163,7 +365,16 @@ impl DieRoll {
         })
     }
 
-    /// Floor-divide every outcome by `divisor`, matching Starlark `//` on integers.
+    /// Floor-divide every outcome by `divisor`, matching Starlark `//` (half damage on save).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let halved = DieRoll::pool_sum(2, 6).unwrap().floor_divide_outcomes(2).unwrap();
+    /// assert_eq!(halved.min(), Some(1));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn floor_divide_outcomes(&self, divisor: i64) -> Result<Self> {
         if divisor <= 0 {
             bail!("divisor must be positive, got {divisor}");
@@ -181,7 +392,17 @@ impl DieRoll {
         Ok(dist)
     }
 
-    /// Exploding die: reroll and add while face equals `max_face`, up to `max_depth` extra rolls.
+    /// Exploding die: on max face, reroll and add (up to `max_depth` extra explosions).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let d6 = DieRoll::die(6).unwrap();
+    /// let exploded = d6.explode(1).unwrap();
+    /// assert!(exploded.max().unwrap() > 6);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn explode(&self, max_depth: u32) -> Result<Self> {
         let Some(max_face) = self.max() else {
             bail!("explode: empty die");
@@ -202,6 +423,16 @@ impl DieRoll {
         Ok(out)
     }
 
+    /// Sum of `n` independent fair `1..=sides` dice (`nd{sides}`).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let two_d6 = DieRoll::pool_sum(2, 6).unwrap();
+    /// assert!((two_d6.mean() - 7.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn pool_sum(n: usize, sides: i64) -> Result<Self> {
         if n == 0 {
             return Ok(Self::constant(0));
@@ -214,12 +445,32 @@ impl DieRoll {
         Ok(acc)
     }
 
+    /// `n`d`sides`, drop the lowest `drop` dice, sum the rest (`4d6dl1`).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let dist = DieRoll::pool_drop_lowest(4, 6, 1).unwrap();
+    /// assert_eq!(dist.min(), Some(3));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn pool_drop_lowest(n: usize, sides: i64, drop: usize) -> Result<Self> {
         use super::dice_pool::DicePool;
         use super::dice_pool::PoolOp;
         DicePool::from_count(n, sides)?.apply_pool_op(drop, PoolOp::DropLowestSum)
     }
 
+    /// `n`d`sides`, keep the highest `keep` dice and sum them (`3d6kh2`).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let dist = DieRoll::pool_keep_highest(3, 6, 2).unwrap();
+    /// assert_eq!(dist.max(), Some(12));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn pool_keep_highest(n: usize, sides: i64, keep: usize) -> Result<Self> {
         use super::dice_pool::DicePool;
         use super::dice_pool::PoolOp;
@@ -229,12 +480,32 @@ impl DieRoll {
         DicePool::from_count(n, sides)?.apply_pool_op(keep, PoolOp::KeepHighestSum)
     }
 
+    /// `n`d`sides`, drop the highest `drop` dice, sum the rest.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let dist = DieRoll::pool_drop_highest(4, 6, 1).unwrap();
+    /// assert!((dist.mean() - 8.755401234567925).abs() < 1e-6);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn pool_drop_highest(n: usize, sides: i64, drop: usize) -> Result<Self> {
         use super::dice_pool::DicePool;
         use super::dice_pool::PoolOp;
         DicePool::from_count(n, sides)?.apply_pool_op(drop, PoolOp::DropHighestSum)
     }
 
+    /// `n`d`sides`, keep the lowest `keep` dice and sum them.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let dist = DieRoll::pool_keep_lowest(3, 12, 1).unwrap();
+    /// assert!((dist.mean() - 3.5208333333333326).abs() < 1e-6);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn pool_keep_lowest(n: usize, sides: i64, keep: usize) -> Result<Self> {
         use super::dice_pool::DicePool;
         use super::dice_pool::PoolOp;

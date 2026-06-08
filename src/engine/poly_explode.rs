@@ -1,4 +1,7 @@
-//! Exact PMF for polyhedral explode pools (even or max = success; max explodes).
+//! Exploding dice pools where evens and max faces count as successes.
+//!
+//! Used for mechanics where you roll many dice, count successes (often even faces
+//! and/or the maximum), optionally penalize ones, and explode max faces for extra dice.
 
 use std::collections::BTreeMap;
 
@@ -8,12 +11,16 @@ use super::DieRoll;
 
 const MAX_WAVES: usize = 48;
 
-/// How rolls of **1** interact with total successes and exploding.
+/// How natural **1**s interact with successes and exploding chains.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Counterbalance {
+    /// Ones do not change successes or explosions.
     Baseline,
+    /// Each 1 removes one success from the tally.
     OnesRemoveSuccess,
+    /// Any 1 on a wave cancels explosions that wave.
     OnesCancelExplosions,
+    /// Ones trigger additional implosion rules (see `successes_dist` tests).
     OnesImplode,
 }
 
@@ -34,8 +41,19 @@ fn bump_faces(faces: &mut [i64], sides: i64) -> bool {
 
 /// Exact distribution of total successes (clamped at 0).
 ///
-/// Exploding chains are truncated after [`MAX_WAVES`] waves; remaining probability
-/// mass is finalized at the current success tally (negligible tail for typical dice).
+/// A face counts as a success when it is even or equals `sides` (the max face).
+/// Max faces explode into more dice up to an internal wave limit; the tail is negligible
+/// for typical polyhedral sizes.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::{successes_dist, Counterbalance};
+/// let dist = successes_dist(6, 4, Counterbalance::Baseline).unwrap();
+/// assert!(dist.min().unwrap() >= 0);
+/// assert!((dist.total_mass() - 1.0).abs() < 1e-9);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn successes_dist(sides: i64, n_dice: usize, mode: Counterbalance) -> Result<DieRoll> {
     if sides < 1 {
         bail!("sides must be >= 1");

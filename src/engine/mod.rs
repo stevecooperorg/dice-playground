@@ -1,4 +1,13 @@
-//! Exact dice probability distributions with a Starlark scripting surface.
+//! Exact dice probability (PMF) engine and Starlark scripting surface.
+//!
+//! At the table, a roll like `2d6` or `4d6dl1` is a finite set of outcomes each with a
+//! chance. This crate represents that as a **probability mass function** (PMF): a map from
+//! integer totals to probabilities that sum to 1. [`DieRoll`] is one such distribution;
+//! [`DicePool`] holds several dice before you sum or apply keep/drop rules; [`Outcomes`]
+//! names bands (hit/miss, crit, and so on) instead of raw numbers.
+//!
+//! User-facing lessons live under `docs/tutorial/`; the generated function list is
+//! `docs/references/stdlib.md` (`make references`).
 
 mod core;
 mod dice_pool;

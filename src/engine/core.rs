@@ -1,10 +1,25 @@
-//! Re-exports and tests for the PMF engine.
+//! Shared PMF types and small comparison helpers used across the engine.
 
 pub use super::dice_pool::{DicePool, PoolOp};
 pub use super::die_roll::DieRoll;
 pub use super::enumerate::MAX_JOINT_CELLS;
 
-/// Total variation distance `0.5 * sum |p - q|`.
+/// How different two roll distributions are, on a scale from 0 (identical) to 1 (no overlap).
+///
+/// This is the **total variation distance** between PMFs: half the sum of absolute
+/// probability gaps at each outcome. Useful when comparing an exact distribution to an
+/// approximation or a house-ruled variant.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::{DieRoll, total_variation_distance};
+/// let d6 = DieRoll::die(6).unwrap();
+/// let shifted = d6.shift(1).unwrap();
+/// assert!(total_variation_distance(&d6, &shifted) > 0.0);
+/// assert!(total_variation_distance(&d6, &d6) < 1e-12);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn total_variation_distance(a: &DieRoll, b: &DieRoll) -> f64 {
     let keys: Vec<i64> = a
         .mass

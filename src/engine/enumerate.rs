@@ -1,11 +1,36 @@
-//! Joint enumeration over dice pools.
+//! Walk every joint outcome of an independent dice pool.
+//!
+//! For `3d6`, there are `6³ = 216` equally likely face tuples before keep/drop or summing.
+//! Enumeration multiplies support sizes; [`MAX_JOINT_CELLS`] caps how large a pool may be
+//! for exact methods (larger pools need smaller dice counts or simulation).
 
 use anyhow::{bail, Context, Result};
 
 use super::DicePool;
 
+/// Maximum joint outcomes (`face₁ × face₂ × …`) allowed for exact pool enumeration.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::{DicePool, MAX_JOINT_CELLS};
+/// let pool = DicePool::from_count(3, 6).unwrap();
+/// assert!(6usize.pow(3) < MAX_JOINT_CELLS);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub const MAX_JOINT_CELLS: usize = 1_000_000;
 
+/// Joint support size for `pool` (product of per-die support sizes), with overflow checks.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::DicePool;
+/// // `2d6` has 6 × 6 = 36 joint face pairs before summing.
+/// let two_d6 = DicePool::from_count(2, 6).unwrap().sum().unwrap();
+/// assert!((two_d6.pmf(7) - 6.0 / 36.0).abs() < 1e-12);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn joint_cell_count_pool(pool: &DicePool) -> Result<usize> {
     let mut cells = 1usize;
     for die in pool.dice() {
@@ -20,7 +45,18 @@ pub fn joint_cell_count_pool(pool: &DicePool) -> Result<usize> {
     Ok(cells)
 }
 
-/// Enumerate all joint outcomes of a uniform fair `n`d`sides` pool.
+/// Visit every face tuple for `n` identical fair `1..=sides` dice, each with probability `1/sides^n`.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::DieRoll;
+/// // Equivalent total distribution after visiting all 36 face pairs for `2d6`.
+/// let two_d6 = DieRoll::pool_sum(2, 6).unwrap();
+/// assert_eq!(two_d6.min(), Some(2));
+/// assert!((two_d6.total_mass() - 1.0).abs() < 1e-9);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn for_each_uniform_joint(n: usize, sides: i64, mut f: impl FnMut(&[i64], f64)) -> Result<()> {
     if sides < 1 {
         bail!("sides must be >= 1");
@@ -46,7 +82,16 @@ pub fn for_each_uniform_joint(n: usize, sides: i64, mut f: impl FnMut(&[i64], f6
     Ok(())
 }
 
-/// Enumerate all joint outcomes of an arbitrary independent pool.
+/// Visit every joint outcome of an independent [`DicePool`], with probability the product of per-die PMFs.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::DicePool;
+/// let pool = DicePool::from_count(2, 6).unwrap();
+/// assert!((pool.sum().unwrap().total_mass() - 1.0_f64).abs() < 1e-9);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn for_each_joint(pool: &DicePool, mut f: impl FnMut(&[i64], f64)) -> Result<()> {
     let dice = pool.dice();
     if dice.is_empty() {
@@ -94,7 +139,17 @@ fn bump_indices(idx: &mut [usize], entries: &[Vec<(i64, f64)>]) -> bool {
     false
 }
 
-/// Fast path: uniform pool with identical fair dice.
+/// Enumerate `pool`, using a fast path when every die is the same fair `nd`sides`.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::DicePool;
+/// // `3d6` enumeration feeds pool keep/drop helpers; sum checks normalization.
+/// let three_d6 = DicePool::from_count(3, 6).unwrap().sum().unwrap();
+/// assert!((three_d6.mean() - 10.5).abs() < 1e-9);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn for_each_pool_joint(pool: &DicePool, f: impl FnMut(&[i64], f64)) -> Result<()> {
     if let Some((n, sides)) = pool.uniform_fair_params() {
         for_each_uniform_joint(n, sides, f)

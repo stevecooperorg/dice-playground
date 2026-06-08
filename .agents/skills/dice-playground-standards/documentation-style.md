@@ -21,9 +21,9 @@ Bridge that gap in one or two sentences, then use precise terms.
 ///
 /// ```
 /// use dice_playground::engine::DieRoll;
-/// let a = DieRoll::die(6)?;
-/// let b = DieRoll::die(6)?;
-/// let sum = &a + &b; // same distribution as `2d6`
+/// let a = DieRoll::die(6).unwrap();
+/// let b = DieRoll::die(6).unwrap();
+/// let sum = a.convolve(&b).unwrap(); // same distribution as `2d6`
 /// # Ok::<(), anyhow::Error>(())
 /// ```
 pub fn example() {}
@@ -31,7 +31,7 @@ pub fn example() {}
 
 ## User-facing reference pattern
 
-1. **Core ideas** — `DieRoll` vs `DicePool` vs `Outcomes` in plain language.
+1. **Core ideas** — `Dist` vs `RollPool` vs `LabelDist` in plain language.
 2. **At-the-table table** — what the player experiences.
 3. **API list** — function names last, grouped by topic.
 

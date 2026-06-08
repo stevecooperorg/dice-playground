@@ -1,8 +1,20 @@
-//! Desugars tabletop dice literals into Starlark expressions.
+//! Desugars tabletop dice literals (`2d6`, `4d6dl1`) into Starlark expressions.
+//!
+//! The playground accepts familiar notation; this pass rewrites it to `d()`, `dice_pool()`,
+//! and keep/drop helpers before parsing. See `docs/tutorial/05-dice-notation.md`.
 
 use anyhow::Context;
 
 /// If `source` contains dice sugar, expand it; otherwise return `source` unchanged.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::desugar_if_needed;
+/// let out = desugar_if_needed("x.dice", "output(2d6)").unwrap();
+/// assert!(out.contains("dice_pool") || out.contains("d("));
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn desugar_if_needed(path: &str, source: &str) -> anyhow::Result<String> {
     desugar(path, source)
 }
@@ -13,11 +25,27 @@ fn next_char(rest: &str) -> Option<(char, usize)> {
 }
 
 /// Byte length of a dice literal at the start of `rest`, if any (for syntax highlighting).
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::dice_literal_len_at;
+/// assert_eq!(dice_literal_len_at("2d6 + 1", None), Some(3));
+/// ```
 pub fn dice_literal_len_at(rest: &str, prev: Option<char>) -> Option<usize> {
     try_parse_dice_expr(rest, prev).map(|(_, len)| len)
 }
 
 /// Replace tabletop dice literals (`4d6`, `4d6dl1`, `4d6kh2`, …) with Starlark stdlib calls.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::desugar;
+/// let out = desugar("pool.dice", "4d6dl1").unwrap();
+/// assert!(out.contains("drop_lowest"));
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn desugar(_path: &str, source: &str) -> anyhow::Result<String> {
     let mut out = String::with_capacity(source.len());
     let mut i = 0usize;

@@ -1,4 +1,7 @@
-//! HTTP-friendly check/eval API for the web playground (no `load()` in public dialect).
+//! Check and evaluate `.dice` programs for the web playground.
+//!
+//! Applies dice notation desugar, parses with a restricted Starlark dialect (`load` disabled),
+//! and returns structured diagnostics plus formatted output tables.
 
 use std::path::Path;
 
@@ -10,10 +13,20 @@ use starlark::syntax::AstModule;
 use super::desugar_if_needed;
 use super::{eval_source_with_dialect, format_eval_result_text, OutputEntry, ProbFormat};
 
+/// Maximum script size accepted from the public playground API.
 pub const MAX_SOURCE_BYTES: usize = 64 * 1024;
+
+/// Maximum `output()` lines allowed per evaluation (DoS guardrail).
 pub const MAX_OUTPUT_COUNT: usize = 500;
 
 /// Dialect for untrusted public evaluation (`load` disabled).
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::dice_dialect_public;
+/// assert!(!dice_dialect_public().enable_load);
+/// ```
 pub fn dice_dialect_public() -> starlark::syntax::Dialect {
     starlark::syntax::Dialect {
         enable_load: false,
@@ -23,6 +36,7 @@ pub fn dice_dialect_public() -> starlark::syntax::Dialect {
     }
 }
 
+/// Single parse, lint, or runtime diagnostic with 1-based line/column.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceDiagnostic {
     pub line: u32,
@@ -31,23 +45,36 @@ pub struct SourceDiagnostic {
     pub severity: String,
 }
 
+/// Result of [`check_source`] (parse + lint only).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckResult {
     pub diagnostics: Vec<SourceDiagnostic>,
 }
 
 impl CheckResult {
+    /// True when any diagnostic has severity `"error"`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::check_source;
+    /// let r = check_source("ok.dice", "output(d(6))").unwrap();
+    /// assert!(!r.has_errors());
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn has_errors(&self) -> bool {
         self.diagnostics.iter().any(|d| d.severity == "error")
     }
 }
 
+/// Options for [`eval_program`] (probability display format, etc.).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EvalProgramOptions {
     #[serde(default)]
     pub prob_format: ProbFormat,
 }
 
+/// Structured and rendered text from a successful [`eval_program`] call.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvalProgramResponse {
     pub return_value: String,
@@ -56,6 +83,15 @@ pub struct EvalProgramResponse {
 }
 
 /// Parse and lint after desugar; does not evaluate.
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::check_source;
+/// let r = check_source("test.dice", "output(d(6))").unwrap();
+/// assert!(!r.has_errors());
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn check_source(path: &str, source: &str) -> anyhow::Result<CheckResult> {
     if source.len() > MAX_SOURCE_BYTES {
         bail!("source exceeds maximum size of {MAX_SOURCE_BYTES} bytes");
@@ -79,7 +115,16 @@ pub fn check_source(path: &str, source: &str) -> anyhow::Result<CheckResult> {
     Ok(CheckResult { diagnostics })
 }
 
-/// Check, then evaluate with guardrails.
+/// Check, then evaluate with guardrails (size limits, no `load`, output cap).
+///
+/// # Example
+///
+/// ```
+/// use dice_playground::engine::{eval_program, EvalProgramOptions};
+/// let r = eval_program("test.dice", "output(d(6))", EvalProgramOptions::default()).unwrap();
+/// assert_eq!(r.outputs.len(), 1);
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 pub fn eval_program(
     path: &str,
     source: &str,
