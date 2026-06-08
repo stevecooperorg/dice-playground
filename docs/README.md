@@ -51,11 +51,9 @@ Face matching and pool methods: [API conventions](references/api-conventions.md)
 
 ## Writing your system with LLM assistance
 
-You can use an LLM (for example [ChatGPT](https://chatgpt.com/), [Claude](https://claude.ai/), or [Cursor](https://cursor.com/)) to turn your tabletop rules into a `.dice` script. The playground **includes LLM assistance**: a compact language reference you can paste into a chat—[/llm-starter-prompt.txt](/llm-starter-prompt.txt) or [/llms.txt](/llms.txt) at the site root.
+Tools like [ChatGPT](https://chatgpt.com/), [Claude](https://claude.ai/), or [Cursor](https://cursor.com/) can draft `.dice` scripts from your rules. The site publishes a model-oriented reference at [/llms.txt](/llms.txt)—copy all of it into a **new chat** as the first message so the model knows the syntax and that scripts compute **exact** odds, not simulated rolls.
 
-**Start a new chat** so the model is not mixing in another language or project. Paste the **entire** starter prompt as your first message (or attach the file). That gives the model exact syntax, builtins, and the rule that scripts compute **exact** probabilities—not simulated rolls.
-
-**Describe your system in plain language** as a follow-up. Name die sizes, what gets summed vs counted, DCs, advantage, crit rules, and what you want under **Output** (one probability, a distribution, a modifier table, named outcome bands). Variables for modifiers or pool size are fine; ask for `output("label", value)` on each result you care about.
+In your **next message**, describe the mechanic in plain language: die sizes, sum vs count successes, DCs, crits, and what to show under **Output**. Use variables for pool size or modifiers when helpful.
 
 Example second message (d6 pool, successes = number of sixes):
 

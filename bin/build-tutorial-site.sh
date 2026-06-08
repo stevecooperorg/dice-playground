@@ -249,9 +249,7 @@ fi
 LLMS_TXT="${ROOT}/llms.txt"
 if [[ -f "${LLMS_TXT}" ]]; then
   cp "${LLMS_TXT}" "${DIST}/llms.txt"
-  cp "${LLMS_TXT}" "${DIST}/llm-starter-prompt.txt"
   echo "Copied llms.txt: ${DIST}/llms.txt"
-  echo "Copied llm-starter-prompt.txt (from llms.txt): ${DIST}/llm-starter-prompt.txt"
 fi
 
 echo "Built tutorial site: ${OUT} (${LESSON_COUNT} lessons)"
