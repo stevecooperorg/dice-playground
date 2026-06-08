@@ -506,13 +506,38 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
 
     /// Name your outcome steps from worst to best (or low to high).
     ///
-    /// Used with `bucket` or `classify`. Example: `scale(["MISS", "PARTIAL", "FULL"])`.
+    /// With only `labels`, every step has no numeric band (for `classify`). Pass one
+    /// [`IntBand`](StarlarkIntBand) per label to bucket with `roll.bucket(scale)` — e.g.
+    /// `scale(["FAIL", "PASS"], ..14, 15..)`.
     ///
     /// # Arguments
     /// * `labels`: Unique non-empty strings, first = lowest rank, last = highest.
+    /// * `bands`: Optional; length must match `labels` when provided.
     #[starlark(as_type = StarlarkScale)]
-    fn scale(labels: UnpackList<String>) -> anyhow::Result<StarlarkScale> {
-        Ok(StarlarkScale::new(Scale::new(labels.items)?))
+    fn scale(
+        labels: UnpackList<String>,
+        #[starlark(args)] bands: UnpackTuple<Value<'_>>,
+    ) -> anyhow::Result<StarlarkScale> {
+        let labels = labels.items;
+        if bands.items.is_empty() {
+            return Ok(StarlarkScale::new(Scale::new(labels)?));
+        }
+        if bands.items.len() != labels.len() {
+            anyhow::bail!(
+                "scale expects {} band(s) for {} label(s), got {}",
+                labels.len(),
+                labels.len(),
+                bands.items.len()
+            );
+        }
+        let mut parsed = Vec::with_capacity(bands.items.len());
+        for (i, v) in bands.items.iter().enumerate() {
+            let band = v
+                .downcast_ref::<StarlarkIntBand>()
+                .with_context(|| format!("scale band {i}: expected IntBand, got {v}"))?;
+            parsed.push(band.inner());
+        }
+        Ok(StarlarkScale::new(Scale::with_bands(labels, parsed)?))
     }
 
     /// Inclusive closed integer interval (same as desugared `6..94`).
@@ -536,15 +561,15 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         Ok(StarlarkIntBand::new(IntBand::at_least(i64::from(lo))))
     }
 
-    /// Split a numeric total into named bands using DC-style cut points.
+    /// Split a numeric total into named bands.
     ///
-    /// With 4 labels you pass **3** cut numbers. Totals at or below the first cut get the first label;
-    /// between cuts get middle labels; above the last cut get the top label. PbtA 2d6+stat moves often use this.
+    /// With bands on `scale` (see `scale(..., ..6, 7..9, 10..)`), call `bucket(roll, scale)` or
+    /// `roll.bucket(scale)`. Otherwise pass **N−1** cut ints or **N** explicit bands (override).
     ///
     /// # Arguments
     /// * `dist`: Numeric roll (e.g. `2d6 + stat`).
     /// * `scale`: From `scale(...)`.
-    /// * `cuts`: Increasing thresholds between labels.
+    /// * `cuts` / `bands`: Optional override thresholds or bands.
     #[starlark(as_type = StarlarkOutcomes)]
     fn bucket(
         dist: &StarlarkDieRoll,
@@ -1016,23 +1041,31 @@ output("ignored_sum", total)
     #[test]
     fn eval_pbta_bucket_bands_matches_cuts() {
         let src = r#"
-Scale = scale(["MISS", "PARTIAL", "FULL"])
+Scale = scale(["MISS", "PARTIAL", "FULL"], ..6, 7..9, 10..)
+ScalePlain = scale(["MISS", "PARTIAL", "FULL"])
 STAT = 2
 roll = sum(dice_pool(2, 6)) + STAT
-by_cuts = bucket(roll, Scale, [6, 9])
-by_bands = roll.bucket(Scale, at_most(6), through(7, 9), at_least(10))
+by_on_scale = roll.bucket(Scale)
+by_cuts = bucket(roll, ScalePlain, [6, 9])
+by_bands = roll.bucket(ScalePlain, at_most(6), through(7, 9), at_least(10))
+output("on_scale", by_on_scale)
 output("cuts", by_cuts)
 output("bands", by_bands)
 "#;
         let res = eval_source("test.dice", src).expect("eval");
-        let cuts = match &res.outputs[0] {
+        let on_scale = match &res.outputs[0] {
             OutputEntry::Outcomes { entries, .. } => entries.clone(),
             other => panic!("expected outcomes, got {other:?}"),
         };
-        let bands = match &res.outputs[1] {
+        let cuts = match &res.outputs[1] {
             OutputEntry::Outcomes { entries, .. } => entries.clone(),
             other => panic!("expected outcomes, got {other:?}"),
         };
+        let bands = match &res.outputs[2] {
+            OutputEntry::Outcomes { entries, .. } => entries.clone(),
+            other => panic!("expected outcomes, got {other:?}"),
+        };
+        assert_eq!(on_scale, cuts);
         assert_eq!(cuts, bands);
     }
 

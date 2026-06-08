@@ -187,6 +187,14 @@ mod tests {
     }
 
     #[test]
+    fn scale_with_range_bands() {
+        assert_eq!(
+            desugar_ranges(r#"scale(["FAIL", "PASS"], ..14, 15..)"#).unwrap(),
+            r#"scale(["FAIL", "PASS"], at_most(14), at_least(15))"#
+        );
+    }
+
+    #[test]
     fn does_not_touch_dice_notation() {
         let out = desugar_ranges("2d6 + 3d6").unwrap();
         assert_eq!(out, "2d6 + 3d6");

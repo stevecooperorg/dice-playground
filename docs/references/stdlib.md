@@ -83,7 +83,7 @@ Use for dice that are not uniform—`die_faces([1, 2, 2, 3])` is twice as likely
 def die_faces.bucket(scale: Scale, *bands) -> Outcomes
 ```
 
-Label numeric totals with one inclusive band per scale label (PbtA-style).
+Label numeric totals using bands on `scale`, or pass cut list / bands to override.
 
 ---
 
@@ -263,6 +263,16 @@ Roll `count` separate fair dice—**not** added together yet.
 
 Use when the rule looks at individual results (highest die, count 10s, etc.). Add with
 `.sum()` or the `sum(...)` function when you only need the total. Example: `dice_pool(4, 6)` for four d6s.
+
+---
+
+## dice\_pool.bucket
+
+```python
+def dice_pool.bucket(scale: Scale, *spec) -> Outcomes
+```
+
+Label the pool total using bands on `scale` (sums first).
 
 ---
 
@@ -542,7 +552,7 @@ Rolemaster **open-ended roll** on **1–100** (d100): low open on **01–05**, h
 def open_ended_d100.bucket(scale: Scale, *bands) -> Outcomes
 ```
 
-Label numeric totals with one inclusive band per scale label (PbtA-style).
+Label numeric totals using bands on `scale`, or pass cut list / bands to override.
 
 ---
 
@@ -848,7 +858,7 @@ Blades in the Dark and similar games use the highest die; some rules use second-
 def order_stat.bucket(scale: Scale, *bands) -> Outcomes
 ```
 
-Label numeric totals with one inclusive band per scale label (PbtA-style).
+Label numeric totals using bands on `scale`, or pass cut list / bands to override.
 
 ---
 
@@ -1032,7 +1042,7 @@ Niche rules that drop extremes from both ends; less common than keep-highest / d
 def middle_of.bucket(scale: Scale, *bands) -> Outcomes
 ```
 
-Label numeric totals with one inclusive band per scale label (PbtA-style).
+Label numeric totals using bands on `scale`, or pass cut list / bands to override.
 
 ---
 
@@ -1217,7 +1227,7 @@ The function receives one argument: the list of rolled values, sorted as the eng
 def pool_map.bucket(scale: Scale, *bands) -> Outcomes
 ```
 
-Label numeric totals with one inclusive band per scale label (PbtA-style).
+Label numeric totals using bands on `scale`, or pass cut list / bands to override.
 
 ---
 
@@ -1414,7 +1424,7 @@ Returns a `DieRoll` over how many successes you rolled. `mode` controls 1s and 1
 def success_pool.bucket(scale: Scale, *bands) -> Outcomes
 ```
 
-Label numeric totals with one inclusive band per scale label (PbtA-style).
+Label numeric totals using bands on `scale`, or pass cut list / bands to override.
 
 ---
 
@@ -1577,7 +1587,7 @@ Turn numeric totals or special roll rules into labeled results.
 ## scale
 
 ```python
-def scale(labels: list[str]) -> Scale
+def scale(labels: list[str], *bands) -> Scale
 ```
 
 Name your outcome steps from worst to best (or low to high).
@@ -1588,11 +1598,17 @@ Name your outcome steps from worst to best (or low to high).
 
   Unique non-empty strings, first = lowest rank, last = highest.
 
+* `*bands`: (required)
+
+  Optional; length must match `labels` when provided.
+
 
 
 #### Details
 
-Used with `bucket` or `classify`. Example: `scale(["MISS", "PARTIAL", "FULL"])`.
+With only `labels`, every step has no numeric band (for `classify`). Pass one
+[`IntBand`](StarlarkIntBand) per label to bucket with `roll.bucket(scale)` — e.g.
+`scale(["FAIL", "PASS"], ..14, 15..)`.
 
 ---
 
@@ -1602,7 +1618,7 @@ Used with `bucket` or `classify`. Example: `scale(["MISS", "PARTIAL", "FULL"])`.
 def bucket(dist: DieRoll, scale: Scale, *spec) -> Outcomes
 ```
 
-Split a numeric total into named bands using DC-style cut points.
+Split a numeric total into named bands.
 
 #### Parameters
 
@@ -1618,8 +1634,8 @@ Split a numeric total into named bands using DC-style cut points.
 
 #### Details
 
-With 4 labels you pass **3** cut numbers. Totals at or below the first cut get the first label;
-between cuts get middle labels; above the last cut get the top label. PbtA 2d6+stat moves often use this.
+With bands on `scale` (see `scale(..., ..6, 7..9, 10..)`), call `bucket(roll, scale)` or
+`roll.bucket(scale)`. Otherwise pass **N−1** cut ints or **N** explicit bands (override).
 
 ---
 
@@ -1918,7 +1934,7 @@ Remap matching faces to 0 (`convert(spec, 0)`).
 def bucket(scale: Scale, *bands) -> Outcomes
 ```
 
-Label numeric totals with one inclusive band per scale label (PbtA-style).
+Label numeric totals using bands on `scale`, or pass cut list / bands to override.
 
 ---
 
@@ -2039,6 +2055,16 @@ def p_at_least(k: int, *spec) -> float
 ```
 
 P(at least `k` dice match the optional face spec).
+
+---
+
+## bucket
+
+```python
+def bucket(scale: Scale, *spec) -> Outcomes
+```
+
+Label the pool total using bands on `scale` (sums first).
 
 ---
 

@@ -16,15 +16,15 @@ In the playground, copy the script below into the **editor**, then click **Run**
 ## The script
 
 ```text
-Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"], ..5, 6..10, 11..15, 16..)
 roll = 1d20
-out = roll.bucket(Scale, ..5, 6..10, 11..15, 16..)
+out = roll.bucket(Scale)
 output("check", out)
 output("p_success_plus", out.p_at_least("SUCCESS"))
 ```
 
 - `scale` defines an **ordered** list of labels (low rank → high rank).
-- `roll.bucket(Scale, …)` maps the numeric total into those labels using **one inclusive range per label** (`..5`, `6..10`, `11..15`, `16..`). Same odds as `bucket(roll, Scale, [5, 10, 15])` with cut-style bands.
+- Bands on `Scale` map each total into a label (`..5`, `6..10`, `11..15`, `16..`). `roll.bucket(Scale)` uses them (same odds as `bucket(roll, scale, [5, 10, 15])` with a label-only scale).
 - `output` on a `Outcomes` shows a probability table (each label and its exact chance) in scale order in **text** and **json**.
 - `p_at_least("SUCCESS")` sums every label at that rank or higher.
 

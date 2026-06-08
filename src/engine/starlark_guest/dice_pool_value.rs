@@ -7,8 +7,11 @@ use starlark::starlark_simple_value;
 use starlark::values::starlark_value;
 use starlark::values::{Heap, NoSerialize, StarlarkValue, Value, ValueLike};
 
+use super::bucket_args::outcomes_from_bucket_args;
 use super::die_roll_value::StarlarkDieRoll;
 use super::face_spec::{face_spec_from_value, optional_face_spec_from_values};
+use super::outcomes_value::StarlarkOutcomes;
+use super::scale_value::StarlarkScale;
 use starlark::values::tuple::UnpackTuple;
 
 /// Several dice still treated separately until you call `.sum()` (see function reference).
@@ -47,6 +50,19 @@ fn dice_pool_methods(builder: &mut starlark::environment::MethodsBuilder) {
     /// Add every die in the pool into one total—turns `dice_pool(4, 6)` into the same idea as `4d6`.
     fn sum(this: &StarlarkDicePool) -> anyhow::Result<StarlarkDieRoll> {
         Ok(StarlarkDieRoll::new(this.inner.sum()?))
+    }
+
+    /// Label the pool total using bands on `scale` (sums first).
+    fn bucket(
+        this: &StarlarkDicePool,
+        scale: &StarlarkScale,
+        #[starlark(args)] spec: UnpackTuple<Value<'_>>,
+    ) -> anyhow::Result<StarlarkOutcomes> {
+        Ok(StarlarkOutcomes::new(outcomes_from_bucket_args(
+            &this.inner.sum()?,
+            scale.inner().clone(),
+            spec.items,
+        )?))
     }
 
     /// Keep only matching faces on every die; drop others and renormalize each die.

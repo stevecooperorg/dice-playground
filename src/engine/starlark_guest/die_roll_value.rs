@@ -143,7 +143,7 @@ fn starlark_die_roll_methods(builder: &mut starlark::environment::MethodsBuilder
         Ok(StarlarkDieRoll::new(this.inner.ignore_faces_spec(parsed)?))
     }
 
-    /// Label numeric totals with one inclusive band per scale label (PbtA-style).
+    /// Label numeric totals using bands on `scale`, or pass cut list / bands to override.
     fn bucket(
         this: &StarlarkDieRoll,
         scale: &StarlarkScale,

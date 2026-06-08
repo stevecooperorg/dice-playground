@@ -699,6 +699,25 @@ impl DieRoll {
         }
         DicePool::from_count(n, sides)?.apply_pool_op(keep, PoolOp::KeepLowestSum)
     }
+
+    /// Label numeric totals using the bands on `scale` ([`Outcomes::from_scale`]).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DieRoll, IntBand, Scale};
+    /// let scale = Scale::with_bands(
+    ///     vec!["LOW".into(), "HIGH".into()],
+    ///     vec![IntBand::at_most(3), IntBand::at_least(4)],
+    /// )
+    /// .unwrap();
+    /// let o = DieRoll::die(6).unwrap().bucket(scale).unwrap();
+    /// assert!((o.p_exact("HIGH").unwrap() - 0.5).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn bucket(&self, scale: super::ordinal::Scale) -> Result<super::ordinal::Outcomes> {
+        super::ordinal::Outcomes::from_scale(self, scale)
+    }
 }
 
 impl Default for DieRoll {

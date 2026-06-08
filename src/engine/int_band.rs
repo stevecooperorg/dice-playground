@@ -4,9 +4,13 @@
 //! (`..6` is “at most 6”; `10..` is “at least 10”).
 
 use anyhow::{bail, Result};
+use serde::{Deserialize, Serialize};
 
 /// Inclusive integer interval, optionally open on one or both ends.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// [`IntBand::unbounded`] is a sentinel: a scale label with no numeric band
+/// (use `classify` for naturals and similar).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IntBand {
     pub min: Option<i64>,
     pub max: Option<i64>,
@@ -51,8 +55,34 @@ impl IntBand {
         }
     }
 
+    /// No numeric band (label-only on a scale; never matches a total in `bucket`).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::IntBand;
+    /// let u = IntBand::unbounded();
+    /// assert!(u.is_unbounded());
+    /// assert!(!u.contains(1));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn unbounded() -> Self {
+        Self {
+            min: None,
+            max: None,
+        }
+    }
+
+    /// True when this band does not restrict numeric totals.
+    pub fn is_unbounded(&self) -> bool {
+        self.min.is_none() && self.max.is_none()
+    }
+
     /// True if `x` lies in this band (inclusive bounds where present).
     pub fn contains(&self, x: i64) -> bool {
+        if self.is_unbounded() {
+            return false;
+        }
         if let Some(lo) = self.min {
             if x < lo {
                 return false;
@@ -87,5 +117,20 @@ mod tests {
         assert!(!IntBand::at_most(6).contains(7));
         assert!(IntBand::at_least(10).contains(10));
         assert!(!IntBand::at_least(10).contains(9));
+    }
+
+    #[test]
+    fn unbounded_never_contains() {
+        let u = IntBand::unbounded();
+        assert!(!u.contains(0));
+        assert!(!u.contains(20));
+    }
+
+    #[test]
+    fn unbounded_serde_round_trip() {
+        let u = IntBand::unbounded();
+        let json = serde_json::to_string(&u).unwrap();
+        let back: IntBand = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, u);
     }
 }

@@ -21,28 +21,19 @@ use super::DieRoll;
 /// assert_eq!(scale.rank("HIT").unwrap(), 1);
 /// # Ok::<(), anyhow::Error>(())
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Scale {
     labels: Vec<String>,
+    bands: Vec<IntBand>,
 }
 
 impl Scale {
-    /// Build a scale from an ordered list of unique non-empty labels.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use dice_playground::engine::Scale;
-    /// let scale = Scale::new(vec!["LOW".into(), "HIGH".into()]).unwrap();
-    /// assert_eq!(scale.len(), 2);
-    /// # Ok::<(), anyhow::Error>(())
-    /// ```
-    pub fn new(labels: Vec<String>) -> Result<Self> {
+    fn validate_labels(labels: &[String]) -> Result<()> {
         if labels.is_empty() {
             bail!("scale requires at least one label");
         }
         let mut seen = BTreeSet::new();
-        for label in &labels {
+        for label in labels {
             if label.is_empty() {
                 bail!("scale labels must be non-empty");
             }
@@ -50,7 +41,96 @@ impl Scale {
                 bail!("duplicate label in scale: {label}");
             }
         }
-        Ok(Self { labels })
+        Ok(())
+    }
+
+    fn validate_bounded_bands_no_overlap(bands: &[IntBand]) -> Result<()> {
+        for (i, a) in bands.iter().enumerate() {
+            if a.is_unbounded() {
+                continue;
+            }
+            for (j, b) in bands.iter().enumerate().skip(i + 1) {
+                if b.is_unbounded() {
+                    continue;
+                }
+                if bands_overlap(a, b) {
+                    bail!("scale bands overlap at ranks {i} and {j}");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Build a scale from an ordered list of unique non-empty labels (unbounded bands).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::Scale;
+    /// let scale = Scale::new(vec!["LOW".into(), "HIGH".into()]).unwrap();
+    /// assert_eq!(scale.len(), 2);
+    /// assert!(scale.band_at(0).unwrap().is_unbounded());
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn new(labels: Vec<String>) -> Result<Self> {
+        Self::validate_labels(&labels)?;
+        let bands = vec![IntBand::unbounded(); labels.len()];
+        Ok(Self { labels, bands })
+    }
+
+    /// Build a scale with one inclusive band per label (use [`IntBand::unbounded`] for label-only steps).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{IntBand, Scale};
+    /// let scale = Scale::with_bands(
+    ///     vec!["FAIL".into(), "PASS".into()],
+    ///     vec![IntBand::at_most(14), IntBand::at_least(15)],
+    /// )
+    /// .unwrap();
+    /// assert!(!scale.band_at(1).unwrap().is_unbounded());
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn with_bands(labels: Vec<String>, bands: Vec<IntBand>) -> Result<Self> {
+        Self::validate_labels(&labels)?;
+        if bands.len() != labels.len() {
+            bail!(
+                "scale expects {} band(s) for {} label(s), got {}",
+                labels.len(),
+                labels.len(),
+                bands.len()
+            );
+        }
+        Self::validate_bounded_bands_no_overlap(&bands)?;
+        Ok(Self { labels, bands })
+    }
+
+    /// Inclusive bands in rank order (parallel to [`Scale::labels`]).
+    pub fn bands(&self) -> &[IntBand] {
+        &self.bands
+    }
+
+    /// Band at `rank`, if in range.
+    pub fn band_at(&self, rank: usize) -> Option<IntBand> {
+        self.bands.get(rank).copied()
+    }
+
+    /// Band for `label` on this scale.
+    pub fn band_for(&self, label: &str) -> Result<IntBand> {
+        let r = self.rank(label)?;
+        self.band_at(r)
+            .with_context(|| format!("band missing for label: {label}"))
+    }
+
+    /// True when every label has an unbounded band (classify-only scales).
+    pub fn all_bands_unbounded(&self) -> bool {
+        self.bands.iter().all(|b| b.is_unbounded())
+    }
+
+    /// True when at least one label has a numeric band.
+    pub fn has_bounded_bands(&self) -> bool {
+        !self.all_bands_unbounded()
     }
 
     /// Labels in rank order (index 0 is lowest).
@@ -123,6 +203,63 @@ impl Scale {
     pub fn is_empty(&self) -> bool {
         self.labels.is_empty()
     }
+
+    /// Replace bands on a scale with the same labels (re-validates overlaps).
+    pub fn with_bands_replaced(self, bands: Vec<IntBand>) -> Result<Self> {
+        Self::with_bands(self.labels, bands)
+    }
+}
+
+impl<'de> Deserialize<'de> for Scale {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct ScaleRaw {
+            labels: Vec<String>,
+            #[serde(default)]
+            bands: Vec<IntBand>,
+        }
+        let raw = ScaleRaw::deserialize(deserializer)?;
+        if raw.bands.is_empty() {
+            Scale::new(raw.labels).map_err(serde::de::Error::custom)
+        } else {
+            Scale::with_bands(raw.labels, raw.bands).map_err(serde::de::Error::custom)
+        }
+    }
+}
+
+fn bands_overlap(a: &IntBand, b: &IntBand) -> bool {
+    let lo_a = a.min.unwrap_or(i64::MIN);
+    let hi_a = a.max.unwrap_or(i64::MAX);
+    let lo_b = b.min.unwrap_or(i64::MIN);
+    let hi_b = b.max.unwrap_or(i64::MAX);
+    lo_a <= hi_b && lo_b <= hi_a
+}
+
+pub(crate) fn bands_from_cuts(cuts: &[i64], n_labels: usize) -> Result<Vec<IntBand>> {
+    if n_labels == 0 {
+        bail!("bands_from_cuts requires at least one label");
+    }
+    if n_labels == 1 {
+        return Ok(vec![IntBand::through(i64::MIN, i64::MAX)?]);
+    }
+    if cuts.len() != n_labels - 1 {
+        bail!(
+            "bands_from_cuts expects {} cut(s) for {} label(s), got {}",
+            n_labels - 1,
+            n_labels,
+            cuts.len()
+        );
+    }
+    let mut bands = Vec::with_capacity(n_labels);
+    bands.push(IntBand::at_most(cuts[0]));
+    for w in cuts.windows(2) {
+        bands.push(IntBand::through(w[0] + 1, w[1])?);
+    }
+    bands.push(IntBand::at_least(cuts[n_labels - 2] + 1));
+    Ok(bands)
 }
 
 /// Exact probabilities for named outcomes on a fixed [`Scale`].
@@ -221,20 +358,59 @@ impl Outcomes {
                 bail!("bucket cuts must be strictly increasing");
             }
         }
+        let bands = bands_from_cuts(cuts, n)?;
+        Self::from_scale(dist, scale.with_bands_replaced(bands)?)
+    }
+
+    /// Bucket a numeric [`DieRoll`] using the bands stored on `scale`.
+    ///
+    /// Unbounded bands never receive mass; every outcome must match exactly one bounded band.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DieRoll, IntBand, Outcomes, Scale};
+    /// let scale = Scale::with_bands(
+    ///     vec!["FAIL".into(), "PASS".into()],
+    ///     vec![IntBand::at_most(14), IntBand::at_least(15)],
+    /// )
+    /// .unwrap();
+    /// let d20 = DieRoll::die(20).unwrap();
+    /// let o = Outcomes::from_scale(&d20, scale).unwrap();
+    /// assert!((o.p_exact("PASS").unwrap() - 6.0 / 20.0).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn from_scale(dist: &DieRoll, scale: Scale) -> Result<Self> {
+        if scale.all_bands_unbounded() {
+            bail!("scale has no numeric bands; pass bands to scale(...) or use bucket(..., cuts)");
+        }
+        let bands = scale.bands();
         let mut mass = BTreeMap::new();
         for (x, p) in dist.entries() {
             if p <= 0.0 {
                 continue;
             }
-            let idx = bucket_index(x, cuts, n);
+            let mut matches = 0usize;
+            let mut label_idx = None;
+            for (i, band) in bands.iter().enumerate() {
+                if band.is_unbounded() {
+                    continue;
+                }
+                if band.contains(x) {
+                    matches += 1;
+                    label_idx = Some(i);
+                }
+            }
+            if matches == 0 {
+                bail!("outcome {x} is not covered by any band");
+            }
+            if matches > 1 {
+                bail!("outcome {x} lies in more than one band");
+            }
+            let idx = label_idx.context("band index")?;
             let label = scale
                 .label_at(idx)
-                .ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "bucket_index {idx} out of range for scale len {}",
-                        scale.len()
-                    )
-                })?
+                .ok_or_else(|| anyhow::anyhow!("label index {idx} out of range"))?
                 .to_owned();
             *mass.entry(label).or_insert(0.0) += p;
         }
@@ -270,33 +446,7 @@ impl Outcomes {
                 bands.len()
             );
         }
-        let mut mass = BTreeMap::new();
-        for (x, p) in dist.entries() {
-            if p <= 0.0 {
-                continue;
-            }
-            let mut matches = 0usize;
-            let mut label_idx = None;
-            for (i, band) in bands.iter().enumerate() {
-                if band.contains(x) {
-                    matches += 1;
-                    label_idx = Some(i);
-                }
-            }
-            if matches == 0 {
-                bail!("outcome {x} is not covered by any band");
-            }
-            if matches > 1 {
-                bail!("outcome {x} lies in more than one band");
-            }
-            let idx = label_idx.context("band index")?;
-            let label = scale
-                .label_at(idx)
-                .ok_or_else(|| anyhow::anyhow!("label index {idx} out of range"))?
-                .to_owned();
-            *mass.entry(label).or_insert(0.0) += p;
-        }
-        Self::validate_and_normalize(scale, mass)
+        Self::from_scale(dist, scale.with_bands_replaced(bands.to_vec())?)
     }
 
     /// Map each numeric outcome through `classify(x) -> label` and accumulate mass.
@@ -463,21 +613,6 @@ impl Outcomes {
     }
 }
 
-fn bucket_index(x: i64, cuts: &[i64], n_labels: usize) -> usize {
-    if n_labels <= 1 {
-        return 0;
-    }
-    if x <= cuts[0] {
-        return 0;
-    }
-    for (i, cut) in cuts.iter().enumerate().take(n_labels - 1).skip(1) {
-        if x <= *cut {
-            return i;
-        }
-    }
-    n_labels - 1
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -539,6 +674,41 @@ mod tests {
         assert!((ld.p_exact("CRITICAL_FAIL").unwrap() - 1.0 / 20.0).abs() < 1e-12);
         assert!((ld.p_exact("CRITICAL_SUCCESS").unwrap() - 1.0 / 20.0).abs() < 1e-12);
         assert!((ld.p_exact("SUCCESS").unwrap() - 5.0 / 20.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn from_scale_matches_with_bands_on_scale() {
+        let scale = Scale::with_bands(
+            vec!["LOW".into(), "MID".into(), "HIGH".into()],
+            vec![
+                IntBand::at_most(2),
+                IntBand::through(3, 4).unwrap(),
+                IntBand::at_least(5),
+            ],
+        )
+        .unwrap();
+        let d6 = DieRoll::die(6).unwrap();
+        let o = Outcomes::from_scale(&d6, scale).unwrap();
+        assert!((o.p_exact("LOW").unwrap() - 2.0 / 6.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn from_scale_all_unbounded_errors() {
+        let scale = Scale::new(vec!["A".into(), "B".into()]).unwrap();
+        let d6 = DieRoll::die(6).unwrap();
+        assert!(Outcomes::from_scale(&d6, scale).is_err());
+    }
+
+    #[test]
+    fn with_bands_rejects_overlap() {
+        let err = Scale::with_bands(
+            vec!["A".into(), "B".into()],
+            vec![
+                IntBand::through(1, 5).unwrap(),
+                IntBand::through(3, 6).unwrap(),
+            ],
+        );
+        assert!(err.is_err());
     }
 
     #[test]

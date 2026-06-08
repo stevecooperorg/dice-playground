@@ -1,6 +1,6 @@
 use super::super::{DieRoll, Outcomes, Scale};
 use super::int_band_value::StarlarkIntBand;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use starlark::values::list::UnpackList;
 use starlark::values::{UnpackValue, Value, ValueLike};
 
@@ -29,7 +29,7 @@ pub fn outcomes_from_bucket_args(
 ) -> Result<Outcomes> {
     let items = expand_bucket_spec_items(spec);
     if items.is_empty() {
-        bail!("bucket requires cut list or one IntBand per label");
+        return Outcomes::from_scale(dist, scale);
     }
     if items[0].downcast_ref::<StarlarkIntBand>().is_some() {
         let mut bands = Vec::with_capacity(items.len());

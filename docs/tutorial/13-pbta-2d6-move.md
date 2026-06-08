@@ -24,18 +24,18 @@ In the playground, copy the script below into the **editor**, then click **Run**
 ## The script
 
 ```text
-Scale = scale(["MISS", "PARTIAL", "FULL_SUCCESS"])
+Scale = scale(["MISS", "PARTIAL", "FULL_SUCCESS"], ..6, 7..9, 10..)
 STAT = 2
 
 roll = 2d6 + STAT
-out = roll.bucket(Scale, ..6, 7..9, 10..)
+out = roll.bucket(Scale)
 output("move", out)
 output("p_full_success", out.p_at_least("FULL_SUCCESS"))
 output("p_partial_or_better", out.p_at_least("PARTIAL"))
 ```
 
 - `2d6 + STAT` is the usual PbtA notation (lesson 3); same odds as `shift(2d6, STAT)` if you prefer the function form.
-- `roll.bucket(Scale, ..6, 7..9, 10..)` gives one inclusive band per label (same odds as `bucket(roll, Scale, [6, 9])`).
+- Bands on `Scale` give one inclusive interval per label; `roll.bucket(Scale)` uses them (same odds as `bucket(roll, scale, [6, 9])` with a label-only scale).
 - `p_at_least("PARTIAL")` is the chance you do **not** miss (partial or full).
 
 ## Reading the result

@@ -238,6 +238,7 @@ pub fn render_stdlib_reference_markdown() -> String {
             "p_any",
             "p_none",
             "p_at_least",
+            "bucket",
         ],
         &dice_pool_type_docs(),
     );

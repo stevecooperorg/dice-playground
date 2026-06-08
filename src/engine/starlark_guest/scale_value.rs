@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::super::Scale;
+use super::super::{IntBand, Scale};
 use allocative::Allocative;
 use starlark::any::ProvidesStaticType;
 use starlark::starlark_simple_value;
@@ -23,9 +23,31 @@ impl StarlarkScale {
     }
 }
 
+fn format_band(b: IntBand) -> String {
+    match (b.min, b.max) {
+        (Some(lo), Some(hi)) => format!("{lo}..{hi}"),
+        (None, Some(hi)) => format!("..{hi}"),
+        (Some(lo), None) => format!("{lo}.."),
+        (None, None) => "..".to_owned(),
+    }
+}
+
 impl fmt::Display for StarlarkScale {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Scale({:?})", self.inner.labels())
+        let labels = self.inner.labels();
+        let bands = self.inner.bands();
+        if self.inner.has_bounded_bands() {
+            write!(f, "Scale([")?;
+            for (i, label) in labels.iter().enumerate() {
+                if i > 0 {
+                    write!(f, ", ")?;
+                }
+                write!(f, "({label:?}, {})", format_band(bands[i]))?;
+            }
+            write!(f, "])")
+        } else {
+            write!(f, "Scale({labels:?})")
+        }
     }
 }
 

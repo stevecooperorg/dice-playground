@@ -267,6 +267,25 @@ impl DicePool {
     /// assert!((total.mean() - 7.0).abs() < 1e-9);
     /// # Ok::<(), anyhow::Error>(())
     /// ```
+    /// Label the pool **total** using the bands on `scale` (sums first, then buckets).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, IntBand, Scale};
+    /// let scale = Scale::with_bands(
+    ///     vec!["LOW".into(), "HIGH".into()],
+    ///     vec![IntBand::at_most(6), IntBand::at_least(7)],
+    /// )
+    /// .unwrap();
+    /// let o = DicePool::from_count(2, 6).unwrap().bucket(scale).unwrap();
+    /// assert!(o.p_exact("HIGH").unwrap() > 0.0);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn bucket(&self, scale: super::ordinal::Scale) -> Result<super::ordinal::Outcomes> {
+        self.sum()?.bucket(scale)
+    }
+
     pub fn sum(&self) -> Result<DieRoll> {
         if let Some((n, sides)) = self.uniform_fair_params() {
             return DieRoll::pool_sum(n, sides);
