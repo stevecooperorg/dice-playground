@@ -29,7 +29,13 @@ In the playground, copy the script below into the **editor** and click **Run**. 
 ## The script
 
 ```text
-Scale = scale(["INCORRECT", "CORRECT_COMPLICATION", "CORRECT", "CONSPIRACY_REVEAL"], ..6, 7..9, 10..11, 12..)
+Scale = (
+    scale()
+    .step("INCORRECT", ..6)
+    .step("CORRECT_COMPLICATION", 7..9)
+    .step("CORRECT", 10..11)
+    .step("CONSPIRACY_REVEAL", 12..)
+)
 
 COMPLEXITY = 6
 CLUES = 5

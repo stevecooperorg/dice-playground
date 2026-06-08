@@ -189,8 +189,8 @@ mod tests {
     #[test]
     fn scale_with_range_bands() {
         assert_eq!(
-            desugar_ranges(r#"scale(["FAIL", "PASS"], ..14, 15..)"#).unwrap(),
-            r#"scale(["FAIL", "PASS"], at_most(14), at_least(15))"#
+            desugar_ranges(r#"scale().step("FAIL", ..14).step("PASS", 15..)"#).unwrap(),
+            r#"scale().step("FAIL", at_most(14)).step("PASS", at_least(15))"#
         );
     }
 

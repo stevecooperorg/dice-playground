@@ -1587,28 +1587,14 @@ Turn numeric totals or special roll rules into labeled results.
 ## scale
 
 ```python
-def scale(labels: list[str], *bands) -> Scale
+def scale() -> Scale
 ```
 
-Name your outcome steps from worst to best (or low to high).
+Start an ordered outcome scale; chain `.step(label)` or `.step(label, band)` on the result.
 
-#### Parameters
+(`with` is reserved in Starlark.) Example: `scale().step("MISS", ..6).step("PARTIAL", 7..9)`.
 
-* `labels`: (required)
-
-  Unique non-empty strings, first = lowest rank, last = highest.
-
-* `*bands`: (required)
-
-  Optional; length must match `labels` when provided.
-
-
-
-#### Details
-
-With only `labels`, every step has no numeric band (for `classify`). Pass one
-[`IntBand`](StarlarkIntBand) per label to bucket with `roll.bucket(scale)` — e.g.
-`scale(["FAIL", "PASS"], ..14, 15..)`.
+---
 
 ---
 
@@ -1628,13 +1614,13 @@ Split a numeric total into named bands.
 
 * `scale`: (required)
 
-  From `scale(...)`.
+  Built with `scale()` and `.step`.
 
 
 
 #### Details
 
-With bands on `scale` (see `scale(..., ..6, 7..9, 10..)`), call `bucket(roll, scale)` or
+With bands on `scale` (from `scale().step(..., band)`), call `bucket(roll, scale)` or
 `roll.bucket(scale)`. Otherwise pass **N−1** cut ints or **N** explicit bands (override).
 
 ---
@@ -2103,6 +2089,22 @@ def p_at_most(label: str) -> float
 ```
 
 Chance of this outcome **or any worse one**—e.g. “failure or partial failure”.
+
+---
+
+# Scale methods
+
+Build ordered outcome labels and optional numeric bands after `scale()`.
+
+## step
+
+```python
+def step(label: str, *band) -> Scale
+```
+
+Append one outcome label (low → high). With no band, the step is for `classify` only.
+
+With a band (`IntBand` or desugared `..6`, `7..9`, `10..`), the step buckets numeric totals.
 
 ---
 

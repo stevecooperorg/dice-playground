@@ -1,6 +1,12 @@
 # Ordered outcome bands on a numeric roll (d20-style thresholds).
-Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+Scale = (
+    scale()
+    .step("CRITICAL_FAIL", ..5)
+    .step("FAIL", 6..10)
+    .step("SUCCESS", 11..15)
+    .step("CRITICAL_SUCCESS", 16..)
+)
 roll = 1d20
-out = roll.bucket(Scale, ..5, 6..10, 11..15, 16..)
+out = roll.bucket(Scale)
 output("check", out)
 output("p_success_plus", out.p_at_least("SUCCESS"))

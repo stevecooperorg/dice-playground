@@ -4,7 +4,14 @@ HP = 4
 ARMOR = 2
 STR = 11
 
-Scale = scale(["NO_EFFECT", "HIT_PROTECTION_LOSS", "SCAR", "STR_DOWN_OK", "CRITICAL_DAMAGE"])
+Scale = (
+    scale()
+    .step("NO_EFFECT")
+    .step("HIT_PROTECTION_LOSS")
+    .step("SCAR")
+    .step("STR_DOWN_OK")
+    .step("CRITICAL_DAMAGE")
+)
 
 def damage(horn):
     d = horn - ARMOR

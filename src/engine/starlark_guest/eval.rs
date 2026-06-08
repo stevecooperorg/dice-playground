@@ -504,40 +504,12 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         Ok(StarlarkDieRoll::new(dist.inner.shift(i64::from(delta))?))
     }
 
-    /// Name your outcome steps from worst to best (or low to high).
+    /// Start an ordered outcome scale; chain `.step(label)` or `.step(label, band)` on the result.
     ///
-    /// With only `labels`, every step has no numeric band (for `classify`). Pass one
-    /// [`IntBand`](StarlarkIntBand) per label to bucket with `roll.bucket(scale)` — e.g.
-    /// `scale(["FAIL", "PASS"], ..14, 15..)`.
-    ///
-    /// # Arguments
-    /// * `labels`: Unique non-empty strings, first = lowest rank, last = highest.
-    /// * `bands`: Optional; length must match `labels` when provided.
+    /// (`with` is reserved in Starlark.) Example: `scale().step("MISS", ..6).step("PARTIAL", 7..9)`.
     #[starlark(as_type = StarlarkScale)]
-    fn scale(
-        labels: UnpackList<String>,
-        #[starlark(args)] bands: UnpackTuple<Value<'_>>,
-    ) -> anyhow::Result<StarlarkScale> {
-        let labels = labels.items;
-        if bands.items.is_empty() {
-            return Ok(StarlarkScale::new(Scale::new(labels)?));
-        }
-        if bands.items.len() != labels.len() {
-            anyhow::bail!(
-                "scale expects {} band(s) for {} label(s), got {}",
-                labels.len(),
-                labels.len(),
-                bands.items.len()
-            );
-        }
-        let mut parsed = Vec::with_capacity(bands.items.len());
-        for (i, v) in bands.items.iter().enumerate() {
-            let band = v
-                .downcast_ref::<StarlarkIntBand>()
-                .with_context(|| format!("scale band {i}: expected IntBand, got {v}"))?;
-            parsed.push(band.inner());
-        }
-        Ok(StarlarkScale::new(Scale::with_bands(labels, parsed)?))
+    fn scale() -> anyhow::Result<StarlarkScale> {
+        Ok(StarlarkScale::new(Scale::empty()))
     }
 
     /// Inclusive closed integer interval (same as desugared `6..94`).
@@ -563,12 +535,12 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
 
     /// Split a numeric total into named bands.
     ///
-    /// With bands on `scale` (see `scale(..., ..6, 7..9, 10..)`), call `bucket(roll, scale)` or
+    /// With bands on `scale` (from `scale().step(..., band)`), call `bucket(roll, scale)` or
     /// `roll.bucket(scale)`. Otherwise pass **N−1** cut ints or **N** explicit bands (override).
     ///
     /// # Arguments
     /// * `dist`: Numeric roll (e.g. `2d6 + stat`).
-    /// * `scale`: From `scale(...)`.
+    /// * `scale`: Built with `scale()` and `.step`.
     /// * `cuts` / `bands`: Optional override thresholds or bands.
     #[starlark(as_type = StarlarkOutcomes)]
     fn bucket(
@@ -840,7 +812,7 @@ output("two_d6", d(6) + d(6))
     #[test]
     fn eval_bucket_and_ordinal_output() {
         let src = r#"
-Scale = scale(["FAIL", "SUCCESS"])
+Scale = scale().step("FAIL").step("SUCCESS")
 roll = d(6)
 out = bucket(roll, Scale, [3])
 output("bands", out)
@@ -874,18 +846,24 @@ output("p_success", out.p_at_least("SUCCESS"))
     #[test]
     fn eval_classify_d20_crit_bands() {
         let src = r#"
-Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
-DC = 15
-MOD = 0
-def label(n):
-    if n == 1:
-        return "CRITICAL_FAIL"
-    if n == 20:
-        return "CRITICAL_SUCCESS"
-    if n + MOD >= DC:
-        return "SUCCESS"
-    return "FAIL"
-out = classify(d(20), Scale, label)
+def natural_check_scale(labels, dc, mod):
+    t = dc - mod
+    s = scale().step(labels[0], 1..1)
+    if t >= 20:
+        s = s.step(labels[1], 2..19).step(labels[2])
+    elif t >= 2:
+        s = s.step(labels[1], through(2, t - 1))
+        if t <= 19:
+            s = s.step(labels[2], through(t, 19))
+        else:
+            s = s.step(labels[2])
+    else:
+        s = s.step(labels[1]).step(labels[2], 2..19)
+    return s.step(labels[3], 20..20)
+
+LABELS = ["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"]
+Scale = natural_check_scale(LABELS, 15, 0)
+out = d(20).bucket(Scale)
 output("check", out)
 "#;
         let res = eval_source("test.star", src).expect("eval");
@@ -905,7 +883,7 @@ output("check", out)
     #[test]
     fn eval_joint_classify_two_d6() {
         let src = r#"
-Scale = scale(["FAILURE", "MIXED", "SUCCESS"])
+Scale = scale().step("FAILURE").step("MIXED").step("SUCCESS")
 def label(w, b):
     if w >= 4 and b >= 4:
         return "SUCCESS"
@@ -931,7 +909,7 @@ output("pbtA", out)
     #[test]
     fn eval_bucket_rejects_wrong_cut_count() {
         let src = r#"
-Scale = scale(["A", "B", "C"])
+Scale = scale().step("A").step("B").step("C")
 out = bucket(d(6), Scale, [3])
 "#;
         let err = eval_source("test.star", src).unwrap_err();
@@ -942,7 +920,7 @@ out = bucket(d(6), Scale, [3])
     #[test]
     fn eval_joint_classify_rejects_unknown_label() {
         let src = r#"
-Scale = scale(["A", "B"])
+Scale = scale().step("A").step("B")
 def bad(w, b):
     return "Z"
 joint_classify(d(2), d(2), Scale, bad)
@@ -1041,8 +1019,8 @@ output("ignored_sum", total)
     #[test]
     fn eval_pbta_bucket_bands_matches_cuts() {
         let src = r#"
-Scale = scale(["MISS", "PARTIAL", "FULL"], ..6, 7..9, 10..)
-ScalePlain = scale(["MISS", "PARTIAL", "FULL"])
+Scale = scale().step("MISS", ..6).step("PARTIAL", 7..9).step("FULL", 10..)
+ScalePlain = scale().step("MISS").step("PARTIAL").step("FULL")
 STAT = 2
 roll = sum(dice_pool(2, 6)) + STAT
 by_on_scale = roll.bucket(Scale)
@@ -1072,7 +1050,7 @@ output("bands", by_bands)
     #[test]
     fn eval_range_desugar_in_bucket() {
         let src = r#"
-Scale = scale(["LOW", "HIGH"])
+Scale = scale().step("LOW").step("HIGH")
 out = bucket(d(6) + 3, Scale, ..5, 6..)
 output("x", out)
 "#;

@@ -31,7 +31,7 @@ In the playground, copy the script below into the **editor** and click **Run**. 
 ## The script
 
 ```text
-Scale = scale(["BAD", "MESSY", "CLEAN", "CRITICAL"])
+Scale = scale().step("BAD").step("MESSY").step("CLEAN").step("CRITICAL")
 
 def blades_pool(faces):
     high = max(faces)

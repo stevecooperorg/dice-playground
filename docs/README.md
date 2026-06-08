@@ -32,7 +32,7 @@ A **step-by-step** introduction to the language. Work through the lessons in ord
 | [9. Pool success counts](tutorial/09-pool-success-counts.md) | `count`, `p_any`, `p_at_least` |
 | [10. Many checks at once](tutorial/10-tables.md) | Modifier grid |
 | [11. Ordered outcome labels](tutorial/11-ordered-outcomes.md) | Named bands on a roll |
-| [12. D&amp;D 5e d20 checks](tutorial/12-dnd5e-d20-check.md) | Nat 1/20, adv/dis, `classify` |
+| [12. D&amp;D 5e d20 checks](tutorial/12-dnd5e-d20-check.md) | Nat 1/20, adv/dis, `scale().step` + `bucket` |
 | [13. PbtA 2d6 move](tutorial/13-pbta-2d6-move.md) | Miss / partial / full on total |
 
 Start with [lesson 1](tutorial/01-one-die.md): copy the script into the playground and read the distribution under **Output**.

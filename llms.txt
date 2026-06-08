@@ -16,7 +16,7 @@
 | **`DieRoll`** | A single numeric outcome distribution: one die, summed dice (`2d6`, `4d6dl1`), success counts, modifiers applied to every face. |
 | **`DicePool`** | Several dice rolled **together** but not summed—rules that care about **individual faces** (count 1s, highest die, Blades crit on two 6s). Use `.sum()` or `sum(pool)` when only the total matters. |
 | **`Outcomes`** | Named ordered bands (miss / partial / hit, crit fail / success). Built with `bucket` or `classify`. |
-| **`Scale`** | Ordered label list (low → high) from `scale([...])`; required by `bucket`, `classify`, `joint_classify`. |
+| **`Scale`** | Ordered labels (low → high) from `scale().step(...)`; required by `bucket`, `classify`, `joint_classify`. |
 | **`float`** | Scalar probability from `.p_ge()`, `.pmf()`, `.p_at_least()`, etc.—pass to `output("label", prob)`. |
 | **`prob_table`** | Independent labeled rows (modifier grids); from `prob_table(rows)`. |
 
@@ -136,16 +136,21 @@ Storyteller-style pool: success on **even** faces or **max** face; `mode` is `"b
 ### Named outcomes
 
 ```python
-scale(labels: list[str]) -> Scale
+scale() -> Scale
 ```
-Ordered labels, **first = lowest rank**, **last = highest**.
+Start an empty outcome ladder. Chain **`.step(label)`** (classify-only, unbounded band) or **`.step(label, band)`** with inclusive ranges (`..6`, `7..9`, `10..`). Starlark reserves `with`, so the method is **`step`**, not `with`.
+
+```python
+Scale.step(label: str) -> Scale
+Scale.step(label: str, band) -> Scale
+```
 
 ```python
 bucket(dist: DieRoll, scale: Scale, cuts: list[int]) -> Outcomes
-bucket(dist: DieRoll, scale: Scale, band, ...) -> Outcomes  # one IntBand per label
-roll.bucket(scale, ..6, 7..9, 10..) -> Outcomes             # method form (PbtA)
+bucket(dist: DieRoll, scale: Scale, band, ...) -> Outcomes  # override bands
+roll.bucket(scale) -> Outcomes                              # bands on scale from .step
 ```
-Split a **numeric total** into bands. **Cuts:** with `L` labels, pass **`L - 1`** increasing integers (`[6, 9]`). **Bands:** pass **`L`** inclusive ranges (`..6`, `through(7, 9)`, `10..`). Face filters (`keep`, `ignore`, etc.) change per-die outcomes; `p_ge(n)` on a total is a **probability**.
+Split a **numeric total** into bands. Prefer bands on the scale via `.step(label, band)`; optional **cuts** or extra bands on `bucket` override. Face filters (`keep`, `ignore`, etc.) change per-die outcomes; `p_ge(n)` on a total is a **probability**.
 
 ```python
 classify(dist: DieRoll, scale: Scale, classify_fn) -> Outcomes
@@ -227,15 +232,15 @@ output("distribution", roll)
 
 **PbtA-style bands on total:**
 ```text
-Scale = scale(["MISS", "PARTIAL", "HIT"])
-out = bucket(2d6 + 2, Scale, [6, 9])
+Scale = scale().step("MISS", ..6).step("PARTIAL", 7..9).step("HIT", 10..)
+out = (2d6 + 2).bucket(Scale)
 output("move", out)
 output("p_hit_plus", out.p_at_least("HIT"))
 ```
 
 **D&D 5e: nat 1/20 on kept die, then modifier vs DC:**
 ```text
-Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+Scale = scale().step("CRITICAL_FAIL").step("FAIL").step("SUCCESS").step("CRITICAL_SUCCESS")
 DC = 15
 MOD = 5
 
@@ -254,7 +259,7 @@ output("check", classify(natural, Scale, label))
 
 **Pool faces matter (3d6, two 1s crit fail, two 6s crit success, else sum vs target):**
 ```text
-Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+Scale = scale().step("CRITICAL_FAIL").step("FAIL").step("SUCCESS").step("CRITICAL_SUCCESS")
 TARGET = 10
 
 def pool_outcome(faces):

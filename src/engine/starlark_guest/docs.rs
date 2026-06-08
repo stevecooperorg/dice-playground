@@ -7,6 +7,7 @@ use super::dice_pool_value::StarlarkDicePool;
 use super::die_roll_value::StarlarkDieRoll;
 use super::eval::dice_globals;
 use super::outcomes_value::StarlarkOutcomes;
+use super::scale_value::StarlarkScale;
 
 /// Documentation for the full eval environment (Starlark standard library + dice builtins).
 pub fn full_environment_docs() -> DocModule {
@@ -251,7 +252,20 @@ pub fn render_stdlib_reference_markdown() -> String {
         &outcomes_type_docs(),
     );
 
+    append_type_methods(
+        &mut out,
+        "Scale methods",
+        "Build ordered outcome labels and optional numeric bands after `scale()`.",
+        &["step"],
+        &scale_type_docs(),
+    );
+
     out
+}
+
+/// Documentation for `Scale` type methods (`with`).
+pub fn scale_type_docs() -> DocType {
+    DocType::from_starlark_value::<StarlarkScale>()
 }
 
 #[cfg(test)]

@@ -24,7 +24,7 @@ In the playground, copy the script below into the **editor**, then click **Run**
 ## The script
 
 ```text
-Scale = scale(["MISS", "PARTIAL", "FULL_SUCCESS"], ..6, 7..9, 10..)
+Scale = scale().step("MISS", ..6).step("PARTIAL", 7..9).step("FULL_SUCCESS", 10..)
 STAT = 2
 
 roll = 2d6 + STAT
@@ -51,4 +51,4 @@ With `STAT = 0`, the bands match the core rulebook: 15/36 miss, 15/36 partial, 6
 
 ## What’s next
 
-See the [user guide index](../README.md). Lesson 11 covered when you need `classify` on a **natural** die (D&D 5e); PbtA totals stay on `bucket`.
+See the [user guide index](../README.md). Lesson 12 buckets the **natural d20** with `scale().step(...)`; PbtA totals use the same builder with bands on the **total**.

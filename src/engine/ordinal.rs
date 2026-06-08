@@ -61,6 +61,37 @@ impl Scale {
         Ok(())
     }
 
+    /// Empty scale for fluent construction via [`Scale::with_step`] (Starlark: `scale().step(...)`).
+    pub fn empty() -> Self {
+        Self {
+            labels: Vec::new(),
+            bands: Vec::new(),
+        }
+    }
+
+    /// Append one label (low → high) and band; validates duplicates and bounded overlaps.
+    pub fn with_step(mut self, label: String, band: IntBand) -> Result<Self> {
+        if label.is_empty() {
+            bail!("scale labels must be non-empty");
+        }
+        if self.labels.iter().any(|l| l == &label) {
+            bail!("duplicate label in scale: {label}");
+        }
+        if !band.is_unbounded() {
+            for prev in &self.bands {
+                if prev.is_unbounded() {
+                    continue;
+                }
+                if bands_overlap(prev, &band) {
+                    bail!("scale band for {label} overlaps a previous bounded band");
+                }
+            }
+        }
+        self.labels.push(label);
+        self.bands.push(band);
+        Ok(self)
+    }
+
     /// Build a scale from an ordered list of unique non-empty labels (unbounded bands).
     ///
     /// # Example
@@ -382,7 +413,7 @@ impl Outcomes {
     /// ```
     pub fn from_scale(dist: &DieRoll, scale: Scale) -> Result<Self> {
         if scale.all_bands_unbounded() {
-            bail!("scale has no numeric bands; pass bands to scale(...) or use bucket(..., cuts)");
+            bail!("scale has no numeric bands; use scale().step(label, band) or bucket(..., cuts)");
         }
         let bands = scale.bands();
         let mut mass = BTreeMap::new();
@@ -617,6 +648,51 @@ impl Outcomes {
 mod tests {
     use super::*;
 
+    fn scale_from_d20_adjusted_target(labels: &[String], dc: i64, mod_: i64) -> Result<Scale> {
+        if labels.len() != 4 {
+            bail!("expected 4 labels");
+        }
+        let t = dc - mod_;
+        let mut s = Scale::empty().with_step(labels[0].clone(), IntBand::through(1, 1)?)?;
+        let fail = if t >= 20 {
+            IntBand::through(2, 19)?
+        } else if t >= 2 {
+            IntBand::through(2, t - 1)?
+        } else {
+            IntBand::unbounded()
+        };
+        s = s.with_step(labels[1].clone(), fail)?;
+        let success = if t <= 19 {
+            IntBand::through(t.max(2), 19)?
+        } else {
+            IntBand::unbounded()
+        };
+        s = s.with_step(labels[2].clone(), success)?;
+        s.with_step(labels[3].clone(), IntBand::through(20, 20)?)
+    }
+
+    #[test]
+    fn with_step_rejects_overlap() {
+        let err = Scale::empty()
+            .with_step("A".into(), IntBand::through(1, 5).unwrap())
+            .unwrap()
+            .with_step("B".into(), IntBand::through(3, 10).unwrap())
+            .unwrap_err();
+        assert!(err.to_string().contains("overlap"));
+    }
+
+    #[test]
+    fn with_step_builds_pbta_scale() {
+        let scale = Scale::empty()
+            .with_step("MISS".into(), IntBand::at_most(6))
+            .unwrap()
+            .with_step("PARTIAL".into(), IntBand::through(7, 9).unwrap())
+            .unwrap()
+            .with_step("FULL".into(), IntBand::at_least(10))
+            .unwrap();
+        assert_eq!(scale.len(), 3);
+    }
+
     #[test]
     fn label_bands_match_cuts_for_d6() {
         let scale = Scale::new(vec!["LOW".into(), "MID".into(), "HIGH".into()]).unwrap();
@@ -674,6 +750,73 @@ mod tests {
         assert!((ld.p_exact("CRITICAL_FAIL").unwrap() - 1.0 / 20.0).abs() < 1e-12);
         assert!((ld.p_exact("CRITICAL_SUCCESS").unwrap() - 1.0 / 20.0).abs() < 1e-12);
         assert!((ld.p_exact("SUCCESS").unwrap() - 5.0 / 20.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn d20_adjusted_target_matches_classify_mod_zero() {
+        let labels = vec![
+            "CRITICAL_FAIL".into(),
+            "FAIL".into(),
+            "SUCCESS".into(),
+            "CRITICAL_SUCCESS".into(),
+        ];
+        let by_classify = {
+            let scale = Scale::new(labels.clone()).unwrap();
+            let d20 = DieRoll::die(20).unwrap();
+            let dc = 15_i64;
+            Outcomes::from_classify(&d20, scale, |n| {
+                if n == 1 {
+                    return "CRITICAL_FAIL".into();
+                }
+                if n == 20 {
+                    return "CRITICAL_SUCCESS".into();
+                }
+                if n >= dc {
+                    "SUCCESS".into()
+                } else {
+                    "FAIL".into()
+                }
+            })
+            .unwrap()
+        };
+        let scale = scale_from_d20_adjusted_target(&labels, 15, 0).unwrap();
+        let by_bucket = Outcomes::from_scale(&DieRoll::die(20).unwrap(), scale).unwrap();
+        for label in ["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"] {
+            assert!(
+                (by_classify.p_exact(label).unwrap() - by_bucket.p_exact(label).unwrap()).abs()
+                    < 1e-12
+            );
+        }
+    }
+
+    #[test]
+    fn d20_adjusted_target_when_t_at_most_two() {
+        let labels = vec![
+            "CRITICAL_FAIL".into(),
+            "FAIL".into(),
+            "SUCCESS".into(),
+            "CRITICAL_SUCCESS".into(),
+        ];
+        let scale = scale_from_d20_adjusted_target(&labels, 10, 9).unwrap();
+        let o = Outcomes::from_scale(&DieRoll::die(20).unwrap(), scale).unwrap();
+        assert!((o.p_exact("CRITICAL_FAIL").unwrap() - 1.0 / 20.0).abs() < 1e-12);
+        assert!((o.p_exact("FAIL").unwrap() - 0.0).abs() < 1e-12);
+        assert!((o.p_exact("SUCCESS").unwrap() - 18.0 / 20.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn d20_adjusted_target_when_t_at_least_twenty() {
+        let labels = vec![
+            "CRITICAL_FAIL".into(),
+            "FAIL".into(),
+            "SUCCESS".into(),
+            "CRITICAL_SUCCESS".into(),
+        ];
+        let scale = scale_from_d20_adjusted_target(&labels, 10, -15).unwrap();
+        let o = Outcomes::from_scale(&DieRoll::die(20).unwrap(), scale).unwrap();
+        assert!((o.p_exact("SUCCESS").unwrap() - 0.0).abs() < 1e-12);
+        assert!((o.p_exact("FAIL").unwrap() - 18.0 / 20.0).abs() < 1e-12);
+        assert!((o.p_exact("CRITICAL_SUCCESS").unwrap() - 1.0 / 20.0).abs() < 1e-12);
     }
 
     #[test]

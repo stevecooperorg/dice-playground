@@ -1,11 +1,15 @@
 use std::fmt;
 
 use super::super::{IntBand, Scale};
+use super::int_band_value::StarlarkIntBand;
 use allocative::Allocative;
+use anyhow::Context;
 use starlark::any::ProvidesStaticType;
+use starlark::environment::Methods;
 use starlark::starlark_simple_value;
 use starlark::values::starlark_value;
-use starlark::values::{NoSerialize, StarlarkValue};
+use starlark::values::tuple::UnpackTuple;
+use starlark::values::{NoSerialize, StarlarkValue, Value, ValueLike};
 
 #[derive(Debug, Clone, ProvidesStaticType, NoSerialize, Allocative)]
 pub struct StarlarkScale {
@@ -25,6 +29,7 @@ impl StarlarkScale {
 
 fn format_band(b: IntBand) -> String {
     match (b.min, b.max) {
+        (Some(lo), Some(hi)) if lo == hi => format!("{lo}..{hi}"),
         (Some(lo), Some(hi)) => format!("{lo}..{hi}"),
         (None, Some(hi)) => format!("..{hi}"),
         (Some(lo), None) => format!("{lo}.."),
@@ -36,22 +41,58 @@ impl fmt::Display for StarlarkScale {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let labels = self.inner.labels();
         let bands = self.inner.bands();
-        if self.inner.has_bounded_bands() {
-            write!(f, "Scale([")?;
-            for (i, label) in labels.iter().enumerate() {
-                if i > 0 {
-                    write!(f, ", ")?;
-                }
-                write!(f, "({label:?}, {})", format_band(bands[i]))?;
-            }
-            write!(f, "])")
-        } else {
-            write!(f, "Scale({labels:?})")
+        if labels.is_empty() {
+            return write!(f, "scale()");
         }
+        write!(f, "scale()")?;
+        for (label, band) in labels.iter().zip(bands.iter()) {
+            if band.is_unbounded() {
+                write!(f, ".step({label:?})")?;
+            } else {
+                write!(f, ".step({label:?}, {})", format_band(*band))?;
+            }
+        }
+        Ok(())
     }
 }
 
 starlark_simple_value!(StarlarkScale);
 
+starlark::methods_static!(
+    SCALE_METHODS = |builder| {
+        starlark_scale_methods(builder);
+    }
+);
+
+#[starlark_module]
+fn starlark_scale_methods(builder: &mut starlark::environment::MethodsBuilder) {
+    /// Append one outcome label (low → high). With no band, the step is for `classify` only.
+    ///
+    /// With a band (`IntBand` or desugared `..6`, `7..9`, `10..`), the step buckets numeric totals.
+    fn step(
+        this: &StarlarkScale,
+        label: &str,
+        #[starlark(args)] band: UnpackTuple<Value<'_>>,
+    ) -> anyhow::Result<StarlarkScale> {
+        let band = match band.items.len() {
+            0 => IntBand::unbounded(),
+            1 => band.items[0]
+                .downcast_ref::<StarlarkIntBand>()
+                .with_context(|| {
+                    format!("scale.step band: expected IntBand, got {}", band.items[0])
+                })?
+                .inner(),
+            n => anyhow::bail!("scale.step expects at most one band, got {n} extra argument(s)"),
+        };
+        Ok(StarlarkScale::new(
+            this.inner.clone().with_step(label.to_owned(), band)?,
+        ))
+    }
+}
+
 #[starlark_value(type = "Scale")]
-impl<'v> StarlarkValue<'v> for StarlarkScale {}
+impl<'v> StarlarkValue<'v> for StarlarkScale {
+    fn get_methods() -> Option<&'static Methods> {
+        Some(SCALE_METHODS.methods())
+    }
+}
