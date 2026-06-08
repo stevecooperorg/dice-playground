@@ -209,33 +209,40 @@ fn starlark_err(err: starlark::Error) -> anyhow::Error {
     anyhow::anyhow!("{err}")
 }
 
-/// Dice probability builtins for Starlark scripts.
-///
-/// Use `+` on `Dist` values to convolve (sum of independent outcomes).
-/// Use `-` for independent differences (e.g. `2d10 - 3d6`). Use `shift` for flat modifiers.
-/// Use `*` to scale every outcome (`1d4 * 10`). Use `//` for per-outcome floor division (`8d6 // 2`).
+/// Dice probability builtins (documented in the generated function reference).
 #[starlark_module]
 pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
-    /// Build a fair die with the given number of faces (1..=sides, uniform).
+    /// One fair die with faces 1 through `sides`, each equally likely.
+    ///
+    /// Same idea as `1d6` or `1d20` in dice notation. Example: `d(6)` for a d6, `d(20)` for a d20.
     ///
     /// # Arguments
-    /// * `sides`: Number of faces (must be positive).
-    ///
-    /// # Returns
-    /// A `Dist` for one die roll.
+    /// * `sides`: Number of faces (must be at least 1).
     #[starlark(as_type = StarlarkDist)]
     fn d(sides: i32) -> anyhow::Result<StarlarkDist> {
         Ok(StarlarkDist::new(Die::die(i64::from(sides))?))
     }
 
-    /// Build a die from explicit face values (multiplicity = weight).
+    /// A die with custom face values (listed in order; duplicates count as extra weight).
+    ///
+    /// Use for dice that are not uniform—`die_faces([1, 2, 2, 3])` is twice as likely to show 2 as 1 or 3.
+    ///
+    /// # Arguments
+    /// * `faces`: List of integer face values.
     #[starlark(as_type = StarlarkDist)]
     fn die_faces(faces: UnpackList<i32>) -> anyhow::Result<StarlarkDist> {
         let f: Vec<i64> = faces.items.into_iter().map(i64::from).collect();
         Ok(StarlarkDist::new(Die::from_faces(&f)?))
     }
 
-    /// Explode on maximum face, summing rerolls up to `max_depth` times (default 2).
+    /// Exploding die: on the highest face, roll again and add, up to `max_depth` extra rolls (default 2).
+    ///
+    /// Common in games where max on a die triggers another die (Savage Worlds–style). Example:
+    /// `explode(d(4))` for one exploding d4.
+    ///
+    /// # Arguments
+    /// * `dist`: Usually a single die from `d(...)`.
+    /// * `max_depth`: Cap on how many times the die can explode (0 = no explode).
     #[starlark(as_type = StarlarkDist)]
     fn explode(dist: &StarlarkDist, #[starlark(default = 2)] max_depth: i32) -> anyhow::Result<StarlarkDist> {
         if max_depth < 0 {
@@ -246,21 +253,31 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         ))
     }
 
-    /// Independent fair dice pool (not summed).
+    /// Roll `count` separate fair dice—**not** added together yet.
+    ///
+    /// Use when the rule looks at individual results (highest die, count 10s, etc.). Add with
+    /// `.sum()` or the `sum(...)` function when you only need the total. Example: `roll_pool(4, 6)` for four d6s.
+    ///
+    /// # Arguments
+    /// * `count`: How many dice.
+    /// * `sides`: Faces per die (each die is 1..=sides).
     #[starlark(as_type = StarlarkRollPool)]
     fn roll_pool(count: i32, sides: i32) -> anyhow::Result<StarlarkRollPool> {
         let n = usize::try_from(count).context("roll_pool count must be non-negative")?;
         Ok(StarlarkRollPool::new(RollPool::from_count(n, i64::from(sides))?))
     }
 
-    /// Alias for [`roll_pool`].
+    /// Shorthand for `roll_pool`—same arguments, same meaning.
     #[starlark(as_type = StarlarkRollPool)]
     fn pool(count: i32, sides: i32) -> anyhow::Result<StarlarkRollPool> {
         let n = usize::try_from(count).context("roll_pool count must be non-negative")?;
         Ok(StarlarkRollPool::new(RollPool::from_count(n, i64::from(sides))?))
     }
 
-    /// Collapse a pool to a total, or pass through a `Dist`.
+    /// Total a dice pool, or leave a `Dist` unchanged.
+    ///
+    /// `sum(roll_pool(4, 6))` is the distribution of 4d6 summed—equivalent to `4d6` notation.
+    /// If you already have a `Dist`, `sum` returns it as-is.
     #[starlark(as_type = StarlarkDist)]
     fn sum(value: Value) -> anyhow::Result<StarlarkDist> {
         if let Some(pool) = value.downcast_ref::<StarlarkRollPool>() {
@@ -272,7 +289,13 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         anyhow::bail!("sum: expected RollPool or Dist, got {value}")
     }
 
-    /// Distribution of how many dice in the pool are `>= threshold`.
+    /// How many dice in the pool rolled **at least** `threshold`?
+    ///
+    /// The result is a `Dist` over counts (0, 1, 2, …). Example: on 5d10, how many dice show 8+ for a success pool.
+    ///
+    /// # Arguments
+    /// * `pool`: From `roll_pool` / `pool`.
+    /// * `threshold`: Count dice with rolled value ≥ this number.
     #[starlark(as_type = StarlarkDist)]
     fn count_ge(pool: &StarlarkRollPool, threshold: i32) -> anyhow::Result<StarlarkDist> {
         Ok(StarlarkDist::new(
@@ -280,28 +303,49 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         ))
     }
 
-    /// Distribution of how many rolled faces appear in `values`.
+    /// How many dice show a face in your chosen list?
+    ///
+    /// Example: count how many dice rolled 1 in a pool (list `[1]`), or how many show 9 or 10 (`[9, 10]`).
+    ///
+    /// # Arguments
+    /// * `values`: Face values that count (duplicates in the list are harmless).
     #[starlark(as_type = StarlarkDist)]
     fn count_in(pool: &StarlarkRollPool, values: UnpackList<i32>) -> anyhow::Result<StarlarkDist> {
         let vals: Vec<i64> = values.items.into_iter().map(i64::from).collect();
         Ok(StarlarkDist::new(pool.inner().count_in(&vals)?))
     }
 
-    /// Distribution of the `k`th highest die (`k=1` is highest).
+    /// The **k**th highest die in the pool (`k = 1` is the highest, `2` is second-highest, …).
+    ///
+    /// Blades in the Dark and similar games use the highest die; some rules use second-highest.
+    ///
+    /// # Arguments
+    /// * `k`: Rank from the top (1 = best die).
     #[starlark(as_type = StarlarkDist)]
     fn order_stat(pool: &StarlarkRollPool, k: i32) -> anyhow::Result<StarlarkDist> {
         let k = usize::try_from(k).context("k")?;
         Ok(StarlarkDist::new(pool.inner().order_stat(k)?))
     }
 
-    /// Sum of the middle `keep` dice after sorting ascending.
+    /// Sum the middle `keep` dice after sorting the pool low to high.
+    ///
+    /// Niche rules that drop extremes from both ends; less common than keep-highest / drop-lowest.
+    ///
+    /// # Arguments
+    /// * `keep`: How many dice in the middle to sum.
     #[starlark(as_type = StarlarkDist)]
     fn middle_of(pool: &StarlarkRollPool, keep: i32) -> anyhow::Result<StarlarkDist> {
         let k = usize::try_from(keep).context("keep")?;
         Ok(StarlarkDist::new(pool.inner().middle_of(k)?))
     }
 
-    /// Map each joint pool outcome through `fn(faces: list[int]) -> int`.
+    /// Custom rule: for every way the pool can land, run your function on the list of faces and use its integer result.
+    ///
+    /// Advanced—use when no built-in pool helper fits (e.g. “sum only dice that matched another die”).
+    /// The function receives one argument: the list of rolled values, sorted as the engine stores them.
+    ///
+    /// # Arguments
+    /// * `map_fn`: Starlark function `(faces) -> int`.
     #[starlark(as_type = StarlarkDist)]
     fn pool_map<'v>(
         pool: &StarlarkRollPool,
@@ -350,7 +394,15 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         Ok(StarlarkDist::new(die))
     }
 
-    /// WoD-style success count pool (even or max on d10, optional explode rules).
+    /// Count **successes** on a dice pool (Storyteller / WoD-style d10 pools and variants).
+    ///
+    /// Returns a `Dist` over how many successes you rolled. `mode` controls 1s and 10s:
+    /// `"baseline"` (default), `"ones_cancel"`, `"ones_remove"`, or `"implode"`.
+    ///
+    /// # Arguments
+    /// * `count`: Dice in the pool.
+    /// * `sides`: Usually 10 for classic WoD.
+    /// * `mode`: How ones and explosions interact—match your table’s house rules.
     #[starlark(as_type = StarlarkDist)]
     fn success_pool(
         count: i32,
@@ -368,12 +420,14 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         Ok(StarlarkDist::new(successes_dist(i64::from(sides), n, cb)?))
     }
 
-    /// Roll `count` dice, drop the `drop` lowest, sum the rest (e.g. 4d6 drop lowest 1).
+    /// Roll several dice, drop the lowest results, sum the rest—**4d6 drop lowest 1** is `drop_lowest(4, 6, 1)`.
+    ///
+    /// Same as `4d6dl1` in dice notation.
     ///
     /// # Arguments
-    /// * `count`: Dice in the pool.
+    /// * `count`: Dice rolled.
     /// * `sides`: Faces per die.
-    /// * `drop`: How many lowest results to remove before summing.
+    /// * `drop`: How many lowest dice to remove before summing.
     fn drop_lowest(count: i32, sides: i32, drop: i32) -> anyhow::Result<StarlarkDist> {
         let n = usize::try_from(count).context("count")?;
         let d = usize::try_from(drop).context("drop")?;
@@ -384,12 +438,12 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         )?))
     }
 
-    /// Roll `count` dice, keep the `keep` highest, sum them.
+    /// Roll dice, keep only the highest few, sum those—**4d6 keep highest 3** is `keep_highest(4, 6, 3)` (`4d6kh3`).
     ///
     /// # Arguments
-    /// * `count`: Dice in the pool.
+    /// * `count`: Dice rolled.
     /// * `sides`: Faces per die.
-    /// * `keep`: How many highest results to sum.
+    /// * `keep`: How many highest dice to sum.
     fn keep_highest(count: i32, sides: i32, keep: i32) -> anyhow::Result<StarlarkDist> {
         let n = usize::try_from(count).context("count")?;
         let k = usize::try_from(keep).context("keep")?;
@@ -400,12 +454,12 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         )?))
     }
 
-    /// Roll `count` dice, drop the `drop` highest, sum the rest.
+    /// Roll dice, drop the highest results, sum the rest (`4d6dh1` notation).
     ///
     /// # Arguments
-    /// * `count`: Dice in the pool.
+    /// * `count`: Dice rolled.
     /// * `sides`: Faces per die.
-    /// * `drop`: How many highest results to remove before summing.
+    /// * `drop`: How many highest dice to remove before summing.
     fn drop_highest(count: i32, sides: i32, drop: i32) -> anyhow::Result<StarlarkDist> {
         let n = usize::try_from(count).context("count")?;
         let d = usize::try_from(drop).context("drop")?;
@@ -416,12 +470,12 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         )?))
     }
 
-    /// Roll `count` dice, keep the `keep` lowest, sum them.
+    /// Roll dice, keep only the lowest few, sum those (`4d6kl3` notation).
     ///
     /// # Arguments
-    /// * `count`: Dice in the pool.
+    /// * `count`: Dice rolled.
     /// * `sides`: Faces per die.
-    /// * `keep`: How many lowest results to sum.
+    /// * `keep`: How many lowest dice to sum.
     fn keep_lowest(count: i32, sides: i32, keep: i32) -> anyhow::Result<StarlarkDist> {
         let n = usize::try_from(count).context("count")?;
         let k = usize::try_from(keep).context("keep")?;
@@ -432,28 +486,37 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         )?))
     }
 
-    /// Add a constant to every outcome (modifier), without convolving with another die.
+    /// Add a flat modifier to every outcome—**+3 to the roll** without rolling another die.
+    ///
+    /// Same effect as `roll + 3` when `roll` is a `Dist`. Prefer `roll + 3` in scripts when it reads clearer.
     ///
     /// # Arguments
-    /// * `dist`: Input distribution.
-    /// * `delta`: Amount to add to each outcome.
+    /// * `dist`: The roll (e.g. `2d10` as a `Dist`).
+    /// * `delta`: Modifier to add (can be negative).
     fn shift(dist: &StarlarkDist, delta: i32) -> anyhow::Result<StarlarkDist> {
         Ok(StarlarkDist::new(dist.inner.shift(i64::from(delta))?))
     }
 
-    /// Define an ordered enumerated result scale (low → high rank).
+    /// Name your outcome steps from worst to best (or low to high).
+    ///
+    /// Used with `bucket` or `classify`. Example: `result_type(["MISS", "PARTIAL", "FULL"])`.
     ///
     /// # Arguments
-    /// * `labels`: Unique non-empty strings in order from worst to best (or low to high).
+    /// * `labels`: Unique non-empty strings, first = lowest rank, last = highest.
     #[starlark(as_type = StarlarkResultScale)]
     fn result_type(labels: UnpackList<String>) -> anyhow::Result<StarlarkResultScale> {
         Ok(StarlarkResultScale::new(ResultScale::new(labels.items)?))
     }
 
-    /// Partition a numeric `Dist` into ordered labels using upper-bound cuts.
+    /// Split a numeric total into named bands using DC-style cut points.
     ///
-    /// For `n` labels, pass `n - 1` strictly increasing cut values.
-    /// Band 0: outcomes `<= cuts[0]`; middle bands between cuts; top band: outcomes above the last cut.
+    /// With 4 labels you pass **3** cut numbers. Totals at or below the first cut get the first label;
+    /// between cuts get middle labels; above the last cut get the top label. PbtA 2d6+stat moves often use this.
+    ///
+    /// # Arguments
+    /// * `dist`: Numeric roll (e.g. `2d6 + stat`).
+    /// * `scale`: From `result_type(...)`.
+    /// * `cuts`: Increasing thresholds between labels.
     #[starlark(as_type = StarlarkLabelDist)]
     fn bucket(
         dist: &StarlarkDist,
@@ -468,10 +531,13 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         )?))
     }
 
-    /// Map each outcome of `dist` through a Starlark function `(value) -> str`.
+    /// Label each **exact** roll value with your own rule—natural 1s, natural 20s, custom crits.
     ///
-    /// Use for rules that depend on the **natural** roll (e.g. D&D nat 1 / nat 20) before or
-    /// instead of simple numeric cuts. The function must return a label present on `scale`.
+    /// Your function takes the numeric result and returns one of the strings on `scale`.
+    /// Example: map only 1 and 20 to special labels, bucket everything else by total.
+    ///
+    /// # Arguments
+    /// * `classify`: Starlark function `(value) -> str`.
     #[starlark(as_type = StarlarkLabelDist)]
     fn classify<'v>(
         dist: &StarlarkDist,
@@ -500,9 +566,13 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         Ok(StarlarkLabelDist::new(LabelDist::from_mass(scale_inner, mass)?))
     }
 
-    /// Classify independent rolls `(d1, d2)` with a Starlark function `(w, b) -> str`.
+    /// Label outcomes that depend on **two** dice together—advantage, disadvantage, or paired rolls.
     ///
-    /// The function must return a label present on `scale`.
+    /// Every combination of `d1` and `d2` is classified by your `(left, right) -> str` function.
+    ///
+    /// # Arguments
+    /// * `d1`, `d2`: Independent rolls (e.g. two d20s for advantage).
+    /// * `classify`: Starlark function `(w, b) -> str` returning a label on `scale`.
     #[starlark(as_type = StarlarkLabelDist)]
     fn joint_classify<'v>(
         d1: &StarlarkDist,
@@ -542,20 +612,27 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         Ok(StarlarkLabelDist::new(LabelDist::from_mass(scale_inner, mass)?))
     }
 
-    /// Build a multi-row probability table from `(label, probability)` tuples.
+    /// One table of labeled probabilities—grids of “chance to hit DC X at modifier Y”.
     ///
-    /// Probabilities are independent (they need not sum to 1). Typical pattern: accumulate
-    /// rows in a loop, then `output("name", prob_table(rows))` once.
+    /// Each row is `(description, probability)`. Rows are **independent** (they do not have to add to 100%).
+    /// Build a list in a loop, then pass it here once: `output("grid", prob_table(rows))`.
+    ///
+    /// # Arguments
+    /// * `rows`: List of `(string, float)` pairs.
     #[starlark(as_type = StarlarkProbTable)]
     fn prob_table(rows: UnpackList<Value<'_>>) -> anyhow::Result<StarlarkProbTable> {
         Ok(StarlarkProbTable::new(parse_prob_table_rows(rows)?))
     }
 
-    /// Record a distribution or probability for playground output (text, json, graph).
+    /// Send a result to the playground **Output** panel (text, json, and graph tabs).
+    ///
+    /// Almost every script should call this at least once. Pass a name and a value:
+    /// a full distribution (`Dist`), named outcomes (`LabelDist`), a probability (`float`),
+    /// or a table (`prob_table(...)`). One argument works but naming outputs helps you read results.
     ///
     /// # Arguments
-    /// * Optional name (`str`) and value: a `Dist`, `LabelDist`, `ProbTable`, `float`, or `int`.
-    /// One argument records an anonymous name; two arguments are `output(name, value)`.
+    /// * `output("label", value)` — recommended.
+    /// * `output(value)` — auto-generated name.
     fn output(
         #[starlark(args)] args: UnpackTuple<Value>,
         eval: &mut Evaluator,

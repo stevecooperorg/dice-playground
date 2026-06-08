@@ -9,7 +9,7 @@ use starlark::values::{Heap, NoSerialize, StarlarkValue, Value, ValueLike};
 
 use super::dist_value::StarlarkDist;
 
-/// Independent dice pool (not summed until `sum()`).
+/// Several dice still treated separately until you call `.sum()` (see function reference).
 #[derive(Debug, Clone, ProvidesStaticType, NoSerialize, Allocative)]
 pub struct StarlarkRollPool {
     #[allocative(skip)]
@@ -42,7 +42,7 @@ starlark::methods_static!(
 
 #[starlark_module]
 fn roll_pool_methods(builder: &mut starlark::environment::MethodsBuilder) {
-    /// Sum all dice in the pool into one outcome distribution.
+    /// Add every die in the pool into one total—turns `roll_pool(4, 6)` into the same idea as `4d6`.
     fn sum(this: &StarlarkRollPool) -> anyhow::Result<StarlarkDist> {
         Ok(StarlarkDist::new(this.inner.sum()?))
     }

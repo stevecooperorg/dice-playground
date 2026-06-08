@@ -5,7 +5,7 @@ author: Steve Cooper
 
 # Function reference
 
-This section is the **stdlib and type reference** for `.dice` scripts: builtins (`d`, `roll_pool`, `sum`, `classify`, …) and methods on `Dist`, `RollPool`, and `LabelDist`.
+This section is the **stdlib and type reference** for `.dice` scripts—written for **game designers** exploring odds, not for Rust contributors. It lists builtins (`d`, `roll_pool`, `sum`, `classify`, …) and methods on `Dist`, `RollPool`, and `LabelDist`, with short table examples where helpful.
 
 | File | Contents |
 |------|----------|

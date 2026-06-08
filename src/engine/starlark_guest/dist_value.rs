@@ -10,7 +10,7 @@ use starlark::starlark_simple_value;
 use starlark::values::starlark_value;
 use starlark::values::{Heap, NoSerialize, StarlarkValue, Value, ValueError, ValueLike};
 
-/// A discrete distribution exposed to Starlark (`+` / `-` on independent rolls).
+/// Exact chances for each numeric result of a roll or total (see function reference).
 #[derive(Debug, Clone, ProvidesStaticType, NoSerialize, Allocative)]
 pub struct StarlarkDist {
     #[allocative(skip)]
@@ -55,36 +55,42 @@ starlark::methods_static!(
 
 #[starlark_module]
 fn starlark_dist_methods(builder: &mut starlark::environment::MethodsBuilder) {
-    /// Probability mass at an exact outcome: P(X = value).
+    /// Chance of rolling **exactly** this number (one outcome, not “this or higher”).
+    ///
+    /// Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
     ///
     /// # Arguments
-    /// * `value`: Outcome to query.
+    /// * `value`: The total you care about.
     fn pmf(this: &StarlarkDist, value: i32) -> anyhow::Result<f64> {
         Ok(this.inner.pmf(i64::from(value)))
     }
 
-    /// Cumulative distribution: P(X <= value).
+    /// Chance the total is **this number or lower** (cumulative from the bottom).
+    ///
+    /// Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
     ///
     /// # Arguments
-    /// * `value`: Upper bound (inclusive).
+    /// * `value`: Upper cap (inclusive).
     fn cdf(this: &StarlarkDist, value: i32) -> anyhow::Result<f64> {
         Ok(this.inner.cdf(i64::from(value)))
     }
 
-    /// Probability of meeting or beating a target: P(X >= value).
+    /// Chance of **meeting or beating** a target number—your go-to for “need 15+ on 2d10”.
+    ///
+    /// Example: `output("success", (2d10 + 3).p_ge(15))`.
     ///
     /// # Arguments
-    /// * `value`: Target outcome (inclusive).
+    /// * `value`: Target total (inclusive)—success if roll ≥ this.
     fn p_ge(this: &StarlarkDist, value: i32) -> anyhow::Result<f64> {
         Ok(this.inner.p_ge(i64::from(value)))
     }
 
-    /// Expected value (mean) of the distribution.
+    /// Average result if you rolled this distribution many times—the **mean** on the output table.
     fn mean(this: &StarlarkDist) -> anyhow::Result<f64> {
         Ok(this.inner.mean())
     }
 
-    /// Number of outcomes with non-zero probability.
+    /// How many different totals can occur with non-zero chance (size of the result table).
     fn support_size(this: &StarlarkDist) -> anyhow::Result<i32> {
         i32::try_from(this.inner.support_size()).context("support_size fits in i32")
     }
