@@ -1,0 +1,3 @@
+roll = 2d10
+output("roll_base", sum(roll))
+output("roll_plus_5", roll + 5)

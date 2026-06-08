@@ -1,0 +1,6 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/tutorial/*", "/cookbook/*", "/docs/*", "/references/*", "/*.{css,js,wasm,png,svg,ico,html}"]
+  }
+}

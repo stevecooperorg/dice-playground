@@ -1,0 +1,28 @@
+# Blades in the Dark action roll: read highest d6; 4–5 partial, 6 full, two 6s critical.
+# 0 (or negative) dice → lowest of 2d6; no critical on that desperate roll.
+Outcome = result_type(["BAD", "MESSY", "CLEAN", "CRITICAL"])
+
+def blades_pool(faces):
+    high = max(faces)
+    if high == 6:
+        if len([f for f in faces if f == 6]) >= 2:
+            return 3
+        return 2
+    if high >= 4:
+        return 1
+    return 0
+
+def code_label(c):
+    return ["BAD", "MESSY", "CLEAN", "CRITICAL"][c]
+
+def desperate_label(n):
+    if n == 6:
+        return "CLEAN"
+    if n >= 4:
+        return "MESSY"
+    return "BAD"
+
+output("0d", classify(keep_lowest(2, 6, 1), Outcome, desperate_label))
+for dice in range(1, 8):
+    codes = pool_map(roll_pool(dice, 6), blades_pool)
+    output("{}d".format(dice), classify(codes, Outcome, code_label))

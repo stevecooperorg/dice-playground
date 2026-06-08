@@ -1,0 +1,16 @@
+[build]
+target = "index.html"
+dist = "dist"
+
+[[hooks]]
+stage = "pre_build"
+command = "bash"
+command_arguments = ["bin/build-tutorial-site.sh", "static-site"]
+
+[watch]
+watch = ["src", "index.html", "docs/README.md", "docs/tutorial", "docs/cookbook", "docs/references", "tutorial-static", "staticwebapp.config.json"]
+
+[serve]
+address = "127.0.0.1"
+port = 8081
+

@@ -1,0 +1,5 @@
+# How many dice in 3d6 rolled strictly greater than 4?
+def count_high(faces):
+    return len([f for f in faces if f > 4])
+
+output("success_count", pool_map(roll_pool(3, 6), count_high))

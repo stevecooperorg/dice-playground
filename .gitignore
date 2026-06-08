@@ -1,0 +1,12 @@
+/target/
+**/dist/
+/static-site/*
+!/static-site/.gitkeep
+/node_modules/
+**/static/
+!app-dice-playground-server/docker/
+app-dice-playground-server/docker/out/
+app-dice-playground-server/infra/azure.env
+app-dice-playground-server/infra/parameters.bicepparam
+.env
+ignore/

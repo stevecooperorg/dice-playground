@@ -1,0 +1,1 @@
+output("one_d6", 1d6)

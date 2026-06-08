@@ -1,0 +1,37 @@
+# Cairn 2e: Blood Elk horns (d8) vs PC with 4 HP, 2 Armor, STR 11.
+# Armor subtracts before HP; HP to exactly 0 → Scar; below 0 → STR loss + STR save.
+HP = 4
+ARMOR = 2
+STR = 11
+
+Outcome = result_type(["NO_EFFECT", "HIT_PROTECTION_LOSS", "SCAR", "STR_DOWN_OK", "CRITICAL_DAMAGE"])
+
+def damage(horn):
+    d = horn - ARMOR
+    if d < 0:
+        return 0
+    return d
+
+def blood_elk_hit(horn, save):
+    dmg = damage(horn)
+    if dmg == 0:
+        return "NO_EFFECT"
+    if dmg < HP:
+        return "HIT_PROTECTION_LOSS"
+    if dmg == HP:
+        return "SCAR"
+    overflow = dmg - HP
+    new_str = STR - overflow
+    if save == 1:
+        return "STR_DOWN_OK"
+    if save == 20:
+        return "CRITICAL_DAMAGE"
+    if save <= new_str:
+        return "STR_DOWN_OK"
+    return "CRITICAL_DAMAGE"
+
+out = joint_classify(d(8), d(20), Outcome, blood_elk_hit)
+output("blood_elk_horns", out)
+output("p_protection_loss_or_worse", out.p_at_least("HIT_PROTECTION_LOSS"))
+output("p_scar_or_worse", out.p_at_least("SCAR"))
+output("p_critical_damage", out.p_at_least("CRITICAL_DAMAGE"))

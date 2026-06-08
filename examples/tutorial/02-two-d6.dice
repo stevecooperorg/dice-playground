@@ -1,0 +1,1 @@
+output("two_d6", 2d6)

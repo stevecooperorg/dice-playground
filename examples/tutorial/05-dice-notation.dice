@@ -1,0 +1,9 @@
+# Dice notation buildup: one die, pools, bonus, drop lowest
+output("one_d4", 1d4)
+output("two_d6", 2d6)
+output("two_d6_plus_3", 2d6 + 3)
+output("four_d6", 4d6)
+output("four_d6dl1", 4d6dl1)
+output("four_d6dh1", 4d6dh1)
+output("four_d6kh2", 4d6kh2)
+output("three_d12kl1", 3d12kl1)

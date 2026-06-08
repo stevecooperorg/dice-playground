@@ -1,0 +1,78 @@
+[package]
+name = "dice-playground"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "dice_playground"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "dice-playground"
+path = "src/bin/dice-playground.rs"
+
+[[bin]]
+name = "dice"
+path = "src/bin/dice.rs"
+required-features = ["cli"]
+
+[features]
+default = ["cli", "lsp"]
+cli = ["dep:clap", "dep:csv", "lsp"]
+lsp = ["dep:starlark_lsp"]
+
+[dependencies]
+allocative = "0.3"
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive", "env"], optional = true }
+console_error_panic_hook = "0.1"
+csv = { version = "1.4", optional = true }
+gloo-timers = { version = "0.3", features = ["futures"] }
+js-sys = "0.3"
+leptos = { version = "0.8", features = ["csr"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+starlark = "0.14.2"
+starlark_derive = "0.14.2"
+starlark_lsp = { version = "0.14.2", optional = true }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+  "Window",
+  "Storage",
+  "Element",
+  "HtmlDivElement",
+  "HtmlTextAreaElement",
+  "HtmlSelectElement",
+  "ScrollIntoViewOptions",
+  "ScrollBehavior",
+  "ScrollLogicalPosition",
+] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.4", features = ["wasm_js"] }
+
+[dev-dependencies]
+rand = { version = "0.9", features = ["std", "std_rng"] }
+
+[profile.release]
+# "z" shrinks wasm32 more than "s" (runtime may be slightly slower).
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"
+
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy.unwrap_used]
+level = "deny"
+
+[lints.clippy.expect_used]
+level = "deny"
+
+[lints.clippy.let_and_return]
+level = "allow"

@@ -1,0 +1,13 @@
+{
+  "name": "dice-playground",
+  "private": true,
+  "license": "MIT",
+  "description": "Deploy scripts for Dice Playground (Cloudflare Workers)",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev --ip 127.0.0.1 --port 8787"
+  },
+  "devDependencies": {
+    "wrangler": "^4.24.0"
+  }
+}
