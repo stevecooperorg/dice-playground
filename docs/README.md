@@ -13,7 +13,7 @@ Use the site header (or the sections below) for **Tutorial**, **Cookbook**, and 
 
 ## Playground
 
-In the playground, each lesson and recipe includes a script to copy into the **editor**. Click **Run** (or press **Shift+Enter**) and read results under **Output**—**text**, **json**, or **graph**. Use the **Files** control to manage multiple scripts; **Diagnostics** lists parse and type errors with line numbers.
+In the playground, each lesson and recipe includes a script to copy into the **editor** (or click **↗ Load in playground** on a script block in the tutorial or cookbook—build-time links open `/` with the script in the URL). Click **Run** (or press **Shift+Enter**) and read results under **Output**—**text**, **json**, or **graph**. Use the **Files** control to manage multiple scripts; **Diagnostics** lists parse and type errors with line numbers.
 
 ## Tutorial
 

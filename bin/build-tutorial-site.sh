@@ -252,6 +252,9 @@ if [[ -f "${LLMS_TXT}" ]]; then
   echo "Copied llms.txt: ${DIST}/llms.txt"
 fi
 
+cargo run --quiet --bin dice -- enhance-static-site "${DIST}"
+echo "Injected playground load links (dice enhance-static-site)"
+
 echo "Built tutorial site: ${OUT} (${LESSON_COUNT} lessons)"
 [[ ${COOKBOOK_COUNT} -gt 0 ]] && echo "Built cookbook: ${COOKBOOK_OUT} (${COOKBOOK_COUNT} recipes)"
 [[ -f "${GUIDE_OUT}/index.html" ]] && echo "Built user guide: ${GUIDE_OUT}/index.html"

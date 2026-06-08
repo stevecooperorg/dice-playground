@@ -20,6 +20,7 @@ help:
 	@echo "  make cf-deploy       release-static + wrangler deploy"
 	@echo "  make cf-preview      release-static + wrangler dev (:8787)"
 	@echo "  make references      Regenerate docs/references/stdlib.md"
+	@echo "  dice enhance-static-site  Add playground links to built HTML under dist/"
 	@echo "  make cli             cargo build --release --bin dice"
 	@echo "  make fmt             cargo fmt"
 	@echo "  make clean           rm -rf dist/"

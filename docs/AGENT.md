@@ -29,7 +29,7 @@ No runtime server. Ship **`dist/`** to any CDN ([docs/deploy-cdn.md](deploy-cdn.
 ├── examples/tutorial/
 ├── examples/cookbook/
 ├── tutorial-static/        # Pandoc HTML templates
-└── bin/build-tutorial-site.sh
+└── bin/build-tutorial-site.sh  # ends with `dice enhance-static-site` (playground ↗ links)
 ```
 
 ```mermaid

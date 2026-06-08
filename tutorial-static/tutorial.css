@@ -69,6 +69,32 @@ pre {
   overflow-x: auto;
 }
 
+pre.code-with-playground {
+  position: relative;
+  padding-right: 2.5rem;
+}
+
+a.load-in-playground,
+button.load-in-playground {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--panel);
+  color: var(--link);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+}
+
+a.load-in-playground:hover,
+button.load-in-playground:hover {
+  border-color: var(--link);
+  background: #0f172a;
+}
+
 table {
   border-collapse: collapse;
   width: 100%;

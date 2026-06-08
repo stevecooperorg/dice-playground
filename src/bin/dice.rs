@@ -40,6 +40,12 @@ enum Command {
     },
     /// Language server (stdio LSP).
     Lsp,
+    /// Inject playground load links into static HTML under tutorial/, cookbook/, docs/, references/.
+    EnhanceStaticSite {
+        /// Site output directory (e.g. dist/ or static-site/).
+        #[arg(default_value = "dist")]
+        root: PathBuf,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -60,7 +66,14 @@ fn main() -> anyhow::Result<()> {
         Command::Table2d10 => run_table_2d10(),
         Command::Docs { out } => run_docs(out.as_deref()),
         Command::Lsp => dice_playground::engine::lsp::run_stdio(),
+        Command::EnhanceStaticSite { root } => run_enhance_static_site(&root),
     }
+}
+
+fn run_enhance_static_site(root: &std::path::Path) -> anyhow::Result<()> {
+    let n = dice_playground::ui::static_site::enhance_static_site_tree(root)?;
+    eprintln!("enhanced {n} HTML file(s) under {}", root.display());
+    Ok(())
 }
 
 fn run_docs(out: Option<&std::path::Path>) -> anyhow::Result<()> {
