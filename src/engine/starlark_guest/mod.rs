@@ -1,7 +1,10 @@
+mod bucket_args;
 mod dice_pool_value;
 mod die_roll_value;
 mod docs;
 mod eval;
+mod face_spec;
+mod int_band_value;
 mod outcomes_value;
 mod output_format;
 mod prob_table_value;
@@ -17,6 +20,7 @@ pub use eval::{
     dice_dialect, dice_globals, eval_source, eval_source_with_dialect, format_eval_result_text,
     EvalResult, OutputEntry, OutputStore,
 };
+pub use int_band_value::StarlarkIntBand;
 pub use outcomes_value::StarlarkOutcomes;
 pub use output_format::{
     format_probability, format_probability_with_denom, infer_sample_space_denominator, ProbFormat,

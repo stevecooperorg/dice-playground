@@ -31,7 +31,7 @@ output("two_d6", 2d6)
 ```
 
 - **`2d6`** — roll two six-sided dice and **add** them.
-- Sum of two independent d6 (same idea as lesson 2); the engine expands this to `dice_pool(2, 6)`.
+- Sum of two independent d6 (same idea as lesson 2); the engine expands this to `dice_pool(2, 6)` and then sums. For pools you keep separate, see [lesson 6](06-dice-pools.md).
 
 **Mean** ≈ **7**.
 
@@ -122,4 +122,4 @@ Eight named outputs in the sample script, each with mean and a probability table
 
 ## Next
 
-[Lesson 6: Many checks at once](06-tables.md)
+[Lesson 6: Dice pools (faces still separate)](06-dice-pools.md)

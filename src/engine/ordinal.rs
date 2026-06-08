@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 
+use super::int_band::IntBand;
 use super::DieRoll;
 
 /// User-defined ordered list of outcome names (lowest rank first).
@@ -240,6 +241,64 @@ impl Outcomes {
         Self::validate_and_normalize(scale, mass)
     }
 
+    /// Split a numeric total into named bands using one inclusive [`IntBand`] per scale label.
+    ///
+    /// Each outcome must fall in **exactly one** band; overlapping or gapped bands are errors.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DieRoll, IntBand, Outcomes, Scale};
+    /// let scale = Scale::new(vec!["MISS".into(), "PARTIAL".into(), "FULL".into()]).unwrap();
+    /// let roll = DieRoll::pool_sum(2, 6).unwrap().shift(2).unwrap();
+    /// let bands = [
+    ///     IntBand::at_most(8),
+    ///     IntBand::through(9, 11).unwrap(),
+    ///     IntBand::at_least(12),
+    /// ];
+    /// let o = Outcomes::from_label_bands(&roll, scale, &bands).unwrap();
+    /// assert!(o.p_exact("FULL").unwrap() > 0.0);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn from_label_bands(dist: &DieRoll, scale: Scale, bands: &[IntBand]) -> Result<Self> {
+        let n = scale.len();
+        if bands.len() != n {
+            bail!(
+                "bucket expects {} band(s) for {} label(s), got {}",
+                n,
+                n,
+                bands.len()
+            );
+        }
+        let mut mass = BTreeMap::new();
+        for (x, p) in dist.entries() {
+            if p <= 0.0 {
+                continue;
+            }
+            let mut matches = 0usize;
+            let mut label_idx = None;
+            for (i, band) in bands.iter().enumerate() {
+                if band.contains(x) {
+                    matches += 1;
+                    label_idx = Some(i);
+                }
+            }
+            if matches == 0 {
+                bail!("outcome {x} is not covered by any band");
+            }
+            if matches > 1 {
+                bail!("outcome {x} lies in more than one band");
+            }
+            let idx = label_idx.context("band index")?;
+            let label = scale
+                .label_at(idx)
+                .ok_or_else(|| anyhow::anyhow!("label index {idx} out of range"))?
+                .to_owned();
+            *mass.entry(label).or_insert(0.0) += p;
+        }
+        Self::validate_and_normalize(scale, mass)
+    }
+
     /// Map each numeric outcome through `classify(x) -> label` and accumulate mass.
     ///
     /// # Example
@@ -422,6 +481,24 @@ fn bucket_index(x: i64, cuts: &[i64], n_labels: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn label_bands_match_cuts_for_d6() {
+        let scale = Scale::new(vec!["LOW".into(), "MID".into(), "HIGH".into()]).unwrap();
+        let d6 = DieRoll::die(6).unwrap();
+        let by_cuts = Outcomes::from_bucket(&d6, scale.clone(), &[2, 4]).unwrap();
+        let bands = [
+            IntBand::at_most(2),
+            IntBand::through(3, 4).unwrap(),
+            IntBand::at_least(5),
+        ];
+        let by_bands = Outcomes::from_label_bands(&d6, scale, &bands).unwrap();
+        for label in ["LOW", "MID", "HIGH"] {
+            assert!(
+                (by_cuts.p_exact(label).unwrap() - by_bands.p_exact(label).unwrap()).abs() < 1e-12
+            );
+        }
+    }
 
     #[test]
     fn bucket_three_bands() {

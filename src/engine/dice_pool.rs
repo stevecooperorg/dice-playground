@@ -10,6 +10,8 @@ use anyhow::{bail, Result};
 
 use super::die_roll::DieRoll;
 use super::enumerate::for_each_pool_joint;
+use super::face_spec::{FaceSpec, OptionalFaceSpec};
+use super::int_band::IntBand;
 
 /// Independent dice that have not yet been combined into a single [`DieRoll`].
 ///
@@ -89,6 +91,106 @@ impl DicePool {
     /// ```
     pub fn dice(&self) -> &[DieRoll] {
         &self.dice
+    }
+
+    /// Apply `f` to each die in the pool independently.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, FaceSpec, IntBand};
+    /// let pool = DicePool::from_count(3, 6).unwrap()
+    ///     .keep_faces_spec(FaceSpec::Band(IntBand::at_least(5))).unwrap();
+    /// let total = pool.sum().unwrap();
+    /// assert_eq!(total.min(), Some(15));
+    /// assert_eq!(total.max(), Some(18));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn map_dice(&self, mut f: impl FnMut(DieRoll) -> Result<DieRoll>) -> Result<Self> {
+        let dice: Vec<DieRoll> = self
+            .dice
+            .iter()
+            .cloned()
+            .map(&mut f)
+            .collect::<Result<_>>()?;
+        Self::from_dice(dice)
+    }
+
+    /// Keep only faces ≥ `threshold` on every die.
+    pub fn keep_ge(&self, threshold: i64) -> Result<Self> {
+        self.map_dice(|d| d.keep_ge(threshold))
+    }
+
+    pub fn keep_gt(&self, threshold: i64) -> Result<Self> {
+        self.map_dice(|d| d.keep_gt(threshold))
+    }
+
+    pub fn keep_le(&self, threshold: i64) -> Result<Self> {
+        self.map_dice(|d| d.keep_le(threshold))
+    }
+
+    pub fn keep_lt(&self, threshold: i64) -> Result<Self> {
+        self.map_dice(|d| d.keep_lt(threshold))
+    }
+
+    pub fn keep_in_range(&self, lo: i64, hi: i64) -> Result<Self> {
+        self.map_dice(|d| d.keep_in_range(lo, hi))
+    }
+
+    pub fn keep_in_set(&self, values: &[i64]) -> Result<Self> {
+        self.map_dice(|d| d.keep_in_set(values))
+    }
+
+    pub fn keep_in_band(&self, band: IntBand) -> Result<Self> {
+        self.map_dice(|d| d.keep_in_band(band))
+    }
+
+    /// Keep only matching faces on every die (see [`FaceSpec`]).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, FaceSpec, IntBand};
+    /// let pool = DicePool::from_count(2, 6).unwrap()
+    ///     .keep_faces_spec(FaceSpec::Band(IntBand::at_least(5))).unwrap();
+    /// assert_eq!(pool.sum().unwrap().min(), Some(10));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn keep_faces_spec(&self, spec: FaceSpec) -> Result<Self> {
+        self.map_dice(|d| d.keep_faces_spec(spec.clone()))
+    }
+
+    /// Drop matching faces on every die, then renormalize each die.
+    pub fn remove_faces_spec(&self, spec: FaceSpec) -> Result<Self> {
+        self.map_dice(|d| d.remove_faces_spec(spec.clone()))
+    }
+
+    /// Remap matching faces to `to` on every die.
+    pub fn convert_faces_spec(&self, spec: FaceSpec, to: i64) -> Result<Self> {
+        self.map_dice(|d| d.convert_faces_spec(spec.clone(), to))
+    }
+
+    /// Remap matching faces to 0 on every die.
+    pub fn ignore_faces_spec(&self, spec: FaceSpec) -> Result<Self> {
+        self.map_dice(|d| d.ignore_faces_spec(spec.clone()))
+    }
+
+    /// Distribution of how many dice in the pool match `spec`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, FaceSpec, IntBand};
+    /// let c = DicePool::from_count(3, 6).unwrap()
+    ///     .count_faces(FaceSpec::Band(IntBand::at_least(5))).unwrap();
+    /// assert!((c.pmf(0) - 8.0 / 27.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn count_faces(&self, spec: FaceSpec) -> Result<DieRoll> {
+        match spec {
+            FaceSpec::Band(band) => self.count_in_band(band),
+            FaceSpec::Faces(ref values) => self.count_in(values),
+        }
     }
 
     /// If every die is the same fair `1..=sides`, return `(count, sides)`.
@@ -237,6 +339,23 @@ impl DicePool {
         Ok(die)
     }
 
+    /// How many dice show a face in `band`?
+    pub fn count_in_band(&self, band: IntBand) -> Result<DieRoll> {
+        if let Some((n, sides)) = self.uniform_fair_params() {
+            let hits = (1..=sides).filter(|&f| band.contains(f)).count();
+            let p = hits as f64 / sides as f64;
+            return binomial_success_count(n, p);
+        }
+        let mut mass = BTreeMap::new();
+        for_each_pool_joint(self, |faces, p| {
+            let c = faces.iter().filter(|&&f| band.contains(f)).count() as i64;
+            *mass.entry(c).or_insert(0.0) += p;
+        })?;
+        let mut die = DieRoll::from_mass(mass);
+        die.normalize_in_place()?;
+        Ok(die)
+    }
+
     /// Distribution of the `k`th highest face (`k = 1` is the maximum die).
     ///
     /// # Example
@@ -315,6 +434,69 @@ impl DicePool {
         die.normalize_in_place()?;
         Ok(die)
     }
+
+    fn count_for_optional(&self, spec: &OptionalFaceSpec) -> Result<DieRoll> {
+        match spec {
+            OptionalFaceSpec::LengthOnly => bail!("count: face spec required"),
+            OptionalFaceSpec::Spec(face) => self.count_faces(face.clone()),
+        }
+    }
+
+    /// **P(at least one die matches `spec`)**, or **P(pool is non-empty)** when `spec` is [`OptionalFaceSpec::LengthOnly`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, FaceSpec, OptionalFaceSpec};
+    /// let pool = DicePool::from_count(2, 6).unwrap();
+    /// let p = pool.p_any(OptionalFaceSpec::Spec(FaceSpec::Faces(vec![1])))?;
+    /// assert!((p - 11.0 / 36.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn p_any(&self, spec: OptionalFaceSpec) -> Result<f64> {
+        if matches!(spec, OptionalFaceSpec::LengthOnly) {
+            return Ok(if self.dice.is_empty() { 0.0 } else { 1.0 });
+        }
+        Ok(self.count_for_optional(&spec)?.p_ge(1))
+    }
+
+    /// **P(no die matches `spec`)**, or **P(pool is empty)** when `spec` is [`OptionalFaceSpec::LengthOnly`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, FaceSpec, OptionalFaceSpec};
+    /// let pool = DicePool::from_count(1, 6).unwrap();
+    /// let p = pool.p_none(OptionalFaceSpec::Spec(FaceSpec::Faces(vec![1])))?;
+    /// assert!((p - 5.0 / 6.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn p_none(&self, spec: OptionalFaceSpec) -> Result<f64> {
+        if matches!(spec, OptionalFaceSpec::LengthOnly) {
+            return Ok(if self.dice.is_empty() { 1.0 } else { 0.0 });
+        }
+        Ok(self.count_for_optional(&spec)?.pmf(0))
+    }
+
+    /// **P(at least `k` dice match `spec`)**, or **P(pool has ≥ `k` dice)** when `spec` is [`OptionalFaceSpec::LengthOnly`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, FaceSpec, IntBand, OptionalFaceSpec};
+    /// let pool = DicePool::from_count(3, 6).unwrap();
+    /// let band = IntBand::at_least(5);
+    /// let p = pool.p_at_least(2, OptionalFaceSpec::Spec(FaceSpec::Band(band)))?;
+    /// assert!((p - 7.0 / 27.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn p_at_least(&self, k: usize, spec: OptionalFaceSpec) -> Result<f64> {
+        if matches!(spec, OptionalFaceSpec::LengthOnly) {
+            return Ok(if self.dice.len() >= k { 1.0 } else { 0.0 });
+        }
+        let k_i64 = i64::try_from(k).map_err(|_| anyhow::anyhow!("p_at_least: k out of range"))?;
+        Ok(self.count_for_optional(&spec)?.p_ge(k_i64))
+    }
 }
 
 /// Binomial: number of successes in `n` i.i.d. trials with probability `p` each.
@@ -363,9 +545,11 @@ mod tests {
     }
 
     #[test]
-    fn count_ge_3d6_above_4() {
+    fn count_faces_3d6_at_least_5() {
         let pool = DicePool::from_count(3, 6).unwrap();
-        let c = pool.count_ge(5).unwrap();
+        let c = pool
+            .count_faces(FaceSpec::Band(IntBand::at_least(5)))
+            .unwrap();
         assert!((c.pmf(0) - 8.0 / 27.0).abs() < 1e-9);
         assert!((c.pmf(1) - 4.0 / 9.0).abs() < 1e-9);
         assert!((c.pmf(3) - 1.0 / 27.0).abs() < 1e-9);
@@ -379,5 +563,51 @@ mod tests {
         for k in 1..=6 {
             assert!((hi.pmf(k) - keep.pmf(k)).abs() < 1e-9);
         }
+    }
+
+    #[test]
+    fn p_any_the_pool_style() {
+        for n in 1..=10 {
+            let pool = DicePool::from_count(n, 6).unwrap();
+            let p = pool
+                .p_any(OptionalFaceSpec::Spec(FaceSpec::Faces(vec![1])))
+                .unwrap();
+            let expected = 1.0 - f64::powf(5.0 / 6.0, n as f64);
+            assert!((p - expected).abs() < 1e-9, "n={n}");
+        }
+    }
+
+    #[test]
+    fn p_none_single_one() {
+        let pool = DicePool::from_count(1, 6).unwrap();
+        assert!(
+            (pool
+                .p_none(OptionalFaceSpec::Spec(FaceSpec::Faces(vec![1])))
+                .unwrap()
+                - 5.0 / 6.0)
+                .abs()
+                < 1e-9
+        );
+    }
+
+    #[test]
+    fn p_at_least_two_fives_on_3d6() {
+        let pool = DicePool::from_count(3, 6).unwrap();
+        let p = pool
+            .p_at_least(
+                2,
+                OptionalFaceSpec::Spec(FaceSpec::Band(IntBand::at_least(5))),
+            )
+            .unwrap();
+        assert!((p - 7.0 / 27.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn length_only_p_predicates() {
+        let pool = DicePool::from_count(3, 6).unwrap();
+        assert!((pool.p_any(OptionalFaceSpec::LengthOnly).unwrap() - 1.0).abs() < 1e-9);
+        assert!((pool.p_none(OptionalFaceSpec::LengthOnly).unwrap() - 0.0).abs() < 1e-9);
+        assert!((pool.p_at_least(4, OptionalFaceSpec::LengthOnly).unwrap() - 0.0).abs() < 1e-9);
+        assert!((pool.p_at_least(3, OptionalFaceSpec::LengthOnly).unwrap() - 1.0).abs() < 1e-9);
     }
 }

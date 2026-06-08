@@ -17,14 +17,14 @@ In the playground, copy the script below into the **editor** and click **Run**. 
 
 ```text
 for dice in range(1, 11):
-    p = count_in(dice_pool(dice, 6), [1]).p_ge(1)
+    p = dice_pool(dice, 6).p_any(1)
     output("{}d".format(dice), p)
 ```
 
-- `dice_pool(n, 6)` is **n** fair d6 not yet summed.
-- `count_in(..., [1])` yields a distribution of how many 1s appeared; `.p_ge(1)` is the chance of at least one 1.
+- `dice_pool(n, 6)` is **n** fair d6 not yet summed (or use `nd6` when `n` is literal in a script).
+- `.p_any(1)` is the chance that **at least one** die shows a 1. You can pass a face list (`p_any([1])`), a desugared range (`p_any(5..6)`), or omit the argument for a deterministic pool-length check.
 
-Similar “any success die” rules appear in other indie designs; the same pattern works with different target faces or `count_ge` for “8+ on d10” pools.
+Similar “any success die” rules: `.p_any(8..)` on a d10 pool for “any 8+”, `.p_at_least(2, 5..)` for “at least two fives or better”, or `.p_none(1)` for “no natural ones”. See [API conventions](../references/api-conventions.md).
 
 ## Cookbook
 

@@ -1,0 +1,4 @@
+# keep = conditional faces; ignore = low faces count as 0 in the sum.
+output("high_die", d(6).keep(5..))
+output("conditional_pool_sum", dice_pool(3, 6).keep(5..).sum())
+output("ignored_pool_sum", dice_pool(3, 6).ignore(1..4).sum())

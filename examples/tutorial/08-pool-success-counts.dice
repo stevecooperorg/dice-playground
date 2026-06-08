@@ -1,0 +1,3 @@
+# How many of 3d6 show 5+? Any natural 1 on 2d6?
+output("how_many_high", 3d6.count(5..))
+output("any_one", dice_pool(2, 6).p_any(1))

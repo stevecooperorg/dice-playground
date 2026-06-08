@@ -4,7 +4,7 @@ Scale = scale(["MISS", "PARTIAL", "FULL_SUCCESS"])
 STAT = 2
 
 roll = 2d6 + STAT
-out = bucket(roll, Scale, [6, 9])
+out = roll.bucket(Scale, ..6, 7..9, 10..)
 output("move", out)
 output("p_full_success", out.p_at_least("FULL_SUCCESS"))
 output("p_partial_or_better", out.p_at_least("PARTIAL"))

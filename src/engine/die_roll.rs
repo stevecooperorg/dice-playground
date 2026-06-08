@@ -10,6 +10,8 @@ use std::collections::BTreeMap;
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 
+use super::int_band::IntBand;
+
 /// Exact distribution over integer roll totals (supports modifiers and negative outcomes).
 ///
 /// # Example
@@ -365,6 +367,130 @@ impl DieRoll {
         self.map_outcomes(|k| k.clamp(min, max))
     }
 
+    /// Keep only outcomes that satisfy `predicate`, then renormalize.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let high_faces = DieRoll::die(6).unwrap().keep_ge(5).unwrap();
+    /// assert_eq!(high_faces.support_size(), 2);
+    /// assert!((high_faces.pmf(5) - 0.5).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn keep_faces(&self, mut predicate: impl FnMut(i64) -> bool) -> Result<Self> {
+        if self.mass.is_empty() {
+            bail!("cannot keep faces on empty distribution");
+        }
+        let mut out = BTreeMap::new();
+        for (&k, &p) in &self.mass {
+            if predicate(k) {
+                *out.entry(k).or_insert(0.0) += p;
+            }
+        }
+        if out.is_empty() {
+            bail!("keep_faces: no outcomes remain");
+        }
+        let mut dist = Self { mass: out };
+        dist.normalize_in_place()?;
+        Ok(dist)
+    }
+
+    /// Drop outcomes that satisfy `predicate`, then renormalize.
+    pub fn remove_faces(&self, mut predicate: impl FnMut(i64) -> bool) -> Result<Self> {
+        self.keep_faces(|k| !predicate(k))
+    }
+
+    /// Keep outcomes with value ≥ `threshold` (inclusive).
+    pub fn keep_ge(&self, threshold: i64) -> Result<Self> {
+        self.keep_faces(|k| k >= threshold)
+    }
+
+    /// Keep outcomes with value > `threshold`.
+    pub fn keep_gt(&self, threshold: i64) -> Result<Self> {
+        self.keep_faces(|k| k > threshold)
+    }
+
+    /// Keep outcomes with value ≤ `threshold` (inclusive).
+    pub fn keep_le(&self, threshold: i64) -> Result<Self> {
+        self.keep_faces(|k| k <= threshold)
+    }
+
+    /// Keep outcomes with value < `threshold`.
+    pub fn keep_lt(&self, threshold: i64) -> Result<Self> {
+        self.keep_faces(|k| k < threshold)
+    }
+
+    /// Keep outcomes in the inclusive closed interval `[lo, hi]`.
+    pub fn keep_in_range(&self, lo: i64, hi: i64) -> Result<Self> {
+        IntBand::through(lo, hi)?;
+        self.keep_faces(|k| (lo..=hi).contains(&k))
+    }
+
+    /// Keep outcomes whose value appears in `values` (duplicates in the list are ignored).
+    pub fn keep_in_set(&self, values: &[i64]) -> Result<Self> {
+        if values.is_empty() {
+            bail!("keep_in_set: need at least one face value");
+        }
+        self.keep_faces(|k| values.contains(&k))
+    }
+
+    /// Keep outcomes that fall in `band`.
+    pub fn keep_in_band(&self, band: IntBand) -> Result<Self> {
+        self.keep_faces(|k| band.contains(k))
+    }
+
+    /// Keep only faces matching a script [`FaceSpec`](crate::engine::FaceSpec).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DieRoll, FaceSpec, IntBand};
+    /// let high = DieRoll::die(6).unwrap().keep_faces_spec(FaceSpec::Band(IntBand::at_least(5)))?;
+    /// assert_eq!(high.min(), Some(5));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn keep_faces_spec(&self, spec: super::face_spec::FaceSpec) -> Result<Self> {
+        spec.keep_die_roll(self)
+    }
+
+    /// Drop faces matching `spec`, then renormalize.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DieRoll, FaceSpec, IntBand};
+    /// let d6 = DieRoll::die(6).unwrap();
+    /// let removed = d6.remove_faces_spec(FaceSpec::Band(IntBand::through(1, 4)?))?;
+    /// let kept = d6.keep_faces_spec(FaceSpec::Band(IntBand::at_least(5)))?;
+    /// assert_eq!(removed.entries(), kept.entries());
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn remove_faces_spec(&self, spec: super::face_spec::FaceSpec) -> Result<Self> {
+        self.remove_faces(|k| spec.matches(k))
+    }
+
+    /// Remap matching faces to `to`; other faces unchanged (masses merged when outcomes collide).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DieRoll, FaceSpec, IntBand};
+    /// let ignored = DieRoll::die(6).unwrap()
+    ///     .convert_faces_spec(FaceSpec::Band(IntBand::through(1, 4)?), 0)?;
+    /// assert!((ignored.pmf(0) - 4.0 / 6.0).abs() < 1e-12);
+    /// assert!((ignored.pmf(5) - 1.0 / 6.0).abs() < 1e-12);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn convert_faces_spec(&self, spec: super::face_spec::FaceSpec, to: i64) -> Result<Self> {
+        self.map_outcomes(|k| if spec.matches(k) { to } else { k })
+    }
+
+    /// Remap matching faces to 0 (`convert(spec, 0)`).
+    pub fn ignore_faces_spec(&self, spec: super::face_spec::FaceSpec) -> Result<Self> {
+        self.convert_faces_spec(spec, 0)
+    }
+
     /// Multiply every outcome by `factor` (e.g. tens die reading `d4 * 10`).
     ///
     /// # Example
@@ -700,5 +826,42 @@ mod floor_div_tests {
             oe.pmf(199) >= one_path,
             "RMSS high open example 99+96+04 should contribute mass at 199"
         );
+    }
+
+    #[test]
+    fn remove_faces_matches_keep_complement_on_d6() {
+        use crate::engine::{FaceSpec, IntBand};
+        let d6 = DieRoll::die(6).unwrap();
+        let band_low = FaceSpec::Band(IntBand::through(1, 4).unwrap());
+        let removed = d6.remove_faces_spec(band_low).unwrap();
+        let kept = d6
+            .keep_faces_spec(FaceSpec::Band(IntBand::at_least(5)))
+            .unwrap();
+        assert_eq!(removed.entries(), kept.entries());
+    }
+
+    #[test]
+    fn ignore_low_faces_on_d6() {
+        use crate::engine::{FaceSpec, IntBand};
+        let ignored = DieRoll::die(6)
+            .unwrap()
+            .ignore_faces_spec(FaceSpec::Band(IntBand::through(1, 4).unwrap()))
+            .unwrap();
+        assert!((ignored.pmf(0) - 4.0 / 6.0).abs() < 1e-12);
+        assert!((ignored.pmf(5) - 1.0 / 6.0).abs() < 1e-12);
+        assert!((ignored.pmf(6) - 1.0 / 6.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn pool_ignore_low_faces_sum_has_zero() {
+        use crate::engine::{DicePool, FaceSpec, IntBand};
+        let total = DicePool::from_count(3, 6)
+            .unwrap()
+            .ignore_faces_spec(FaceSpec::Band(IntBand::through(1, 4).unwrap()))
+            .unwrap()
+            .sum()
+            .unwrap();
+        assert!(total.pmf(0) > 0.0);
+        assert!((total.mean() - 5.5).abs() < 1e-9);
     }
 }

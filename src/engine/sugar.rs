@@ -16,7 +16,7 @@ use anyhow::Context;
 /// # Ok::<(), anyhow::Error>(())
 /// ```
 pub fn desugar_if_needed(path: &str, source: &str) -> anyhow::Result<String> {
-    desugar(path, source)
+    super::range_sugar::desugar_all(path, source)
 }
 
 fn next_char(rest: &str) -> Option<(char, usize)> {

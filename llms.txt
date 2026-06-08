@@ -94,17 +94,24 @@ shift(dist: DieRoll, delta: int) -> DieRoll
 ```
 Add `delta` to every outcome (`roll + delta` is usually clearer).
 
+### Inclusive ranges (`.dice` sugar + helpers)
+
+In scripts you can write **`6..94`**, **`..6`**, **`10..`** (inclusive endpoints). They desugar to:
+
+```python
+through(lo: int, hi: int) -> IntBand   # closed interval
+at_most(hi: int) -> IntBand            # ..hi
+at_least(lo: int) -> IntBand           # lo..
+```
+
+Use with `keep` / `remove` / `convert` / `ignore`, `count(...)`, `bucket`. **Not** Starlark’s half-open `range()`. See `docs/references/api-conventions.md`.
+
 ### Pool analysis (need `DicePool`)
 
 ```python
-count_ge(pool: DicePool, threshold: int) -> DieRoll
+count(pool: DicePool, spec) -> DieRoll
 ```
-Distribution of **how many** dice rolled ≥ `threshold`.
-
-```python
-count_in(pool: DicePool, values: list[int]) -> DieRoll
-```
-How many dice show a face in `values` (e.g. `[1]` for counting ones).
+Distribution of **how many** dice match `spec` (int, `[faces]`, or band / `5..`). Same as `pool.count(spec)`.
 
 ```python
 order_stat(pool: DicePool, k: int) -> DieRoll
@@ -135,8 +142,10 @@ Ordered labels, **first = lowest rank**, **last = highest**.
 
 ```python
 bucket(dist: DieRoll, scale: Scale, cuts: list[int]) -> Outcomes
+bucket(dist: DieRoll, scale: Scale, band, ...) -> Outcomes  # one IntBand per label
+roll.bucket(scale, ..6, 7..9, 10..) -> Outcomes             # method form (PbtA)
 ```
-Split a **numeric total** into bands. With `L` labels, pass **`L - 1`** increasing cut values. Totals ≤ first cut → first label; between cuts → middle labels; above last cut → top label. Good for PbtA **2d6 + mod** ladders when only the total matters.
+Split a **numeric total** into bands. **Cuts:** with `L` labels, pass **`L - 1`** increasing integers (`[6, 9]`). **Bands:** pass **`L`** inclusive ranges (`..6`, `through(7, 9)`, `10..`). Face filters (`keep`, `ignore`, etc.) change per-die outcomes; `p_ge(n)` on a total is a **probability**.
 
 ```python
 classify(dist: DieRoll, scale: Scale, classify_fn) -> Outcomes
@@ -161,12 +170,22 @@ prob_table(rows: list) -> prob_table
 ```
 `rows` is a list of `(description: str, probability: float)` pairs; rows are **independent** (need not sum to 1).
 
-### `DicePool` method
+### `DicePool` methods
 
 ```python
 pool.sum() -> DieRoll
+pool.keep(spec) -> DicePool           # drop non-matching faces, renormalize
+pool.remove(spec) -> DicePool
+pool.convert(spec, to) -> DicePool
+pool.ignore(spec) -> DicePool         # convert(spec, 0)
+pool.count(spec) -> DieRoll           # how many dice matched spec
+pool.order_stat(k) -> DieRoll
+pool.middle_of(keep) -> DieRoll
+pool.p_any(spec?) -> float            # P(≥1 match); omit spec = non-empty pool
+pool.p_none(spec?) -> float
+pool.p_at_least(k, spec?) -> float    # P(≥k matches); on Outcomes, p_at_least is label-ranked
 ```
-Same as `sum(pool)`.
+Example: `dice_pool(5, 6).p_any(1)` (The Pool); `5d10.keep(8..).count(8..)`.
 
 ### `DieRoll` methods
 
@@ -177,6 +196,11 @@ roll.p_ge(value: int) -> float     # P(total >= value) — DC checks
 roll.cdf(value: int) -> float      # P(total <= value)
 roll.clamp(min: int, max: int) -> DieRoll   # cap each outcome, merge at bounds
 roll.support_size() -> int         # count of outcomes with P > 0
+roll.keep(spec) -> DieRoll           # not .p_ge on totals
+roll.remove(spec) -> DieRoll
+roll.convert(spec, to) -> DieRoll
+roll.ignore(spec) -> DieRoll
+roll.bucket(scale, band, ...) -> Outcomes
 ```
 
 ### `Outcomes` methods
@@ -267,7 +291,7 @@ output("grid", prob_table(rows))
 |----------------|-----|
 | Sum of dice, one number vs DC | `DieRoll`, `.p_ge()`, or `bucket` |
 | Special faces on one kept die (nat 1/20) | `classify` on that die **before** adding mod in the label function, or on `keep_highest` result |
-| Count of successes in a pool | `count_ge`, `count_in`, or `success_pool` |
+| Count of successes in a pool | `count(spec)`, `p_any` / `p_at_least`, or `success_pool` |
 | Highest die, multiple 6s, arbitrary face logic | `dice_pool` + `pool_map` + optional `classify` on integer codes |
 | Two dice that interact (advantage as joint, paired save) | `joint_classify` or model kept die explicitly (`2d20kh1`) |
 | Half damage on save | `8d6 // 2` |

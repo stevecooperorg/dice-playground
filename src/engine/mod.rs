@@ -13,8 +13,11 @@ mod core;
 mod dice_pool;
 mod die_roll;
 mod enumerate;
+mod face_spec;
+mod int_band;
 mod ordinal;
 mod poly_explode;
+mod range_sugar;
 mod sugar;
 
 mod playground;
@@ -24,6 +27,8 @@ mod starlark_guest;
 pub mod lsp;
 
 pub use core::{total_variation_distance, DicePool, DieRoll, PoolOp, MAX_JOINT_CELLS};
+pub use face_spec::{FaceSpec, OptionalFaceSpec};
+pub use int_band::IntBand;
 pub use ordinal::{Outcomes, Scale};
 pub use playground::{
     check_source, dice_dialect_public, eval_program, CheckResult, EvalProgramOptions,
@@ -35,6 +40,7 @@ pub use starlark_guest::{
     eval_source_with_dialect, format_eval_result_text, format_probability,
     format_probability_with_denom, full_environment_docs, infer_sample_space_denominator,
     outcomes_type_docs, render_stdlib_reference_markdown, EvalResult, OutputEntry, OutputStore,
-    ProbFormat, StarlarkDicePool, StarlarkDieRoll, StarlarkOutcomes, StarlarkScale,
+    ProbFormat, StarlarkDicePool, StarlarkDieRoll, StarlarkIntBand, StarlarkOutcomes,
+    StarlarkScale,
 };
 pub use sugar::{desugar, desugar_if_needed, dice_literal_len_at};

@@ -2,6 +2,8 @@
 
 This reference lists everything built into `.dice` scripts beyond basic Starlark (variables, `for` loops, lists). New here? Work through the [tutorial](../README.md#tutorial) first—it introduces notation like `2d6` and `4d6dl1`, which the playground expands into the functions below.
 
+**Naming:** face matching (`keep` / `remove` / `convert` / `ignore`), `count`, and pool `p_*` methods follow [API conventions](api-conventions.md).
+
 ## Core ideas
 
 **`DieRoll`** — a finished numeric roll (or total) with exact chances for each possible result. Example: `2d6` is a `DieRoll`; so is `4d6dl1`. Use **`output("name", roll)`** to print its table in the playground.
@@ -75,6 +77,16 @@ Use for dice that are not uniform—`die_faces([1, 2, 2, 3])` is twice as likely
 
 ---
 
+## die\_faces.bucket
+
+```python
+def die_faces.bucket(scale: Scale, *bands) -> Outcomes
+```
+
+Label numeric totals with one inclusive band per scale label (PbtA-style).
+
+---
+
 ## die\_faces.cdf
 
 ```python
@@ -120,6 +132,36 @@ Cap every outcome at `min` and `max` (inclusive), merging probability at the bou
 #### Details
 
 Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
+## die\_faces.convert
+
+```python
+def die_faces.convert(spec, to: int) -> DieRoll
+```
+
+Remap matching faces to `to`; other faces unchanged.
+
+---
+
+## die\_faces.ignore
+
+```python
+def die_faces.ignore(spec) -> DieRoll
+```
+
+Remap matching faces to 0 (`convert(spec, 0)`).
+
+---
+
+## die\_faces.keep
+
+```python
+def die_faces.keep(spec) -> DieRoll
+```
+
+Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
 
 ---
 
@@ -177,6 +219,16 @@ Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
 
 ---
 
+## die\_faces.remove
+
+```python
+def die_faces.remove(spec) -> DieRoll
+```
+
+Drop faces matching `spec`; renormalize the rest.
+
+---
+
 ## die\_faces.support\_size
 
 ```python
@@ -211,6 +263,102 @@ Roll `count` separate fair dice—**not** added together yet.
 
 Use when the rule looks at individual results (highest die, count 10s, etc.). Add with
 `.sum()` or the `sum(...)` function when you only need the total. Example: `dice_pool(4, 6)` for four d6s.
+
+---
+
+## dice\_pool.convert
+
+```python
+def dice_pool.convert(spec, to: int) -> DicePool
+```
+
+Remap matching faces to `to` on every die.
+
+---
+
+## dice\_pool.count
+
+```python
+def dice_pool.count(spec) -> DieRoll
+```
+
+Distribution of how many dice match `spec`.
+
+---
+
+## dice\_pool.ignore
+
+```python
+def dice_pool.ignore(spec) -> DicePool
+```
+
+Remap matching faces to 0 on every die.
+
+---
+
+## dice\_pool.keep
+
+```python
+def dice_pool.keep(spec) -> DicePool
+```
+
+Keep only matching faces on every die; drop others and renormalize each die.
+
+---
+
+## dice\_pool.middle\_of
+
+```python
+def dice_pool.middle_of(keep: int) -> DieRoll
+```
+
+---
+
+## dice\_pool.order\_stat
+
+```python
+def dice_pool.order_stat(k: int) -> DieRoll
+```
+
+---
+
+## dice\_pool.p\_any
+
+```python
+def dice_pool.p_any(*spec) -> float
+```
+
+P(at least one die matches the optional face spec).
+
+---
+
+## dice\_pool.p\_at\_least
+
+```python
+def dice_pool.p_at_least(k: int, *spec) -> float
+```
+
+P(at least `k` dice match the optional face spec).
+
+---
+
+## dice\_pool.p\_none
+
+```python
+def dice_pool.p_none(*spec) -> float
+```
+
+P(no die matches the optional face spec).
+
+---
+
+## dice\_pool.remove
+
+```python
+def dice_pool.remove(spec) -> DicePool
+```
+
+Drop matching faces on every die; renormalize each die.
 
 ---
 
@@ -388,6 +536,16 @@ Rolemaster **open-ended roll** on **1–100** (d100): low open on **01–05**, h
 
 ---
 
+## open\_ended\_d100.bucket
+
+```python
+def open_ended_d100.bucket(scale: Scale, *bands) -> Outcomes
+```
+
+Label numeric totals with one inclusive band per scale label (PbtA-style).
+
+---
+
 ## open\_ended\_d100.cdf
 
 ```python
@@ -433,6 +591,36 @@ Cap every outcome at `min` and `max` (inclusive), merging probability at the bou
 #### Details
 
 Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
+## open\_ended\_d100.convert
+
+```python
+def open_ended_d100.convert(spec, to: int) -> DieRoll
+```
+
+Remap matching faces to `to`; other faces unchanged.
+
+---
+
+## open\_ended\_d100.ignore
+
+```python
+def open_ended_d100.ignore(spec) -> DieRoll
+```
+
+Remap matching faces to 0 (`convert(spec, 0)`).
+
+---
+
+## open\_ended\_d100.keep
+
+```python
+def open_ended_d100.keep(spec) -> DieRoll
+```
+
+Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
 
 ---
 
@@ -490,6 +678,16 @@ Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
 
 ---
 
+## open\_ended\_d100.remove
+
+```python
+def open_ended_d100.remove(spec) -> DieRoll
+```
+
+Drop faces matching `spec`; renormalize the rest.
+
+---
+
 ## open\_ended\_d100.support\_size
 
 ```python
@@ -526,17 +724,81 @@ Same effect as `roll + 3` when `roll` is a `DieRoll`. Prefer `roll + 3` in scrip
 
 ---
 
+## through
+
+```python
+def through(lo: int, hi: int) -> IntBand
+```
+
+Inclusive closed integer interval (same as desugared `6..94`).
+
+---
+
+## at_most
+
+```python
+def at_most(hi: int) -> IntBand
+```
+
+All integers at or below `hi` (desugared `..hi`).
+
+---
+
+## at_least
+
+```python
+def at_least(lo: int) -> IntBand
+```
+
+All integers at or above `lo` (desugared `lo..`).
+
+---
+
+### Inclusive ranges
+
+Integer bands for face filters and bucketing. In `.dice` scripts you can also write `6..94`, `..6`, and `10..` (inclusive endpoints).
+
+## through
+
+```python
+def through(lo: int, hi: int) -> IntBand
+```
+
+Inclusive closed integer interval (same as desugared `6..94`).
+
+---
+
+## at_most
+
+```python
+def at_most(hi: int) -> IntBand
+```
+
+All integers at or below `hi` (desugared `..hi`).
+
+---
+
+## at_least
+
+```python
+def at_least(lo: int) -> IntBand
+```
+
+All integers at or above `lo` (desugared `lo..`).
+
+---
+
 ### Pool rules (faces still matter)
 
 These need a `DicePool` from `dice_pool` before you total the dice.
 
-## count_ge
+## count
 
 ```python
-def count_ge(pool: DicePool, threshold: int) -> DieRoll
+def count(pool: DicePool, spec) -> DieRoll
 ```
 
-How many dice in the pool rolled **at least** `threshold`?
+How many dice in the pool match a face spec?
 
 #### Parameters
 
@@ -544,261 +806,17 @@ How many dice in the pool rolled **at least** `threshold`?
 
   From `dice_pool`.
 
-* `threshold`: (required)
+* `spec`: (required)
 
-  Count dice with rolled value ≥ this number.
-
-
-
-#### Details
-
-The result is a `DieRoll` over counts (0, 1, 2, …). Example: on 5d10, how many dice show 8+ for a success pool.
-
----
-
-## count\_ge.cdf
-
-```python
-def count_ge.cdf(value: int) -> float
-```
-
-Chance the total is **this number or lower** (cumulative from the bottom).
-
-#### Parameters
-
-* `value`: (required)
-
-  Upper cap (inclusive).
+  int face, list of ints, or `IntBand` / desugared range (e.g. `5..` for 5+).
 
 
 
 #### Details
 
-Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
+The result is a `DieRoll` over counts (0, 1, 2, …). Same as `pool.count(spec)`.
 
 ---
-
-## count\_ge.clamp
-
-```python
-def count_ge.clamp(min: int, max: int) -> DieRoll
-```
-
-Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
-
-#### Parameters
-
-* `min`: (required)
-
-  Lower bound (inclusive).
-
-* `max`: (required)
-
-  Upper bound (inclusive).
-
-
-
-#### Details
-
-Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
-
----
-
-## count\_ge.mean
-
-```python
-def count_ge.mean() -> float
-```
-
-Average result if you rolled this distribution many times—the **mean** on the output table.
-
----
-
-## count\_ge.p\_ge
-
-```python
-def count_ge.p_ge(value: int) -> float
-```
-
-Chance of **meeting or beating** a target number—your go-to for “need 15+ on 2d10”.
-
-#### Parameters
-
-* `value`: (required)
-
-  Target total (inclusive)—success if roll ≥ this.
-
-
-
-#### Details
-
-Example: `output("success", (2d10 + 3).p_ge(15))`.
-
----
-
-## count\_ge.pmf
-
-```python
-def count_ge.pmf(value: int) -> float
-```
-
-Chance of rolling **exactly** this number (one outcome, not “this or higher”).
-
-#### Parameters
-
-* `value`: (required)
-
-  The total you care about.
-
-
-
-#### Details
-
-Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
-
----
-
-## count\_ge.support\_size
-
-```python
-def count_ge.support_size() -> int
-```
-
-How many different totals can occur with non-zero chance (size of the result table).
-
----
-
-## count_in
-
-```python
-def count_in(pool: DicePool, values: list[int]) -> DieRoll
-```
-
-How many dice show a face in your chosen list?
-
-#### Parameters
-
-* `values`: (required)
-
-  Face values that count (duplicates in the list are harmless).
-
-
-
-#### Details
-
-Example: count how many dice rolled 1 in a pool (list `[1]`), or how many show 9 or 10 (`[9, 10]`).
-
----
-
-## count\_in.cdf
-
-```python
-def count_in.cdf(value: int) -> float
-```
-
-Chance the total is **this number or lower** (cumulative from the bottom).
-
-#### Parameters
-
-* `value`: (required)
-
-  Upper cap (inclusive).
-
-
-
-#### Details
-
-Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
-
----
-
-## count\_in.clamp
-
-```python
-def count_in.clamp(min: int, max: int) -> DieRoll
-```
-
-Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
-
-#### Parameters
-
-* `min`: (required)
-
-  Lower bound (inclusive).
-
-* `max`: (required)
-
-  Upper bound (inclusive).
-
-
-
-#### Details
-
-Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
-
----
-
-## count\_in.mean
-
-```python
-def count_in.mean() -> float
-```
-
-Average result if you rolled this distribution many times—the **mean** on the output table.
-
----
-
-## count\_in.p\_ge
-
-```python
-def count_in.p_ge(value: int) -> float
-```
-
-Chance of **meeting or beating** a target number—your go-to for “need 15+ on 2d10”.
-
-#### Parameters
-
-* `value`: (required)
-
-  Target total (inclusive)—success if roll ≥ this.
-
-
-
-#### Details
-
-Example: `output("success", (2d10 + 3).p_ge(15))`.
-
----
-
-## count\_in.pmf
-
-```python
-def count_in.pmf(value: int) -> float
-```
-
-Chance of rolling **exactly** this number (one outcome, not “this or higher”).
-
-#### Parameters
-
-* `value`: (required)
-
-  The total you care about.
-
-
-
-#### Details
-
-Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
-
----
-
-## count\_in.support\_size
-
-```python
-def count_in.support_size() -> int
-```
-
-How many different totals can occur with non-zero chance (size of the result table).
 
 ---
 
@@ -821,6 +839,16 @@ The **k**th highest die in the pool (`k = 1` is the highest, `2` is second-highe
 #### Details
 
 Blades in the Dark and similar games use the highest die; some rules use second-highest.
+
+---
+
+## order\_stat.bucket
+
+```python
+def order_stat.bucket(scale: Scale, *bands) -> Outcomes
+```
+
+Label numeric totals with one inclusive band per scale label (PbtA-style).
 
 ---
 
@@ -869,6 +897,36 @@ Cap every outcome at `min` and `max` (inclusive), merging probability at the bou
 #### Details
 
 Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
+## order\_stat.convert
+
+```python
+def order_stat.convert(spec, to: int) -> DieRoll
+```
+
+Remap matching faces to `to`; other faces unchanged.
+
+---
+
+## order\_stat.ignore
+
+```python
+def order_stat.ignore(spec) -> DieRoll
+```
+
+Remap matching faces to 0 (`convert(spec, 0)`).
+
+---
+
+## order\_stat.keep
+
+```python
+def order_stat.keep(spec) -> DieRoll
+```
+
+Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
 
 ---
 
@@ -926,6 +984,16 @@ Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
 
 ---
 
+## order\_stat.remove
+
+```python
+def order_stat.remove(spec) -> DieRoll
+```
+
+Drop faces matching `spec`; renormalize the rest.
+
+---
+
 ## order\_stat.support\_size
 
 ```python
@@ -955,6 +1023,16 @@ Sum the middle `keep` dice after sorting the pool low to high.
 #### Details
 
 Niche rules that drop extremes from both ends; less common than keep-highest / drop-lowest.
+
+---
+
+## middle\_of.bucket
+
+```python
+def middle_of.bucket(scale: Scale, *bands) -> Outcomes
+```
+
+Label numeric totals with one inclusive band per scale label (PbtA-style).
 
 ---
 
@@ -1003,6 +1081,36 @@ Cap every outcome at `min` and `max` (inclusive), merging probability at the bou
 #### Details
 
 Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
+## middle\_of.convert
+
+```python
+def middle_of.convert(spec, to: int) -> DieRoll
+```
+
+Remap matching faces to `to`; other faces unchanged.
+
+---
+
+## middle\_of.ignore
+
+```python
+def middle_of.ignore(spec) -> DieRoll
+```
+
+Remap matching faces to 0 (`convert(spec, 0)`).
+
+---
+
+## middle\_of.keep
+
+```python
+def middle_of.keep(spec) -> DieRoll
+```
+
+Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
 
 ---
 
@@ -1060,6 +1168,16 @@ Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
 
 ---
 
+## middle\_of.remove
+
+```python
+def middle_of.remove(spec) -> DieRoll
+```
+
+Drop faces matching `spec`; renormalize the rest.
+
+---
+
 ## middle\_of.support\_size
 
 ```python
@@ -1090,6 +1208,16 @@ Custom rule: for every way the pool can land, run your function on the list of f
 
 Advanced—use when no built-in pool helper fits (e.g. “sum only dice that matched another die”).
 The function receives one argument: the list of rolled values, sorted as the engine stores them.
+
+---
+
+## pool\_map.bucket
+
+```python
+def pool_map.bucket(scale: Scale, *bands) -> Outcomes
+```
+
+Label numeric totals with one inclusive band per scale label (PbtA-style).
 
 ---
 
@@ -1138,6 +1266,36 @@ Cap every outcome at `min` and `max` (inclusive), merging probability at the bou
 #### Details
 
 Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
+## pool\_map.convert
+
+```python
+def pool_map.convert(spec, to: int) -> DieRoll
+```
+
+Remap matching faces to `to`; other faces unchanged.
+
+---
+
+## pool\_map.ignore
+
+```python
+def pool_map.ignore(spec) -> DieRoll
+```
+
+Remap matching faces to 0 (`convert(spec, 0)`).
+
+---
+
+## pool\_map.keep
+
+```python
+def pool_map.keep(spec) -> DieRoll
+```
+
+Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
 
 ---
 
@@ -1195,6 +1353,16 @@ Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
 
 ---
 
+## pool\_map.remove
+
+```python
+def pool_map.remove(spec) -> DieRoll
+```
+
+Drop faces matching `spec`; renormalize the rest.
+
+---
+
 ## pool\_map.support\_size
 
 ```python
@@ -1237,6 +1405,16 @@ Count **successes** on a dice pool (Storyteller / WoD-style d10 pools and varian
 
 Returns a `DieRoll` over how many successes you rolled. `mode` controls 1s and 10s:
 `"baseline"` (default), `"ones_cancel"`, `"ones_remove"`, or `"implode"`.
+
+---
+
+## success\_pool.bucket
+
+```python
+def success_pool.bucket(scale: Scale, *bands) -> Outcomes
+```
+
+Label numeric totals with one inclusive band per scale label (PbtA-style).
 
 ---
 
@@ -1285,6 +1463,36 @@ Cap every outcome at `min` and `max` (inclusive), merging probability at the bou
 #### Details
 
 Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
+## success\_pool.convert
+
+```python
+def success_pool.convert(spec, to: int) -> DieRoll
+```
+
+Remap matching faces to `to`; other faces unchanged.
+
+---
+
+## success\_pool.ignore
+
+```python
+def success_pool.ignore(spec) -> DieRoll
+```
+
+Remap matching faces to 0 (`convert(spec, 0)`).
+
+---
+
+## success\_pool.keep
+
+```python
+def success_pool.keep(spec) -> DieRoll
+```
+
+Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
 
 ---
 
@@ -1342,6 +1550,16 @@ Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
 
 ---
 
+## success\_pool.remove
+
+```python
+def success_pool.remove(spec) -> DieRoll
+```
+
+Drop faces matching `spec`; renormalize the rest.
+
+---
+
 ## success\_pool.support\_size
 
 ```python
@@ -1381,7 +1599,7 @@ Used with `bucket` or `classify`. Example: `scale(["MISS", "PARTIAL", "FULL"])`.
 ## bucket
 
 ```python
-def bucket(dist: DieRoll, scale: Scale, cuts: list[int]) -> Outcomes
+def bucket(dist: DieRoll, scale: Scale, *spec) -> Outcomes
 ```
 
 Split a numeric total into named bands using DC-style cut points.
@@ -1395,10 +1613,6 @@ Split a numeric total into named bands using DC-style cut points.
 * `scale`: (required)
 
   From `scale(...)`.
-
-* `cuts`: (required)
-
-  Increasing thresholds between labels.
 
 
 
@@ -1658,9 +1872,59 @@ How many different totals can occur with non-zero chance (size of the result tab
 
 ---
 
+## keep
+
+```python
+def keep(spec) -> DieRoll
+```
+
+Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
+
+---
+
+## remove
+
+```python
+def remove(spec) -> DieRoll
+```
+
+Drop faces matching `spec`; renormalize the rest.
+
+---
+
+## convert
+
+```python
+def convert(spec, to: int) -> DieRoll
+```
+
+Remap matching faces to `to`; other faces unchanged.
+
+---
+
+## ignore
+
+```python
+def ignore(spec) -> DieRoll
+```
+
+Remap matching faces to 0 (`convert(spec, 0)`).
+
+---
+
+## bucket
+
+```python
+def bucket(scale: Scale, *bands) -> Outcomes
+```
+
+Label numeric totals with one inclusive band per scale label (PbtA-style).
+
+---
+
 # DicePool methods
 
-Turn a pool into a single total when the rule no longer cares about separate dice.
+Face filters (`keep` / `remove` / `convert` / `ignore`), match counts (`count`), pool match probabilities (`p_any` / `p_none` / `p_at_least`), or total the pool. See [API conventions](../references/api-conventions.md).
 
 ## sum
 
@@ -1669,6 +1933,112 @@ def sum() -> DieRoll
 ```
 
 Add every die in the pool into one total—turns `dice_pool(4, 6)` into the same idea as `4d6`.
+
+---
+
+## keep
+
+```python
+def keep(spec) -> DicePool
+```
+
+Keep only matching faces on every die; drop others and renormalize each die.
+
+---
+
+## remove
+
+```python
+def remove(spec) -> DicePool
+```
+
+Drop matching faces on every die; renormalize each die.
+
+---
+
+## convert
+
+```python
+def convert(spec, to: int) -> DicePool
+```
+
+Remap matching faces to `to` on every die.
+
+---
+
+## ignore
+
+```python
+def ignore(spec) -> DicePool
+```
+
+Remap matching faces to 0 on every die.
+
+---
+
+## count
+
+```python
+def count(spec) -> DieRoll
+```
+
+Distribution of how many dice match `spec`.
+
+---
+
+## order_stat
+
+## order\_stat
+
+```python
+def order_stat(k: int) -> DieRoll
+```
+
+---
+
+## middle_of
+
+## middle\_of
+
+```python
+def middle_of(keep: int) -> DieRoll
+```
+
+---
+
+## p_any
+
+## p\_any
+
+```python
+def p_any(*spec) -> float
+```
+
+P(at least one die matches the optional face spec).
+
+---
+
+## p_none
+
+## p\_none
+
+```python
+def p_none(*spec) -> float
+```
+
+P(no die matches the optional face spec).
+
+---
+
+## p_at_least
+
+## p\_at\_least
+
+```python
+def p_at_least(k: int, *spec) -> float
+```
+
+P(at least `k` dice match the optional face spec).
 
 ---
 

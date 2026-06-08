@@ -2,7 +2,8 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::{self, Write as _};
 
-use super::super::{successes_dist, Counterbalance, DicePool, DieRoll, Outcomes, Scale};
+use super::super::{successes_dist, Counterbalance, DicePool, DieRoll, IntBand, Outcomes, Scale};
+use super::bucket_args::outcomes_from_bucket_args;
 use anyhow::Context;
 use serde::Serialize;
 use starlark::any::ProvidesStaticType;
@@ -18,6 +19,7 @@ use starlark::values::{UnpackValue, Value, ValueLike};
 
 use super::dice_pool_value::StarlarkDicePool;
 use super::die_roll_value::StarlarkDieRoll;
+use super::int_band_value::StarlarkIntBand;
 use super::outcomes_value::StarlarkOutcomes;
 use super::output_format::{
     format_dist_pmf_text, format_ordinal_pmf_text, format_prob_multi_column,
@@ -304,33 +306,17 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         anyhow::bail!("sum: expected DicePool or DieRoll, got {value}")
     }
 
-    /// How many dice in the pool rolled **at least** `threshold`?
+    /// How many dice in the pool match a face spec?
     ///
-    /// The result is a `DieRoll` over counts (0, 1, 2, …). Example: on 5d10, how many dice show 8+ for a success pool.
+    /// The result is a `DieRoll` over counts (0, 1, 2, …). Same as `pool.count(spec)`.
     ///
     /// # Arguments
     /// * `pool`: From `dice_pool`.
-    /// * `threshold`: Count dice with rolled value ≥ this number.
+    /// * `spec`: int face, list of ints, or `IntBand` / desugared range (e.g. `5..` for 5+).
     #[starlark(as_type = StarlarkDieRoll)]
-    fn count_ge(pool: &StarlarkDicePool, threshold: i32) -> anyhow::Result<StarlarkDieRoll> {
-        Ok(StarlarkDieRoll::new(
-            pool.inner().count_ge(i64::from(threshold))?,
-        ))
-    }
-
-    /// How many dice show a face in your chosen list?
-    ///
-    /// Example: count how many dice rolled 1 in a pool (list `[1]`), or how many show 9 or 10 (`[9, 10]`).
-    ///
-    /// # Arguments
-    /// * `values`: Face values that count (duplicates in the list are harmless).
-    #[starlark(as_type = StarlarkDieRoll)]
-    fn count_in(
-        pool: &StarlarkDicePool,
-        values: UnpackList<i32>,
-    ) -> anyhow::Result<StarlarkDieRoll> {
-        let vals: Vec<i64> = values.items.into_iter().map(i64::from).collect();
-        Ok(StarlarkDieRoll::new(pool.inner().count_in(&vals)?))
+    fn count(pool: &StarlarkDicePool, spec: Value<'_>) -> anyhow::Result<StarlarkDieRoll> {
+        let parsed = super::face_spec::face_spec_from_value(spec)?;
+        Ok(StarlarkDieRoll::new(pool.inner().count_faces(parsed)?))
     }
 
     /// The **k**th highest die in the pool (`k = 1` is the highest, `2` is second-highest, …).
@@ -529,6 +515,27 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         Ok(StarlarkScale::new(Scale::new(labels.items)?))
     }
 
+    /// Inclusive closed integer interval (same as desugared `6..94`).
+    #[starlark(as_type = StarlarkIntBand)]
+    fn through(lo: i32, hi: i32) -> anyhow::Result<StarlarkIntBand> {
+        Ok(StarlarkIntBand::new(IntBand::through(
+            i64::from(lo),
+            i64::from(hi),
+        )?))
+    }
+
+    /// All integers at or below `hi` (desugared `..hi`).
+    #[starlark(as_type = StarlarkIntBand)]
+    fn at_most(hi: i32) -> anyhow::Result<StarlarkIntBand> {
+        Ok(StarlarkIntBand::new(IntBand::at_most(i64::from(hi))))
+    }
+
+    /// All integers at or above `lo` (desugared `lo..`).
+    #[starlark(as_type = StarlarkIntBand)]
+    fn at_least(lo: i32) -> anyhow::Result<StarlarkIntBand> {
+        Ok(StarlarkIntBand::new(IntBand::at_least(i64::from(lo))))
+    }
+
     /// Split a numeric total into named bands using DC-style cut points.
     ///
     /// With 4 labels you pass **3** cut numbers. Totals at or below the first cut get the first label;
@@ -542,13 +549,12 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     fn bucket(
         dist: &StarlarkDieRoll,
         scale: &StarlarkScale,
-        cuts: UnpackList<i32>,
+        #[starlark(args)] spec: UnpackTuple<Value<'_>>,
     ) -> anyhow::Result<StarlarkOutcomes> {
-        let cuts: Vec<i64> = cuts.items.into_iter().map(i64::from).collect();
-        Ok(StarlarkOutcomes::new(Outcomes::from_bucket(
+        Ok(StarlarkOutcomes::new(outcomes_from_bucket_args(
             dist.inner(),
             scale.inner().clone(),
-            &cuts,
+            spec.items,
         )?))
     }
 
@@ -728,7 +734,8 @@ fn record_output(store: &OutputStore, name: String, value: Value<'_>) -> anyhow:
 
 /// Parse and evaluate Starlark source with the dice standard library.
 pub fn eval_source(path: &str, content: &str) -> anyhow::Result<EvalResult> {
-    eval_source_with_dialect(path, content, &dice_dialect())
+    let expanded = super::super::desugar_if_needed(path, content)?;
+    eval_source_with_dialect(path, &expanded, &dice_dialect())
 }
 
 /// Parse and evaluate with a specific dialect (e.g. public playground without `load`).
@@ -959,6 +966,77 @@ output("counts", pool_map(dice_pool(3, 6), count_high))
     }
 
     #[test]
+    fn eval_pool_keep_faces_sum() {
+        let src = r#"
+total = dice_pool(3, 6).keep(5..).sum()
+output("high_sum", total)
+"#;
+        let res = eval_source("test.dice", src).expect("eval");
+        match &res.outputs[0] {
+            OutputEntry::DieRoll { entries, .. } => {
+                assert!(entries.iter().all(|(k, _)| *k >= 15));
+            }
+            other => panic!("expected dist, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn eval_pool_ignore_faces_sum_includes_zero() {
+        let src = r#"
+total = dice_pool(3, 6).ignore(1..4).sum()
+output("ignored_sum", total)
+"#;
+        let res = eval_source("test.dice", src).expect("eval");
+        match &res.outputs[0] {
+            OutputEntry::DieRoll { entries, mean, .. } => {
+                assert!(entries.iter().any(|(k, p)| *k == 0 && *p > 0.0));
+                assert!((*mean - 5.5).abs() < 1e-9);
+            }
+            other => panic!("expected dist, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn eval_pbta_bucket_bands_matches_cuts() {
+        let src = r#"
+Scale = scale(["MISS", "PARTIAL", "FULL"])
+STAT = 2
+roll = sum(dice_pool(2, 6)) + STAT
+by_cuts = bucket(roll, Scale, [6, 9])
+by_bands = roll.bucket(Scale, at_most(6), through(7, 9), at_least(10))
+output("cuts", by_cuts)
+output("bands", by_bands)
+"#;
+        let res = eval_source("test.dice", src).expect("eval");
+        let cuts = match &res.outputs[0] {
+            OutputEntry::Outcomes { entries, .. } => entries.clone(),
+            other => panic!("expected outcomes, got {other:?}"),
+        };
+        let bands = match &res.outputs[1] {
+            OutputEntry::Outcomes { entries, .. } => entries.clone(),
+            other => panic!("expected outcomes, got {other:?}"),
+        };
+        assert_eq!(cuts, bands);
+    }
+
+    #[test]
+    fn eval_range_desugar_in_bucket() {
+        let src = r#"
+Scale = scale(["LOW", "HIGH"])
+out = bucket(d(6) + 3, Scale, ..5, 6..)
+output("x", out)
+"#;
+        let res = eval_source("test.dice", src).expect("eval");
+        match &res.outputs[0] {
+            OutputEntry::Outcomes { entries, .. } => {
+                let p_low = entries.iter().find(|(l, _)| l == "LOW").unwrap().1;
+                assert!((p_low - 2.0 / 6.0).abs() < 1e-9);
+            }
+            other => panic!("expected outcomes, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn eval_prob_table_from_loop_pattern() {
         let src = r#"
 rows = []
@@ -976,6 +1054,21 @@ output("grid", prob_table(rows))
                 assert!((entries[0].1 - 0.5).abs() < 1e-9);
             }
             other => panic!("expected table output, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn eval_pool_any_natural_one() {
+        let src = r#"
+p = dice_pool(2, 6).p_any(1)
+output("any_one", p)
+"#;
+        let res = eval_source("test.dice", src).expect("eval");
+        match &res.outputs[0] {
+            OutputEntry::Prob { value, .. } => {
+                assert!((*value - 11.0 / 36.0).abs() < 1e-9);
+            }
+            other => panic!("expected prob output, got {other:?}"),
         }
     }
 }

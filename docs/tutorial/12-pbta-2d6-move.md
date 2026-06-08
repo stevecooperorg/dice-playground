@@ -28,14 +28,14 @@ Scale = scale(["MISS", "PARTIAL", "FULL_SUCCESS"])
 STAT = 2
 
 roll = 2d6 + STAT
-out = bucket(roll, Scale, [6, 9])
+out = roll.bucket(Scale, ..6, 7..9, 10..)
 output("move", out)
 output("p_full_success", out.p_at_least("FULL_SUCCESS"))
 output("p_partial_or_better", out.p_at_least("PARTIAL"))
 ```
 
 - `2d6 + STAT` is the usual PbtA notation (lesson 3); same odds as `shift(2d6, STAT)` if you prefer the function form.
-- `bucket` with cuts `[6, 9]` and three labels maps totals **≤ 6** → `MISS`, **7–9** → `PARTIAL`, **10+** → `FULL_SUCCESS`.
+- `roll.bucket(Scale, ..6, 7..9, 10..)` gives one inclusive band per label (same odds as `bucket(roll, Scale, [6, 9])`).
 - `p_at_least("PARTIAL")` is the chance you do **not** miss (partial or full).
 
 ## Reading the result
@@ -47,8 +47,8 @@ With `STAT = 0`, the bands match the core rulebook: 15/36 miss, 15/36 partial, 6
 ## Try this
 
 - Set `STAT` to a typical score for your playbook (+0, +2, +3).
-- Compare `p_full_success` across stats in a small loop (lesson 6 style) if you want a chart.
+- Compare `p_full_success` across stats in a small loop ([lesson 9](09-tables.md) style) if you want a chart.
 
 ## What’s next
 
-See the [user guide index](../README.md). Lesson 8 covered when you need `classify` on a **natural** die (D&D 5e); PbtA totals stay on `bucket`.
+See the [user guide index](../README.md). Lesson 11 covered when you need `classify` on a **natural** die (D&D 5e); PbtA totals stay on `bucket`.

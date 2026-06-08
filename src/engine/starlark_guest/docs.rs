@@ -37,6 +37,8 @@ pub fn dice_pool_type_docs() -> DocType {
 
 const REFERENCE_INTRO: &str = r#"This reference lists everything built into `.dice` scripts beyond basic Starlark (variables, `for` loops, lists). New here? Work through the [tutorial](../README.md#tutorial) first—it introduces notation like `2d6` and `4d6dl1`, which the playground expands into the functions below.
 
+**Naming:** face matching (`keep` / `remove` / `convert` / `ignore`), `count`, and pool `p_*` methods follow [API conventions](api-conventions.md).
+
 ## Core ideas
 
 **`DieRoll`** — a finished numeric roll (or total) with exact chances for each possible result. Example: `2d6` is a `DieRoll`; so is `4d6dl1`. Use **`output("name", roll)`** to print its table in the playground.
@@ -155,7 +157,18 @@ pub fn render_stdlib_reference_markdown() -> String {
             "explode",
             "open_ended_d100",
             "shift",
+            "through",
+            "at_most",
+            "at_least",
         ],
+        &stdlib.members,
+    );
+
+    append_members(
+        &mut out,
+        "Inclusive ranges",
+        "Integer bands for face filters and bucketing. In `.dice` scripts you can also write `6..94`, `..6`, and `10..` (inclusive endpoints).",
+        &["through", "at_most", "at_least"],
         &stdlib.members,
     );
 
@@ -164,8 +177,7 @@ pub fn render_stdlib_reference_markdown() -> String {
         "Pool rules (faces still matter)",
         "These need a `DicePool` from `dice_pool` before you total the dice.",
         &[
-            "count_ge",
-            "count_in",
+            "count",
             "order_stat",
             "middle_of",
             "pool_map",
@@ -194,15 +206,39 @@ pub fn render_stdlib_reference_markdown() -> String {
         &mut out,
         "DieRoll methods",
         "Ask questions about a numeric `DieRoll` after you build it (often inside `output(..., roll.p_ge(15))`).",
-        &["mean", "pmf", "p_ge", "cdf", "clamp", "support_size"],
+        &[
+            "mean",
+            "pmf",
+            "p_ge",
+            "cdf",
+            "clamp",
+            "support_size",
+            "keep",
+            "remove",
+            "convert",
+            "ignore",
+            "bucket",
+        ],
         &die_roll_type_docs(),
     );
 
     append_type_methods(
         &mut out,
         "DicePool methods",
-        "Turn a pool into a single total when the rule no longer cares about separate dice.",
-        &["sum"],
+        "Face filters (`keep` / `remove` / `convert` / `ignore`), match counts (`count`), pool match probabilities (`p_any` / `p_none` / `p_at_least`), or total the pool. See [API conventions](../references/api-conventions.md).",
+        &[
+            "sum",
+            "keep",
+            "remove",
+            "convert",
+            "ignore",
+            "count",
+            "order_stat",
+            "middle_of",
+            "p_any",
+            "p_none",
+            "p_at_least",
+        ],
         &dice_pool_type_docs(),
     );
 
@@ -234,8 +270,7 @@ mod tests {
             "open_ended_d100",
             "dice_pool",
             "sum",
-            "count_ge",
-            "count_in",
+            "count",
             "order_stat",
             "middle_of",
             "pool_map",
@@ -251,6 +286,9 @@ mod tests {
             "bucket",
             "classify",
             "joint_classify",
+            "through",
+            "at_most",
+            "at_least",
         ] {
             assert!(
                 docs.members.contains_key(name),

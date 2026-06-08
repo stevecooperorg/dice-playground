@@ -211,9 +211,9 @@ mod tests {
 
     #[test]
     fn eval_program_sample_space_ordinal_and_prob() {
-        let src = tutorial("examples/tutorial/09-pbta-2d6-move.dice");
+        let src = tutorial("examples/tutorial/12-pbta-2d6-move.dice");
         let r = eval_program(
-            "09-pbta-2d6-move.dice",
+            "12-pbta-2d6-move.dice",
             &src,
             EvalProgramOptions {
                 prob_format: ProbFormat::SampleSpace,

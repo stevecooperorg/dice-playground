@@ -1,13 +1,18 @@
 use std::fmt::{self, Display};
 
 use super::super::DieRoll;
+use super::bucket_args::outcomes_from_bucket_args;
 use super::dice_pool_value::StarlarkDicePool;
+use super::face_spec::face_spec_from_value;
+use super::outcomes_value::StarlarkOutcomes;
+use super::scale_value::StarlarkScale;
 use allocative::Allocative;
 use anyhow::{anyhow, Context};
 use starlark::any::ProvidesStaticType;
 use starlark::environment::Methods;
 use starlark::starlark_simple_value;
 use starlark::values::starlark_value;
+use starlark::values::tuple::UnpackTuple;
 use starlark::values::{Heap, NoSerialize, StarlarkValue, Value, ValueError, ValueLike};
 
 /// Exact chances for each numeric result of a roll or total (see function reference).
@@ -106,6 +111,49 @@ fn starlark_die_roll_methods(builder: &mut starlark::environment::MethodsBuilder
         Ok(StarlarkDieRoll::new(
             this.inner.clamp(i64::from(min), i64::from(max))?,
         ))
+    }
+
+    /// Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
+    fn keep(this: &StarlarkDieRoll, spec: Value<'_>) -> anyhow::Result<StarlarkDieRoll> {
+        let parsed = face_spec_from_value(spec)?;
+        Ok(StarlarkDieRoll::new(this.inner.keep_faces_spec(parsed)?))
+    }
+
+    /// Drop faces matching `spec`; renormalize the rest.
+    fn remove(this: &StarlarkDieRoll, spec: Value<'_>) -> anyhow::Result<StarlarkDieRoll> {
+        let parsed = face_spec_from_value(spec)?;
+        Ok(StarlarkDieRoll::new(this.inner.remove_faces_spec(parsed)?))
+    }
+
+    /// Remap matching faces to `to`; other faces unchanged.
+    fn convert(
+        this: &StarlarkDieRoll,
+        spec: Value<'_>,
+        to: i32,
+    ) -> anyhow::Result<StarlarkDieRoll> {
+        let parsed = face_spec_from_value(spec)?;
+        Ok(StarlarkDieRoll::new(
+            this.inner.convert_faces_spec(parsed, i64::from(to))?,
+        ))
+    }
+
+    /// Remap matching faces to 0 (`convert(spec, 0)`).
+    fn ignore(this: &StarlarkDieRoll, spec: Value<'_>) -> anyhow::Result<StarlarkDieRoll> {
+        let parsed = face_spec_from_value(spec)?;
+        Ok(StarlarkDieRoll::new(this.inner.ignore_faces_spec(parsed)?))
+    }
+
+    /// Label numeric totals with one inclusive band per scale label (PbtA-style).
+    fn bucket(
+        this: &StarlarkDieRoll,
+        scale: &StarlarkScale,
+        #[starlark(args)] bands: UnpackTuple<Value<'_>>,
+    ) -> anyhow::Result<StarlarkOutcomes> {
+        Ok(StarlarkOutcomes::new(outcomes_from_bucket_args(
+            this.inner(),
+            scale.inner().clone(),
+            bands.items,
+        )?))
     }
 }
 

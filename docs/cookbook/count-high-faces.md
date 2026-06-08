@@ -7,25 +7,20 @@ author: Steve Cooper
 
 ## At the table
 
-Many games care about **how many dice** in a pool beat a threshold—not just the total. Examples include counting successes on d10 pools (Storyteller / World of Darkness family), tallying raises, or custom house rules on “how many dice rolled 5+.”
+Some rules care **how many** dice in a pool met a target (not just whether any did). Example: count how many of **3d6** show **5 or 6**.
 
 ## Try it
 
-In the playground, copy the script below into the **editor** and click **Run**. It asks: on **3d6**, how many dice rolled **greater than 4**?
+Copy the script into the playground editor and run it. **Output** is a distribution over 0, 1, 2, or 3 successes.
 
 ## The script
 
 ```text
-def count_high(faces):
-    return len([f for f in faces if f > 4])
-
-output("success_count", pool_map(dice_pool(3, 6), count_high))
+output("success_count", 3d6.count(5..))
 ```
 
-- `pool_map` walks every joint outcome of the pool and calls your function with a **list of face values**.
-- Inside the function, a list comprehension filters faces—handy when the rule is easier to read in Starlark than as a single builtin.
-
-For a fixed threshold on fair dice you can also use `count_ge(dice_pool(n, sides), threshold)` without a custom function.
+- `3d6` is a `DicePool` of three separate d6 (notation sugar).
+- `.count(5..)` returns a `DieRoll` over how many dice matched the face spec (here, 5+).
 
 ## Cookbook
 

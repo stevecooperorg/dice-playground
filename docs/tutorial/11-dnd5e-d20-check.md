@@ -56,6 +56,6 @@ Builtin details: [standard library reference](../references/stdlib.md) (`classif
 
 ## What’s next
 
-[Powered by the Apocalypse (2d6 + stat)](09-pbta-2d6-move.md)—miss / partial / full on the **total** with `bucket`, the usual PbtA pattern.
+[Powered by the Apocalypse (2d6 + stat)](12-pbta-2d6-move.md)—miss / partial / full on the **total** with `bucket`, the usual PbtA pattern.
 
 See the [user guide index](../README.md). A dedicated `dnd5e_d20_check` helper may be added later; `classify` is the general tool underneath.
