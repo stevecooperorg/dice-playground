@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use anyhow::{bail, Result};
 
-use super::Dist;
+use super::DieRoll;
 
 const MAX_WAVES: usize = 48;
 
@@ -36,12 +36,12 @@ fn bump_faces(faces: &mut [i64], sides: i64) -> bool {
 ///
 /// Exploding chains are truncated after [`MAX_WAVES`] waves; remaining probability
 /// mass is finalized at the current success tally (negligible tail for typical dice).
-pub fn successes_dist(sides: i64, n_dice: usize, mode: Counterbalance) -> Result<Dist> {
+pub fn successes_dist(sides: i64, n_dice: usize, mode: Counterbalance) -> Result<DieRoll> {
     if sides < 1 {
         bail!("sides must be >= 1");
     }
     if n_dice == 0 {
-        return Ok(Dist::constant(0));
+        return Ok(DieRoll::constant(0));
     }
 
     type Key = (usize, i32, usize, usize);
@@ -107,7 +107,7 @@ pub fn successes_dist(sides: i64, n_dice: usize, mode: Counterbalance) -> Result
             *p /= total;
         }
     }
-    Ok(Dist::from_mass(mass))
+    Ok(DieRoll::from_mass(mass))
 }
 
 fn finalize(

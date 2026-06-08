@@ -19,13 +19,13 @@ In the playground, copy the script below into the **editor** and click **Run**. 
 def count_high(faces):
     return len([f for f in faces if f > 4])
 
-output("success_count", pool_map(roll_pool(3, 6), count_high))
+output("success_count", pool_map(dice_pool(3, 6), count_high))
 ```
 
 - `pool_map` walks every joint outcome of the pool and calls your function with a **list of face values**.
 - Inside the function, a list comprehension filters faces—handy when the rule is easier to read in Starlark than as a single builtin.
 
-For a fixed threshold on fair dice you can also use `count_ge(roll_pool(n, sides), threshold)` without a custom function.
+For a fixed threshold on fair dice you can also use `count_ge(dice_pool(n, sides), threshold)` without a custom function.
 
 ## Cookbook
 

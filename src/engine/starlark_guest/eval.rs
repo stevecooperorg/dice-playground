@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::{self, Write as _};
 
-use super::super::{successes_dist, Counterbalance, Die, Dist, LabelDist, ResultScale, RollPool};
+use super::super::{successes_dist, Counterbalance, DicePool, DieRoll, Outcomes, Scale};
 use anyhow::Context;
 use serde::Serialize;
 use starlark::any::ProvidesStaticType;
@@ -16,16 +16,16 @@ use starlark::values::none::NoneType;
 use starlark::values::tuple::UnpackTuple;
 use starlark::values::{UnpackValue, Value, ValueLike};
 
-use super::dist_value::StarlarkDist;
-use super::label_value::StarlarkLabelDist;
+use super::dice_pool_value::StarlarkDicePool;
+use super::die_roll_value::StarlarkDieRoll;
+use super::outcomes_value::StarlarkOutcomes;
 use super::output_format::{
     format_dist_pmf_text, format_ordinal_pmf_text, format_prob_multi_column,
     format_prob_table_text, infer_sample_space_denominator, infer_sample_space_denominator_probs,
     ProbFormat,
 };
-use super::pool_value::StarlarkRollPool;
 use super::prob_table_value::StarlarkProbTable;
-use super::scale_value::StarlarkResultScale;
+use super::scale_value::StarlarkScale;
 
 /// Collector populated by `output()` during evaluation.
 #[derive(Debug, Default, ProvidesStaticType)]
@@ -35,16 +35,16 @@ pub struct OutputStore(pub RefCell<Vec<OutputEntry>>);
 #[derive(Clone, Debug, Serialize, serde::Deserialize)]
 #[serde(tag = "kind")]
 pub enum OutputEntry {
-    #[serde(rename = "dist")]
-    Dist {
+    #[serde(rename = "dieroll")]
+    DieRoll {
         name: String,
         entries: Vec<(i64, f64)>,
         mean: f64,
     },
     #[serde(rename = "prob")]
     Prob { name: String, value: f64 },
-    #[serde(rename = "ordinal")]
-    Ordinal {
+    #[serde(rename = "outcomes")]
+    Outcomes {
         name: String,
         scale: Vec<String>,
         entries: Vec<(String, f64)>,
@@ -57,8 +57,8 @@ pub enum OutputEntry {
 }
 
 impl OutputStore {
-    fn push_dist(&self, name: String, dist: &Dist) {
-        self.0.borrow_mut().push(OutputEntry::Dist {
+    fn push_die_roll(&self, name: String, dist: &DieRoll) {
+        self.0.borrow_mut().push(OutputEntry::DieRoll {
             name,
             entries: dist.entries(),
             mean: dist.mean(),
@@ -69,8 +69,8 @@ impl OutputStore {
         self.0.borrow_mut().push(OutputEntry::Prob { name, value });
     }
 
-    fn push_ordinal(&self, name: String, dist: &LabelDist) {
-        self.0.borrow_mut().push(OutputEntry::Ordinal {
+    fn push_outcomes(&self, name: String, dist: &Outcomes) {
+        self.0.borrow_mut().push(OutputEntry::Outcomes {
             name,
             scale: dist.scale().labels().to_vec(),
             entries: dist.entries_ordered(),
@@ -107,7 +107,7 @@ pub fn format_eval_result_text(result: &EvalResult, _prob: ProbFormat) -> String
     }
     for entry in &result.outputs {
         match entry {
-            OutputEntry::Dist {
+            OutputEntry::DieRoll {
                 name,
                 entries,
                 mean,
@@ -125,7 +125,7 @@ pub fn format_eval_result_text(result: &EvalResult, _prob: ProbFormat) -> String
                     format_prob_multi_column(name, *value, shared_sample_denom)
                 );
             }
-            OutputEntry::Ordinal { name, entries, .. } => {
+            OutputEntry::Outcomes { name, entries, .. } => {
                 let _ = write!(
                     out,
                     "{}",
@@ -147,12 +147,12 @@ pub fn format_eval_result_text(result: &EvalResult, _prob: ProbFormat) -> String
 fn sample_space_denom_for_eval(result: &EvalResult) -> Option<u64> {
     for entry in &result.outputs {
         match entry {
-            OutputEntry::Dist { entries, .. } => {
+            OutputEntry::DieRoll { entries, .. } => {
                 if let Some(d) = infer_sample_space_denominator(entries) {
                     return Some(d);
                 }
             }
-            OutputEntry::Ordinal { entries, .. } | OutputEntry::Table { entries, .. } => {
+            OutputEntry::Outcomes { entries, .. } | OutputEntry::Table { entries, .. } => {
                 let probs: Vec<f64> = entries.iter().map(|(_, p)| *p).collect();
                 if let Some(d) = infer_sample_space_denominator_probs(&probs) {
                     return Some(d);
@@ -221,9 +221,9 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     ///
     /// # Arguments
     /// * `sides`: Number of faces (must be at least 1).
-    #[starlark(as_type = StarlarkDist)]
-    fn d(sides: i32) -> anyhow::Result<StarlarkDist> {
-        Ok(StarlarkDist::new(Die::die(i64::from(sides))?))
+    #[starlark(as_type = StarlarkDieRoll)]
+    fn d(sides: i32) -> anyhow::Result<StarlarkDieRoll> {
+        Ok(StarlarkDieRoll::new(DieRoll::die(i64::from(sides))?))
     }
 
     /// A die with custom face values (listed in order; duplicates count as extra weight).
@@ -232,10 +232,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     ///
     /// # Arguments
     /// * `faces`: List of integer face values.
-    #[starlark(as_type = StarlarkDist)]
-    fn die_faces(faces: UnpackList<i32>) -> anyhow::Result<StarlarkDist> {
+    #[starlark(as_type = StarlarkDieRoll)]
+    fn die_faces(faces: UnpackList<i32>) -> anyhow::Result<StarlarkDieRoll> {
         let f: Vec<i64> = faces.items.into_iter().map(i64::from).collect();
-        Ok(StarlarkDist::new(Die::from_faces(&f)?))
+        Ok(StarlarkDieRoll::new(DieRoll::from_faces(&f)?))
     }
 
     /// Exploding die: on the highest face, roll again and add, up to `max_depth` extra rolls (default 2).
@@ -246,15 +246,15 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// # Arguments
     /// * `dist`: Usually a single die from `d(...)`.
     /// * `max_depth`: Cap on how many times the die can explode (0 = no explode).
-    #[starlark(as_type = StarlarkDist)]
+    #[starlark(as_type = StarlarkDieRoll)]
     fn explode(
-        dist: &StarlarkDist,
+        dist: &StarlarkDieRoll,
         #[starlark(default = 2)] max_depth: i32,
-    ) -> anyhow::Result<StarlarkDist> {
+    ) -> anyhow::Result<StarlarkDieRoll> {
         if max_depth < 0 {
             anyhow::bail!("max_depth must be >= 0");
         }
-        Ok(StarlarkDist::new(
+        Ok(StarlarkDieRoll::new(
             dist.inner()
                 .explode(u32::try_from(max_depth).context("max_depth")?)?,
         ))
@@ -263,55 +263,45 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// Roll `count` separate fair dice—**not** added together yet.
     ///
     /// Use when the rule looks at individual results (highest die, count 10s, etc.). Add with
-    /// `.sum()` or the `sum(...)` function when you only need the total. Example: `roll_pool(4, 6)` for four d6s.
+    /// `.sum()` or the `sum(...)` function when you only need the total. Example: `dice_pool(4, 6)` for four d6s.
     ///
     /// # Arguments
     /// * `count`: How many dice.
     /// * `sides`: Faces per die (each die is 1..=sides).
-    #[starlark(as_type = StarlarkRollPool)]
-    fn roll_pool(count: i32, sides: i32) -> anyhow::Result<StarlarkRollPool> {
-        let n = usize::try_from(count).context("roll_pool count must be non-negative")?;
-        Ok(StarlarkRollPool::new(RollPool::from_count(
+    #[starlark(as_type = StarlarkDicePool)]
+    fn dice_pool(count: i32, sides: i32) -> anyhow::Result<StarlarkDicePool> {
+        let n = usize::try_from(count).context("dice_pool count must be non-negative")?;
+        Ok(StarlarkDicePool::new(DicePool::from_count(
             n,
             i64::from(sides),
         )?))
     }
 
-    /// Shorthand for `roll_pool`—same arguments, same meaning.
-    #[starlark(as_type = StarlarkRollPool)]
-    fn pool(count: i32, sides: i32) -> anyhow::Result<StarlarkRollPool> {
-        let n = usize::try_from(count).context("roll_pool count must be non-negative")?;
-        Ok(StarlarkRollPool::new(RollPool::from_count(
-            n,
-            i64::from(sides),
-        )?))
-    }
-
-    /// Total a dice pool, or leave a `Dist` unchanged.
+    /// Total a dice pool, or leave a `DieRoll` unchanged.
     ///
-    /// `sum(roll_pool(4, 6))` is the distribution of 4d6 summed—equivalent to `4d6` notation.
-    /// If you already have a `Dist`, `sum` returns it as-is.
-    #[starlark(as_type = StarlarkDist)]
-    fn sum(value: Value) -> anyhow::Result<StarlarkDist> {
-        if let Some(pool) = value.downcast_ref::<StarlarkRollPool>() {
-            return Ok(StarlarkDist::new(pool.inner().sum()?));
+    /// `sum(dice_pool(4, 6))` is the distribution of 4d6 summed—equivalent to `4d6` notation.
+    /// If you already have a `DieRoll`, `sum` returns it as-is.
+    #[starlark(as_type = StarlarkDieRoll)]
+    fn sum(value: Value) -> anyhow::Result<StarlarkDieRoll> {
+        if let Some(pool) = value.downcast_ref::<StarlarkDicePool>() {
+            return Ok(StarlarkDieRoll::new(pool.inner().sum()?));
         }
-        if let Some(dist) = value.downcast_ref::<StarlarkDist>() {
+        if let Some(dist) = value.downcast_ref::<StarlarkDieRoll>() {
             return Ok(dist.clone());
         }
-        anyhow::bail!("sum: expected RollPool or Dist, got {value}")
+        anyhow::bail!("sum: expected DicePool or DieRoll, got {value}")
     }
 
     /// How many dice in the pool rolled **at least** `threshold`?
     ///
-    /// The result is a `Dist` over counts (0, 1, 2, …). Example: on 5d10, how many dice show 8+ for a success pool.
+    /// The result is a `DieRoll` over counts (0, 1, 2, …). Example: on 5d10, how many dice show 8+ for a success pool.
     ///
     /// # Arguments
-    /// * `pool`: From `roll_pool` / `pool`.
+    /// * `pool`: From `dice_pool`.
     /// * `threshold`: Count dice with rolled value ≥ this number.
-    #[starlark(as_type = StarlarkDist)]
-    fn count_ge(pool: &StarlarkRollPool, threshold: i32) -> anyhow::Result<StarlarkDist> {
-        Ok(StarlarkDist::new(
+    #[starlark(as_type = StarlarkDieRoll)]
+    fn count_ge(pool: &StarlarkDicePool, threshold: i32) -> anyhow::Result<StarlarkDieRoll> {
+        Ok(StarlarkDieRoll::new(
             pool.inner().count_ge(i64::from(threshold))?,
         ))
     }
@@ -322,10 +312,13 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     ///
     /// # Arguments
     /// * `values`: Face values that count (duplicates in the list are harmless).
-    #[starlark(as_type = StarlarkDist)]
-    fn count_in(pool: &StarlarkRollPool, values: UnpackList<i32>) -> anyhow::Result<StarlarkDist> {
+    #[starlark(as_type = StarlarkDieRoll)]
+    fn count_in(
+        pool: &StarlarkDicePool,
+        values: UnpackList<i32>,
+    ) -> anyhow::Result<StarlarkDieRoll> {
         let vals: Vec<i64> = values.items.into_iter().map(i64::from).collect();
-        Ok(StarlarkDist::new(pool.inner().count_in(&vals)?))
+        Ok(StarlarkDieRoll::new(pool.inner().count_in(&vals)?))
     }
 
     /// The **k**th highest die in the pool (`k = 1` is the highest, `2` is second-highest, …).
@@ -334,10 +327,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     ///
     /// # Arguments
     /// * `k`: Rank from the top (1 = best die).
-    #[starlark(as_type = StarlarkDist)]
-    fn order_stat(pool: &StarlarkRollPool, k: i32) -> anyhow::Result<StarlarkDist> {
+    #[starlark(as_type = StarlarkDieRoll)]
+    fn order_stat(pool: &StarlarkDicePool, k: i32) -> anyhow::Result<StarlarkDieRoll> {
         let k = usize::try_from(k).context("k")?;
-        Ok(StarlarkDist::new(pool.inner().order_stat(k)?))
+        Ok(StarlarkDieRoll::new(pool.inner().order_stat(k)?))
     }
 
     /// Sum the middle `keep` dice after sorting the pool low to high.
@@ -346,10 +339,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     ///
     /// # Arguments
     /// * `keep`: How many dice in the middle to sum.
-    #[starlark(as_type = StarlarkDist)]
-    fn middle_of(pool: &StarlarkRollPool, keep: i32) -> anyhow::Result<StarlarkDist> {
+    #[starlark(as_type = StarlarkDieRoll)]
+    fn middle_of(pool: &StarlarkDicePool, keep: i32) -> anyhow::Result<StarlarkDieRoll> {
         let k = usize::try_from(keep).context("keep")?;
-        Ok(StarlarkDist::new(pool.inner().middle_of(k)?))
+        Ok(StarlarkDieRoll::new(pool.inner().middle_of(k)?))
     }
 
     /// Custom rule: for every way the pool can land, run your function on the list of faces and use its integer result.
@@ -359,12 +352,12 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     ///
     /// # Arguments
     /// * `map_fn`: Starlark function `(faces) -> int`.
-    #[starlark(as_type = StarlarkDist)]
+    #[starlark(as_type = StarlarkDieRoll)]
     fn pool_map<'v>(
-        pool: &StarlarkRollPool,
+        pool: &StarlarkDicePool,
         map_fn: Value<'v>,
         eval: &mut Evaluator<'v, '_, '_>,
-    ) -> anyhow::Result<StarlarkDist> {
+    ) -> anyhow::Result<StarlarkDieRoll> {
         use std::cell::RefCell;
         let heap = eval.heap();
         let mut mass = BTreeMap::new();
@@ -401,26 +394,26 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         if let Some(e) = err.into_inner() {
             return Err(e);
         }
-        let mut die = Die::from_mass(mass);
+        let mut die = DieRoll::from_mass(mass);
         die.normalize_in_place()?;
-        Ok(StarlarkDist::new(die))
+        Ok(StarlarkDieRoll::new(die))
     }
 
     /// Count **successes** on a dice pool (Storyteller / WoD-style d10 pools and variants).
     ///
-    /// Returns a `Dist` over how many successes you rolled. `mode` controls 1s and 10s:
+    /// Returns a `DieRoll` over how many successes you rolled. `mode` controls 1s and 10s:
     /// `"baseline"` (default), `"ones_cancel"`, `"ones_remove"`, or `"implode"`.
     ///
     /// # Arguments
     /// * `count`: Dice in the pool.
     /// * `sides`: Usually 10 for classic WoD.
     /// * `mode`: How ones and explosions interact—match your table’s house rules.
-    #[starlark(as_type = StarlarkDist)]
+    #[starlark(as_type = StarlarkDieRoll)]
     fn success_pool(
         count: i32,
         sides: i32,
         #[starlark(default = "baseline")] mode: &str,
-    ) -> anyhow::Result<StarlarkDist> {
+    ) -> anyhow::Result<StarlarkDieRoll> {
         let n = usize::try_from(count).context("count")?;
         let cb = match mode {
             "baseline" => Counterbalance::Baseline,
@@ -429,7 +422,11 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
             "implode" => Counterbalance::OnesImplode,
             other => anyhow::bail!("success_pool: unknown mode {other:?}"),
         };
-        Ok(StarlarkDist::new(successes_dist(i64::from(sides), n, cb)?))
+        Ok(StarlarkDieRoll::new(successes_dist(
+            i64::from(sides),
+            n,
+            cb,
+        )?))
     }
 
     /// Roll several dice, drop the lowest results, sum the rest—**4d6 drop lowest 1** is `drop_lowest(4, 6, 1)`.
@@ -440,10 +437,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// * `count`: Dice rolled.
     /// * `sides`: Faces per die.
     /// * `drop`: How many lowest dice to remove before summing.
-    fn drop_lowest(count: i32, sides: i32, drop: i32) -> anyhow::Result<StarlarkDist> {
+    fn drop_lowest(count: i32, sides: i32, drop: i32) -> anyhow::Result<StarlarkDieRoll> {
         let n = usize::try_from(count).context("count")?;
         let d = usize::try_from(drop).context("drop")?;
-        Ok(StarlarkDist::new(Die::pool_drop_lowest(
+        Ok(StarlarkDieRoll::new(DieRoll::pool_drop_lowest(
             n,
             i64::from(sides),
             d,
@@ -456,10 +453,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// * `count`: Dice rolled.
     /// * `sides`: Faces per die.
     /// * `keep`: How many highest dice to sum.
-    fn keep_highest(count: i32, sides: i32, keep: i32) -> anyhow::Result<StarlarkDist> {
+    fn keep_highest(count: i32, sides: i32, keep: i32) -> anyhow::Result<StarlarkDieRoll> {
         let n = usize::try_from(count).context("count")?;
         let k = usize::try_from(keep).context("keep")?;
-        Ok(StarlarkDist::new(Die::pool_keep_highest(
+        Ok(StarlarkDieRoll::new(DieRoll::pool_keep_highest(
             n,
             i64::from(sides),
             k,
@@ -472,10 +469,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// * `count`: Dice rolled.
     /// * `sides`: Faces per die.
     /// * `drop`: How many highest dice to remove before summing.
-    fn drop_highest(count: i32, sides: i32, drop: i32) -> anyhow::Result<StarlarkDist> {
+    fn drop_highest(count: i32, sides: i32, drop: i32) -> anyhow::Result<StarlarkDieRoll> {
         let n = usize::try_from(count).context("count")?;
         let d = usize::try_from(drop).context("drop")?;
-        Ok(StarlarkDist::new(Die::pool_drop_highest(
+        Ok(StarlarkDieRoll::new(DieRoll::pool_drop_highest(
             n,
             i64::from(sides),
             d,
@@ -488,10 +485,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// * `count`: Dice rolled.
     /// * `sides`: Faces per die.
     /// * `keep`: How many lowest dice to sum.
-    fn keep_lowest(count: i32, sides: i32, keep: i32) -> anyhow::Result<StarlarkDist> {
+    fn keep_lowest(count: i32, sides: i32, keep: i32) -> anyhow::Result<StarlarkDieRoll> {
         let n = usize::try_from(count).context("count")?;
         let k = usize::try_from(keep).context("keep")?;
-        Ok(StarlarkDist::new(Die::pool_keep_lowest(
+        Ok(StarlarkDieRoll::new(DieRoll::pool_keep_lowest(
             n,
             i64::from(sides),
             k,
@@ -500,24 +497,24 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
 
     /// Add a flat modifier to every outcome—**+3 to the roll** without rolling another die.
     ///
-    /// Same effect as `roll + 3` when `roll` is a `Dist`. Prefer `roll + 3` in scripts when it reads clearer.
+    /// Same effect as `roll + 3` when `roll` is a `DieRoll`. Prefer `roll + 3` in scripts when it reads clearer.
     ///
     /// # Arguments
-    /// * `dist`: The roll (e.g. `2d10` as a `Dist`).
+    /// * `dist`: The roll (e.g. `2d10` as a `DieRoll`).
     /// * `delta`: Modifier to add (can be negative).
-    fn shift(dist: &StarlarkDist, delta: i32) -> anyhow::Result<StarlarkDist> {
-        Ok(StarlarkDist::new(dist.inner.shift(i64::from(delta))?))
+    fn shift(dist: &StarlarkDieRoll, delta: i32) -> anyhow::Result<StarlarkDieRoll> {
+        Ok(StarlarkDieRoll::new(dist.inner.shift(i64::from(delta))?))
     }
 
     /// Name your outcome steps from worst to best (or low to high).
     ///
-    /// Used with `bucket` or `classify`. Example: `result_type(["MISS", "PARTIAL", "FULL"])`.
+    /// Used with `bucket` or `classify`. Example: `scale(["MISS", "PARTIAL", "FULL"])`.
     ///
     /// # Arguments
     /// * `labels`: Unique non-empty strings, first = lowest rank, last = highest.
-    #[starlark(as_type = StarlarkResultScale)]
-    fn result_type(labels: UnpackList<String>) -> anyhow::Result<StarlarkResultScale> {
-        Ok(StarlarkResultScale::new(ResultScale::new(labels.items)?))
+    #[starlark(as_type = StarlarkScale)]
+    fn scale(labels: UnpackList<String>) -> anyhow::Result<StarlarkScale> {
+        Ok(StarlarkScale::new(Scale::new(labels.items)?))
     }
 
     /// Split a numeric total into named bands using DC-style cut points.
@@ -527,16 +524,16 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     ///
     /// # Arguments
     /// * `dist`: Numeric roll (e.g. `2d6 + stat`).
-    /// * `scale`: From `result_type(...)`.
+    /// * `scale`: From `scale(...)`.
     /// * `cuts`: Increasing thresholds between labels.
-    #[starlark(as_type = StarlarkLabelDist)]
+    #[starlark(as_type = StarlarkOutcomes)]
     fn bucket(
-        dist: &StarlarkDist,
-        scale: &StarlarkResultScale,
+        dist: &StarlarkDieRoll,
+        scale: &StarlarkScale,
         cuts: UnpackList<i32>,
-    ) -> anyhow::Result<StarlarkLabelDist> {
+    ) -> anyhow::Result<StarlarkOutcomes> {
         let cuts: Vec<i64> = cuts.items.into_iter().map(i64::from).collect();
-        Ok(StarlarkLabelDist::new(LabelDist::from_bucket(
+        Ok(StarlarkOutcomes::new(Outcomes::from_bucket(
             dist.inner(),
             scale.inner().clone(),
             &cuts,
@@ -550,13 +547,13 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     ///
     /// # Arguments
     /// * `classify`: Starlark function `(value) -> str`.
-    #[starlark(as_type = StarlarkLabelDist)]
+    #[starlark(as_type = StarlarkOutcomes)]
     fn classify<'v>(
-        dist: &StarlarkDist,
-        scale: &StarlarkResultScale,
+        dist: &StarlarkDieRoll,
+        scale: &StarlarkScale,
         classify: Value<'v>,
         eval: &mut Evaluator<'v, '_, '_>,
-    ) -> anyhow::Result<StarlarkLabelDist> {
+    ) -> anyhow::Result<StarlarkOutcomes> {
         let scale_inner = scale.inner().clone();
         let mut mass = BTreeMap::new();
         let heap = eval.heap();
@@ -575,7 +572,7 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
             scale_inner.rank(&label)?;
             *mass.entry(label).or_insert(0.0) += p;
         }
-        Ok(StarlarkLabelDist::new(LabelDist::from_mass(
+        Ok(StarlarkOutcomes::new(Outcomes::from_mass(
             scale_inner,
             mass,
         )?))
@@ -588,14 +585,14 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// # Arguments
     /// * `d1`, `d2`: Independent rolls (e.g. two d20s for advantage).
     /// * `classify`: Starlark function `(w, b) -> str` returning a label on `scale`.
-    #[starlark(as_type = StarlarkLabelDist)]
+    #[starlark(as_type = StarlarkOutcomes)]
     fn joint_classify<'v>(
-        d1: &StarlarkDist,
-        d2: &StarlarkDist,
-        scale: &StarlarkResultScale,
+        d1: &StarlarkDieRoll,
+        d2: &StarlarkDieRoll,
+        scale: &StarlarkScale,
         classify: Value<'v>,
         eval: &mut Evaluator<'v, '_, '_>,
-    ) -> anyhow::Result<StarlarkLabelDist> {
+    ) -> anyhow::Result<StarlarkOutcomes> {
         let scale_inner = scale.inner().clone();
         let mut mass = BTreeMap::new();
         let pairs: Vec<(i64, i64, f64)> = d1
@@ -624,7 +621,7 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
             scale_inner.rank(&label)?;
             *mass.entry(label).or_insert(0.0) += p;
         }
-        Ok(StarlarkLabelDist::new(LabelDist::from_mass(
+        Ok(StarlarkOutcomes::new(Outcomes::from_mass(
             scale_inner,
             mass,
         )?))
@@ -645,7 +642,7 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// Send a result to the playground **Output** panel (text, json, and graph tabs).
     ///
     /// Almost every script should call this at least once. Pass a name and a value:
-    /// a full distribution (`Dist`), named outcomes (`LabelDist`), a probability (`float`),
+    /// a full distribution (`DieRoll`), named outcomes (`Outcomes`), a probability (`float`),
     /// or a table (`prob_table(...)`). One argument works but naming outputs helps you read results.
     ///
     /// # Arguments
@@ -691,15 +688,15 @@ fn next_anon_name(store: &OutputStore) -> String {
 }
 
 fn record_output(store: &OutputStore, name: String, value: Value<'_>) -> anyhow::Result<()> {
-    if value.downcast_ref::<StarlarkRollPool>().is_some() {
-        anyhow::bail!("output: expected Dist or LabelDist; got RollPool (call sum() first)");
+    if value.downcast_ref::<StarlarkDicePool>().is_some() {
+        anyhow::bail!("output: expected DieRoll or Outcomes; got DicePool (call sum() first)");
     }
-    if let Some(dist) = value.downcast_ref::<StarlarkDist>() {
-        store.push_dist(name, dist.inner());
+    if let Some(dist) = value.downcast_ref::<StarlarkDieRoll>() {
+        store.push_die_roll(name, dist.inner());
         return Ok(());
     }
-    if let Some(ld) = value.downcast_ref::<StarlarkLabelDist>() {
-        store.push_ordinal(name, ld.inner());
+    if let Some(ld) = value.downcast_ref::<StarlarkOutcomes>() {
+        store.push_outcomes(name, ld.inner());
         return Ok(());
     }
     if let Some(table) = value.downcast_ref::<StarlarkProbTable>() {
@@ -714,7 +711,7 @@ fn record_output(store: &OutputStore, name: String, value: Value<'_>) -> anyhow:
         store.push_prob(name, f64::from(p));
         return Ok(());
     }
-    anyhow::bail!("output: expected Dist, LabelDist, ProbTable, float, or int, got {value}");
+    anyhow::bail!("output: expected DieRoll, Outcomes, ProbTable, float, or int, got {value}");
 }
 
 /// Parse and evaluate Starlark source with the dice standard library.
@@ -761,37 +758,37 @@ output("two_d6", d(6) + d(6))
         let res = eval_source("test.star", src).expect("eval");
         assert_eq!(res.outputs.len(), 1);
         match &res.outputs[0] {
-            OutputEntry::Dist { name, mean, .. } => {
+            OutputEntry::DieRoll { name, mean, .. } => {
                 assert_eq!(name, "two_d6");
                 assert!((*mean - 7.0).abs() < 1e-9);
             }
-            other => panic!("expected dist output, got {other:?}"),
+            other => panic!("expected dieroll output, got {other:?}"),
         }
     }
 
     #[test]
     fn eval_dist_subtraction() {
-        let src = r#"output("diff", pool(2, 10) - pool(3, 6))"#;
+        let src = r#"output("diff", dice_pool(2, 10) - dice_pool(3, 6))"#;
         let res = eval_source("test.dice", src).expect("eval");
         match &res.outputs[0] {
-            OutputEntry::Dist { mean, .. } => assert!((*mean - 0.5).abs() < 1e-9),
-            other => panic!("expected dist output, got {other:?}"),
+            OutputEntry::DieRoll { mean, .. } => assert!((*mean - 0.5).abs() < 1e-9),
+            other => panic!("expected dieroll output, got {other:?}"),
         }
     }
 
     #[test]
     fn eval_bucket_and_ordinal_output() {
         let src = r#"
-Outcome = result_type(["FAIL", "SUCCESS"])
+Scale = scale(["FAIL", "SUCCESS"])
 roll = d(6)
-out = bucket(roll, Outcome, [3])
+out = bucket(roll, Scale, [3])
 output("bands", out)
 output("p_success", out.p_at_least("SUCCESS"))
 "#;
         let res = eval_source("test.star", src).expect("eval");
         assert_eq!(res.outputs.len(), 2);
         match &res.outputs[0] {
-            OutputEntry::Ordinal {
+            OutputEntry::Outcomes {
                 name,
                 scale,
                 entries,
@@ -802,7 +799,7 @@ output("p_success", out.p_at_least("SUCCESS"))
                 let p_fail: f64 = entries.iter().find(|(l, _)| l == "FAIL").unwrap().1;
                 assert!((p_fail - 0.5).abs() < 1e-9);
             }
-            other => panic!("expected ordinal output, got {other:?}"),
+            other => panic!("expected outcomes output, got {other:?}"),
         }
         match &res.outputs[1] {
             OutputEntry::Prob { name, value } => {
@@ -816,7 +813,7 @@ output("p_success", out.p_at_least("SUCCESS"))
     #[test]
     fn eval_classify_d20_crit_bands() {
         let src = r#"
-Outcome = result_type(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
 DC = 15
 MOD = 0
 def label(n):
@@ -827,12 +824,12 @@ def label(n):
     if n + MOD >= DC:
         return "SUCCESS"
     return "FAIL"
-out = classify(d(20), Outcome, label)
+out = classify(d(20), Scale, label)
 output("check", out)
 "#;
         let res = eval_source("test.star", src).expect("eval");
         match &res.outputs[0] {
-            OutputEntry::Ordinal { entries, .. } => {
+            OutputEntry::Outcomes { entries, .. } => {
                 let p_crit_succ = entries
                     .iter()
                     .find(|(l, _)| l == "CRITICAL_SUCCESS")
@@ -840,41 +837,41 @@ output("check", out)
                     .1;
                 assert!((p_crit_succ - 0.05).abs() < 1e-9);
             }
-            other => panic!("expected ordinal, got {other:?}"),
+            other => panic!("expected outcomes, got {other:?}"),
         }
     }
 
     #[test]
     fn eval_joint_classify_two_d6() {
         let src = r#"
-Outcome = result_type(["FAILURE", "MIXED", "SUCCESS"])
+Scale = scale(["FAILURE", "MIXED", "SUCCESS"])
 def label(w, b):
     if w >= 4 and b >= 4:
         return "SUCCESS"
     if w >= 4 and b <= 2:
         return "MIXED"
     return "FAILURE"
-out = joint_classify(d(6), d(6), Outcome, label)
+out = joint_classify(d(6), d(6), Scale, label)
 output("pbtA", out)
 "#;
         let res = eval_source("test.star", src).expect("eval");
         assert_eq!(res.outputs.len(), 1);
         match &res.outputs[0] {
-            OutputEntry::Ordinal { name, entries, .. } => {
+            OutputEntry::Outcomes { name, entries, .. } => {
                 assert_eq!(name, "pbtA");
                 assert_eq!(entries.len(), 3);
                 let sum: f64 = entries.iter().map(|(_, p)| p).sum();
                 assert!((sum - 1.0).abs() < 1e-9);
             }
-            other => panic!("expected ordinal, got {other:?}"),
+            other => panic!("expected outcomes, got {other:?}"),
         }
     }
 
     #[test]
     fn eval_bucket_rejects_wrong_cut_count() {
         let src = r#"
-Outcome = result_type(["A", "B", "C"])
-out = bucket(d(6), Outcome, [3])
+Scale = scale(["A", "B", "C"])
+out = bucket(d(6), Scale, [3])
 "#;
         let err = eval_source("test.star", src).unwrap_err();
         let msg = format!("{err:#}");
@@ -884,10 +881,10 @@ out = bucket(d(6), Outcome, [3])
     #[test]
     fn eval_joint_classify_rejects_unknown_label() {
         let src = r#"
-Outcome = result_type(["A", "B"])
+Scale = scale(["A", "B"])
 def bad(w, b):
     return "Z"
-joint_classify(d(2), d(2), Outcome, bad)
+joint_classify(d(2), d(2), Scale, bad)
 "#;
         let err = eval_source("test.star", src).unwrap_err();
         let msg = format!("{err:#}");
@@ -917,11 +914,11 @@ output("p18", roll.p_ge(18))
 def count_high(faces):
     return len([f for f in faces if f > 4])
 
-output("counts", pool_map(roll_pool(3, 6), count_high))
+output("counts", pool_map(dice_pool(3, 6), count_high))
 "#;
         let res = eval_source("test.dice", src).expect("eval");
         match &res.outputs[0] {
-            OutputEntry::Dist { entries, .. } => {
+            OutputEntry::DieRoll { entries, .. } => {
                 let p3: f64 = entries
                     .iter()
                     .find(|(k, _)| *k == 3)

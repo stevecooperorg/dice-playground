@@ -31,7 +31,7 @@ output("two_d6", 2d6)
 ```
 
 - **`2d6`** — roll two six-sided dice and **add** them.
-- Sum of two independent d6 (same idea as lesson 2); the engine expands this to `pool(2, 6)`.
+- Sum of two independent d6 (same idea as lesson 2); the engine expands this to `dice_pool(2, 6)`.
 
 **Mean** ≈ **7**.
 
@@ -42,7 +42,7 @@ output("two_d6_plus_3", 2d6 + 3)
 ```
 
 - **`+ 3`** adds 3 to **every** total on the roll—like a fixed stat bonus on the sum ([lesson 3](03-modifiers.md)).
-- Equivalent to `shift(2d6, 3)` when you already have a `Dist` in a variable.
+- Equivalent to `shift(2d6, 3)` when you already have a `DieRoll` in a variable.
 
 **Mean** ≈ **10** (7 + 3).
 

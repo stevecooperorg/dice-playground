@@ -30,7 +30,7 @@ Two outputs: **roll_base** (mean about 11) and **roll_plus_5** (mean about 16). 
 
 ## The `shift` function
 
-When the bonus is already stored in a variable, or you are working from an existing `Dist` value, **`shift(roll, 5)`** does the same thing as **`roll + 5`**. Use whichever reads clearer in your script; the probabilities match.
+When the bonus is already stored in a variable, or you are working from an existing `DieRoll` value, **`shift(roll, 5)`** does the same thing as **`roll + 5`**. Use whichever reads clearer in your script; the probabilities match.
 
 ```text
 output("same_as_plus", shift(roll, 5))

@@ -1,6 +1,6 @@
 # D&D 5e-style d20 check: nat 1 / nat 20, then total vs DC (modifier applied in the rule).
 # Advantage: 2d20kh1; try 1d20 or 2d20kl1 for a normal roll / disadvantage.
-Outcome = result_type(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
 DC = 15
 MOD = 5
 
@@ -14,6 +14,6 @@ def label(n):
     return "FAIL"
 
 natural = 2d20kh1
-out = classify(natural, Outcome, label)
+out = classify(natural, Scale, label)
 output("advantage_check", out)
 output("p_hit_or_better", out.p_at_least("SUCCESS"))

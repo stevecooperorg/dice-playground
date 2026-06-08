@@ -66,7 +66,7 @@ fn tutorial_01_one_die() {
     let res = eval_sample(SAMPLE_PATHS[0]);
     assert_eq!(res.outputs.len(), 1);
     match &res.outputs[0] {
-        OutputEntry::Dist {
+        OutputEntry::DieRoll {
             name,
             entries,
             mean,
@@ -84,7 +84,7 @@ fn tutorial_02_two_d6() {
     let res = eval_sample(SAMPLE_PATHS[1]);
     assert_eq!(res.outputs.len(), 1);
     match &res.outputs[0] {
-        OutputEntry::Dist { name, mean, .. } => {
+        OutputEntry::DieRoll { name, mean, .. } => {
             assert_eq!(name, "two_d6");
             assert!((*mean - 7.0).abs() < 1e-9);
         }
@@ -98,10 +98,10 @@ fn tutorial_03_modifier_shift() {
     assert_eq!(res.outputs.len(), 2);
     let (base_mean, shifted_mean) = match (&res.outputs[0], &res.outputs[1]) {
         (
-            OutputEntry::Dist {
+            OutputEntry::DieRoll {
                 name: n0, mean: m0, ..
             },
-            OutputEntry::Dist {
+            OutputEntry::DieRoll {
                 name: n1, mean: m1, ..
             },
         ) => {
@@ -130,7 +130,7 @@ fn tutorial_04_success_chance() {
 
 fn dist_mean_by_name(res: &dice_playground::engine::EvalResult, name: &str) -> f64 {
     for out in &res.outputs {
-        if let OutputEntry::Dist { name: n, mean, .. } = out {
+        if let OutputEntry::DieRoll { name: n, mean, .. } = out {
             if n == name {
                 return *mean;
             }
@@ -158,7 +158,7 @@ fn tutorial_07_ordered_outcomes() {
     let res = eval_sample(SAMPLE_PATHS[6]);
     assert_eq!(res.outputs.len(), 2);
     match &res.outputs[0] {
-        OutputEntry::Ordinal {
+        OutputEntry::Outcomes {
             name,
             scale,
             entries,
@@ -185,7 +185,7 @@ fn tutorial_08_dnd5e_d20_check() {
     let res = eval_sample(SAMPLE_PATHS[7]);
     assert_eq!(res.outputs.len(), 2);
     match &res.outputs[0] {
-        OutputEntry::Ordinal {
+        OutputEntry::Outcomes {
             name,
             scale,
             entries,
@@ -212,7 +212,7 @@ fn tutorial_09_pbta_2d6_move() {
     let res = eval_sample(SAMPLE_PATHS[8]);
     assert_eq!(res.outputs.len(), 3);
     match &res.outputs[0] {
-        OutputEntry::Ordinal {
+        OutputEntry::Outcomes {
             name,
             scale,
             entries,

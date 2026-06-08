@@ -4,11 +4,11 @@ This reference lists everything built into `.dice` scripts beyond basic Starlark
 
 ## Core ideas
 
-**`Dist`** — a finished numeric roll (or total) with exact chances for each possible result. Example: `2d6` is a `Dist`; so is `4d6dl1`. Use **`output("name", dist)`** to print its table in the playground.
+**`DieRoll`** — a finished numeric roll (or total) with exact chances for each possible result. Example: `2d6` is a `DieRoll`; so is `4d6dl1`. Use **`output("name", roll)`** to print its table in the playground.
 
-**`RollPool`** — several dice rolled together but **not** added yet. Use this when the rule cares about *individual* faces (highest die, count successes, Blades-style pools). Call **`.sum()`** on the pool when you only need the total.
+**`DicePool`** — several dice rolled together but **not** added yet. Use this when the rule cares about *individual* faces (highest die, count successes, Blades-style pools). Call **`.sum()`** on the pool when you only need the total.
 
-**`LabelDist`** — chances for **named** outcomes (miss / partial / hit, crit fail / success, and so on) instead of raw numbers.
+**`Outcomes`** — chances for **named** outcome bands (miss / partial / hit, crit fail / success, and so on) instead of raw numbers.
 
 ## Combining rolls (operators)
 
@@ -32,7 +32,7 @@ Start here for ordinary dice, custom faces, and summed pools.
 ## d
 
 ```python
-def d(sides: int) -> Dist
+def d(sides: int) -> DieRoll
 ```
 
 One fair die with faces 1 through `sides`, each equally likely.
@@ -56,7 +56,7 @@ Same idea as `1d6` or `1d20` in dice notation. Example: `d(6)` for a d6, `d(20)`
 ## die_faces
 
 ```python
-def die_faces(faces: list[int]) -> Dist
+def die_faces(faces: list[int]) -> DieRoll
 ```
 
 A die with custom face values (listed in order; duplicates count as extra weight).
@@ -161,10 +161,10 @@ How many different totals can occur with non-zero chance (size of the result tab
 
 ---
 
-## roll_pool
+## dice_pool
 
 ```python
-def roll_pool(count: int, sides: int) -> RollPool
+def dice_pool(count: int, sides: int) -> DicePool
 ```
 
 Roll `count` separate fair dice—**not** added together yet.
@@ -184,42 +184,30 @@ Roll `count` separate fair dice—**not** added together yet.
 #### Details
 
 Use when the rule looks at individual results (highest die, count 10s, etc.). Add with
-`.sum()` or the `sum(...)` function when you only need the total. Example: `roll_pool(4, 6)` for four d6s.
+`.sum()` or the `sum(...)` function when you only need the total. Example: `dice_pool(4, 6)` for four d6s.
 
 ---
 
-## roll\_pool.sum
+## dice\_pool.sum
 
 ```python
-def roll_pool.sum() -> Dist
+def dice_pool.sum() -> DieRoll
 ```
 
-Add every die in the pool into one total—turns `roll_pool(4, 6)` into the same idea as `4d6`.
-
----
-
-## pool
-
-```python
-def pool(count: int, sides: int) -> RollPool
-```
-
-Shorthand for `roll_pool`—same arguments, same meaning.
-
----
+Add every die in the pool into one total—turns `dice_pool(4, 6)` into the same idea as `4d6`.
 
 ---
 
 ## sum
 
 ```python
-def sum(value) -> Dist
+def sum(value) -> DieRoll
 ```
 
-Total a dice pool, or leave a `Dist` unchanged.
+Total a dice pool, or leave a `DieRoll` unchanged.
 
-`sum(roll_pool(4, 6))` is the distribution of 4d6 summed—equivalent to `4d6` notation.
-If you already have a `Dist`, `sum` returns it as-is.
+`sum(dice_pool(4, 6))` is the distribution of 4d6 summed—equivalent to `4d6` notation.
+If you already have a `DieRoll`, `sum` returns it as-is.
 
 ---
 
@@ -230,7 +218,7 @@ If you already have a `Dist`, `sum` returns it as-is.
 ## drop\_lowest
 
 ```python
-def drop_lowest(count: int, sides: int, drop: int) -> Dist
+def drop_lowest(count: int, sides: int, drop: int) -> DieRoll
 ```
 
 Roll several dice, drop the lowest results, sum the rest—**4d6 drop lowest 1** is `drop_lowest(4, 6, 1)`.
@@ -262,7 +250,7 @@ Same as `4d6dl1` in dice notation.
 ## drop\_highest
 
 ```python
-def drop_highest(count: int, sides: int, drop: int) -> Dist
+def drop_highest(count: int, sides: int, drop: int) -> DieRoll
 ```
 
 Roll dice, drop the highest results, sum the rest (`4d6dh1` notation).
@@ -288,7 +276,7 @@ Roll dice, drop the highest results, sum the rest (`4d6dh1` notation).
 ## keep\_highest
 
 ```python
-def keep_highest(count: int, sides: int, keep: int) -> Dist
+def keep_highest(count: int, sides: int, keep: int) -> DieRoll
 ```
 
 Roll dice, keep only the highest few, sum those—**4d6 keep highest 3** is `keep_highest(4, 6, 3)` (`4d6kh3`).
@@ -314,7 +302,7 @@ Roll dice, keep only the highest few, sum those—**4d6 keep highest 3** is `kee
 ## keep\_lowest
 
 ```python
-def keep_lowest(count: int, sides: int, keep: int) -> Dist
+def keep_lowest(count: int, sides: int, keep: int) -> DieRoll
 ```
 
 Roll dice, keep only the lowest few, sum those (`4d6kl3` notation).
@@ -338,7 +326,7 @@ Roll dice, keep only the lowest few, sum those (`4d6kl3` notation).
 ## explode
 
 ```python
-def explode(dist: Dist, max_depth: int = 2) -> Dist
+def explode(dist: DieRoll, max_depth: int = 2) -> DieRoll
 ```
 
 Exploding die: on the highest face, roll again and add, up to `max_depth` extra rolls (default 2).
@@ -367,7 +355,7 @@ Common in games where max on a die triggers another die (Savage Worlds–style).
 ## shift
 
 ```python
-def shift(dist: Dist, delta: int) -> Dist
+def shift(dist: DieRoll, delta: int) -> DieRoll
 ```
 
 Add a flat modifier to every outcome—**+3 to the roll** without rolling another die.
@@ -376,7 +364,7 @@ Add a flat modifier to every outcome—**+3 to the roll** without rolling anothe
 
 * `dist`: (required)
 
-  The roll (e.g. `2d10` as a `Dist`).
+  The roll (e.g. `2d10` as a `DieRoll`).
 
 * `delta`: (required)
 
@@ -386,18 +374,18 @@ Add a flat modifier to every outcome—**+3 to the roll** without rolling anothe
 
 #### Details
 
-Same effect as `roll + 3` when `roll` is a `Dist`. Prefer `roll + 3` in scripts when it reads clearer.
+Same effect as `roll + 3` when `roll` is a `DieRoll`. Prefer `roll + 3` in scripts when it reads clearer.
 
 ---
 
 ### Pool rules (faces still matter)
 
-These need a `RollPool` from `roll_pool` / `pool` before you total the dice.
+These need a `DicePool` from `dice_pool` before you total the dice.
 
 ## count_ge
 
 ```python
-def count_ge(pool: RollPool, threshold: int) -> Dist
+def count_ge(pool: DicePool, threshold: int) -> DieRoll
 ```
 
 How many dice in the pool rolled **at least** `threshold`?
@@ -406,7 +394,7 @@ How many dice in the pool rolled **at least** `threshold`?
 
 * `pool`: (required)
 
-  From `roll_pool` / `pool`.
+  From `dice_pool`.
 
 * `threshold`: (required)
 
@@ -416,7 +404,7 @@ How many dice in the pool rolled **at least** `threshold`?
 
 #### Details
 
-The result is a `Dist` over counts (0, 1, 2, …). Example: on 5d10, how many dice show 8+ for a success pool.
+The result is a `DieRoll` over counts (0, 1, 2, …). Example: on 5d10, how many dice show 8+ for a success pool.
 
 ---
 
@@ -509,7 +497,7 @@ How many different totals can occur with non-zero chance (size of the result tab
 ## count_in
 
 ```python
-def count_in(pool: RollPool, values: list[int]) -> Dist
+def count_in(pool: DicePool, values: list[int]) -> DieRoll
 ```
 
 How many dice show a face in your chosen list?
@@ -617,7 +605,7 @@ How many different totals can occur with non-zero chance (size of the result tab
 ## order_stat
 
 ```python
-def order_stat(pool: RollPool, k: int) -> Dist
+def order_stat(pool: DicePool, k: int) -> DieRoll
 ```
 
 The **k**th highest die in the pool (`k = 1` is the highest, `2` is second-highest, …).
@@ -725,7 +713,7 @@ How many different totals can occur with non-zero chance (size of the result tab
 ## middle_of
 
 ```python
-def middle_of(pool: RollPool, keep: int) -> Dist
+def middle_of(pool: DicePool, keep: int) -> DieRoll
 ```
 
 Sum the middle `keep` dice after sorting the pool low to high.
@@ -833,7 +821,7 @@ How many different totals can occur with non-zero chance (size of the result tab
 ## pool_map
 
 ```python
-def pool_map(pool: RollPool, map_fn) -> Dist
+def pool_map(pool: DicePool, map_fn) -> DieRoll
 ```
 
 Custom rule: for every way the pool can land, run your function on the list of faces and use its integer result.
@@ -942,7 +930,11 @@ How many different totals can occur with non-zero chance (size of the result tab
 ## success_pool
 
 ```python
-def success_pool(count: int, sides: int, mode: str = "baseline") -> Dist
+def success_pool(
+    count: int,
+    sides: int,
+    mode: str = "baseline",
+) -> DieRoll
 ```
 
 Count **successes** on a dice pool (Storyteller / WoD-style d10 pools and variants).
@@ -965,7 +957,7 @@ Count **successes** on a dice pool (Storyteller / WoD-style d10 pools and varian
 
 #### Details
 
-Returns a `Dist` over how many successes you rolled. `mode` controls 1s and 10s:
+Returns a `DieRoll` over how many successes you rolled. `mode` controls 1s and 10s:
 `"baseline"` (default), `"ones_cancel"`, `"ones_remove"`, or `"implode"`.
 
 ---
@@ -1060,10 +1052,10 @@ How many different totals can occur with non-zero chance (size of the result tab
 
 Turn numeric totals or special roll rules into labeled results.
 
-## result_type
+## scale
 
 ```python
-def result_type(labels: list[str]) -> ResultScale
+def scale(labels: list[str]) -> Scale
 ```
 
 Name your outcome steps from worst to best (or low to high).
@@ -1078,14 +1070,14 @@ Name your outcome steps from worst to best (or low to high).
 
 #### Details
 
-Used with `bucket` or `classify`. Example: `result_type(["MISS", "PARTIAL", "FULL"])`.
+Used with `bucket` or `classify`. Example: `scale(["MISS", "PARTIAL", "FULL"])`.
 
 ---
 
 ## bucket
 
 ```python
-def bucket(dist: Dist, scale: ResultScale, cuts: list[int]) -> LabelDist
+def bucket(dist: DieRoll, scale: Scale, cuts: list[int]) -> Outcomes
 ```
 
 Split a numeric total into named bands using DC-style cut points.
@@ -1098,7 +1090,7 @@ Split a numeric total into named bands using DC-style cut points.
 
 * `scale`: (required)
 
-  From `result_type(...)`.
+  From `scale(...)`.
 
 * `cuts`: (required)
 
@@ -1118,7 +1110,7 @@ between cuts get middle labels; above the last cut get the top label. PbtA 2d6+s
 ## classify
 
 ```python
-def classify(dist: Dist, scale: ResultScale, classify) -> LabelDist
+def classify(dist: DieRoll, scale: Scale, classify) -> Outcomes
 ```
 
 Label each **exact** roll value with your own rule—natural 1s, natural 20s, custom crits.
@@ -1144,11 +1136,11 @@ Example: map only 1 and 20 to special labels, bucket everything else by total.
 
 ```python
 def joint_classify(
-    d1: Dist,
-    d2: Dist,
-    scale: ResultScale,
+    d1: DieRoll,
+    d2: DieRoll,
+    scale: Scale,
     classify,
-) -> LabelDist
+) -> Outcomes
 ```
 
 Label outcomes that depend on **two** dice together—advantage, disadvantage, or paired rolls.
@@ -1214,7 +1206,7 @@ def output(*args) -> None
 Send a result to the playground **Output** panel (text, json, and graph tabs).
 
 Almost every script should call this at least once. Pass a name and a value:
-a full distribution (`Dist`), named outcomes (`LabelDist`), a probability (`float`),
+a full distribution (`DieRoll`), named outcomes (`Outcomes`), a probability (`float`),
 or a table (`prob_table(...)`). One argument works but naming outputs helps you read results.
 
 ---
@@ -1242,9 +1234,9 @@ Build a list in a loop, then pass it here once: `output("grid", prob_table(rows)
 
 ---
 
-# Dist methods
+# DieRoll methods
 
-Ask questions about a numeric `Dist` after you build it (often inside `output(..., roll.p_ge(15))`).
+Ask questions about a numeric `DieRoll` after you build it (often inside `output(..., roll.p_ge(15))`).
 
 ## mean
 
@@ -1336,21 +1328,21 @@ How many different totals can occur with non-zero chance (size of the result tab
 
 ---
 
-# RollPool methods
+# DicePool methods
 
 Turn a pool into a single total when the rule no longer cares about separate dice.
 
 ## sum
 
 ```python
-def sum() -> Dist
+def sum() -> DieRoll
 ```
 
-Add every die in the pool into one total—turns `roll_pool(4, 6)` into the same idea as `4d6`.
+Add every die in the pool into one total—turns `dice_pool(4, 6)` into the same idea as `4d6`.
 
 ---
 
-# LabelDist methods
+# Outcomes methods
 
 Query named outcome bands (PbtA moves, graded success, etc.).
 

@@ -2,11 +2,11 @@
 
 use anyhow::{bail, Context, Result};
 
-use super::RollPool;
+use super::DicePool;
 
 pub const MAX_JOINT_CELLS: usize = 1_000_000;
 
-pub fn joint_cell_count_pool(pool: &RollPool) -> Result<usize> {
+pub fn joint_cell_count_pool(pool: &DicePool) -> Result<usize> {
     let mut cells = 1usize;
     for die in pool.dice() {
         let n = die.support_size();
@@ -47,7 +47,7 @@ pub fn for_each_uniform_joint(n: usize, sides: i64, mut f: impl FnMut(&[i64], f6
 }
 
 /// Enumerate all joint outcomes of an arbitrary independent pool.
-pub fn for_each_joint(pool: &RollPool, mut f: impl FnMut(&[i64], f64)) -> Result<()> {
+pub fn for_each_joint(pool: &DicePool, mut f: impl FnMut(&[i64], f64)) -> Result<()> {
     let dice = pool.dice();
     if dice.is_empty() {
         bail!("empty pool");
@@ -95,7 +95,7 @@ fn bump_indices(idx: &mut [usize], entries: &[Vec<(i64, f64)>]) -> bool {
 }
 
 /// Fast path: uniform pool with identical fair dice.
-pub fn for_each_pool_joint(pool: &RollPool, f: impl FnMut(&[i64], f64)) -> Result<()> {
+pub fn for_each_pool_joint(pool: &DicePool, f: impl FnMut(&[i64], f64)) -> Result<()> {
     if let Some((n, sides)) = pool.uniform_fair_params() {
         for_each_uniform_joint(n, sides, f)
     } else {
@@ -106,7 +106,7 @@ pub fn for_each_pool_joint(pool: &RollPool, f: impl FnMut(&[i64], f64)) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::RollPool;
+    use crate::engine::DicePool;
 
     #[test]
     fn uniform_joint_count_3d6() {
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn pool_joint_matches_uniform() {
-        let pool = RollPool::from_count(2, 6).unwrap();
+        let pool = DicePool::from_count(2, 6).unwrap();
         let mut sum_prob = 0.0;
         for_each_pool_joint(&pool, |_, p| sum_prob += p).unwrap();
         assert!((sum_prob - 1.0).abs() < 1e-9);

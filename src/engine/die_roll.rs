@@ -1,4 +1,4 @@
-//! Sparse PMF for a single die or collapsed roll total.
+//! Exact chances for numeric roll totals (`1d6`, `2d6`, `4d6dl1`, modifiers).
 
 use std::collections::BTreeMap;
 
@@ -7,11 +7,11 @@ use serde::{Deserialize, Serialize};
 
 /// Sparse PMF over signed integer outcomes (supports shifted rolls and modifiers).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Die {
+pub struct DieRoll {
     pub(crate) mass: BTreeMap<i64, f64>,
 }
 
-impl Die {
+impl DieRoll {
     pub fn new() -> Self {
         Self {
             mass: BTreeMap::new(),
@@ -215,37 +215,37 @@ impl Die {
     }
 
     pub fn pool_drop_lowest(n: usize, sides: i64, drop: usize) -> Result<Self> {
-        use super::pool::PoolOp;
-        use super::pool::RollPool;
-        RollPool::from_count(n, sides)?.apply_pool_op(drop, PoolOp::DropLowestSum)
+        use super::dice_pool::DicePool;
+        use super::dice_pool::PoolOp;
+        DicePool::from_count(n, sides)?.apply_pool_op(drop, PoolOp::DropLowestSum)
     }
 
     pub fn pool_keep_highest(n: usize, sides: i64, keep: usize) -> Result<Self> {
-        use super::pool::PoolOp;
-        use super::pool::RollPool;
+        use super::dice_pool::DicePool;
+        use super::dice_pool::PoolOp;
         if keep == 0 {
             return Ok(Self::constant(0));
         }
-        RollPool::from_count(n, sides)?.apply_pool_op(keep, PoolOp::KeepHighestSum)
+        DicePool::from_count(n, sides)?.apply_pool_op(keep, PoolOp::KeepHighestSum)
     }
 
     pub fn pool_drop_highest(n: usize, sides: i64, drop: usize) -> Result<Self> {
-        use super::pool::PoolOp;
-        use super::pool::RollPool;
-        RollPool::from_count(n, sides)?.apply_pool_op(drop, PoolOp::DropHighestSum)
+        use super::dice_pool::DicePool;
+        use super::dice_pool::PoolOp;
+        DicePool::from_count(n, sides)?.apply_pool_op(drop, PoolOp::DropHighestSum)
     }
 
     pub fn pool_keep_lowest(n: usize, sides: i64, keep: usize) -> Result<Self> {
-        use super::pool::PoolOp;
-        use super::pool::RollPool;
+        use super::dice_pool::DicePool;
+        use super::dice_pool::PoolOp;
         if keep == 0 {
             return Ok(Self::constant(0));
         }
-        RollPool::from_count(n, sides)?.apply_pool_op(keep, PoolOp::KeepLowestSum)
+        DicePool::from_count(n, sides)?.apply_pool_op(keep, PoolOp::KeepLowestSum)
     }
 }
 
-impl Default for Die {
+impl Default for DieRoll {
     fn default() -> Self {
         Self::new()
     }
@@ -275,7 +275,7 @@ mod floor_div_tests {
 
     #[test]
     fn d4_times_ten() {
-        let d4 = Die::die(4).unwrap();
+        let d4 = DieRoll::die(4).unwrap();
         let scaled = d4.scale_outcomes(10).unwrap();
         assert_eq!(scaled.min(), Some(10));
         assert_eq!(scaled.max(), Some(40));
@@ -285,7 +285,7 @@ mod floor_div_tests {
 
     #[test]
     fn eight_d6_halved() {
-        let full = Die::pool_sum(8, 6).unwrap();
+        let full = DieRoll::pool_sum(8, 6).unwrap();
         let half = full.floor_divide_outcomes(2).unwrap();
         assert_eq!(half.min(), Some(4));
         assert_eq!(half.max(), Some(24));

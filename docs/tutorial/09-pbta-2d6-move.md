@@ -24,11 +24,11 @@ In the playground, copy the script below into the **editor**, then click **Run**
 ## The script
 
 ```text
-Outcome = result_type(["MISS", "PARTIAL", "FULL_SUCCESS"])
+Scale = scale(["MISS", "PARTIAL", "FULL_SUCCESS"])
 STAT = 2
 
 roll = 2d6 + STAT
-out = bucket(roll, Outcome, [6, 9])
+out = bucket(roll, Scale, [6, 9])
 output("move", out)
 output("p_full_success", out.p_at_least("FULL_SUCCESS"))
 output("p_partial_or_better", out.p_at_least("PARTIAL"))

@@ -18,7 +18,7 @@ In the playground, copy the script below into the **editor**, then click **Run**
 ## The script
 
 ```text
-Outcome = result_type(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
 DC = 15
 MOD = 5
 
@@ -32,14 +32,14 @@ def label(n):
     return "FAIL"
 
 natural = 2d20kh1
-out = classify(natural, Outcome, label)
+out = classify(natural, Scale, label)
 output("advantage_check", out)
 output("p_hit_or_better", out.p_at_least("SUCCESS"))
 ```
 
 - **`2d20kh1`** is **advantage** (roll two d20, keep the highest one). Same idea as `keep_highest(2, 20, 1)` from [lesson 5](05-dice-notation.md).
 - Use **`1d20`** for a normal roll or **`2d20kl1`** for disadvantage.
-- `classify(dist, scale, fn)` applies your function to each outcome in `dist` and builds a `LabelDist`. Here `n` is the **natural** kept die, not `n + MOD`.
+- `classify(dist, scale, fn)` applies your function to each outcome in `dist` and builds an `Outcomes`. Here `n` is the **natural** kept die, not `n + MOD`.
 - Nat 20 still counts as `CRITICAL_SUCCESS` even if `MOD` is negative; nat 1 still counts as `CRITICAL_FAIL` even with a high `MOD`.
 
 ## Reading the result

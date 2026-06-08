@@ -70,7 +70,7 @@ fn cookbook_the_pool() {
 fn cookbook_ability_4d6dl1_mean() {
     let res = eval_sample_or_panic(SAMPLE_PATHS[3]);
     match &res.outputs[0] {
-        dice_playground::engine::OutputEntry::Dist { mean, .. } => {
+        dice_playground::engine::OutputEntry::DieRoll { mean, .. } => {
             assert!((*mean - 12.244598765432098).abs() < 1e-9);
         }
         other => panic!("expected dist, got {other:?}"),
@@ -83,12 +83,12 @@ fn cookbook_fireball_half_damage() {
     assert_eq!(res.outputs.len(), 2);
     match (&res.outputs[0], &res.outputs[1]) {
         (
-            OutputEntry::Dist {
+            OutputEntry::DieRoll {
                 mean: full,
                 entries: full_entries,
                 ..
             },
-            OutputEntry::Dist {
+            OutputEntry::DieRoll {
                 mean: half,
                 entries: half_entries,
                 ..

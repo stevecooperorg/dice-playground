@@ -3,10 +3,10 @@ use starlark::docs::markdown::render_doc_item_no_link;
 use starlark::docs::{DocItem, DocModule, DocType};
 use starlark::environment::GlobalsBuilder;
 
-use super::dist_value::StarlarkDist;
+use super::dice_pool_value::StarlarkDicePool;
+use super::die_roll_value::StarlarkDieRoll;
 use super::eval::dice_globals;
-use super::label_value::StarlarkLabelDist;
-use super::pool_value::StarlarkRollPool;
+use super::outcomes_value::StarlarkOutcomes;
 
 /// Documentation for the full eval environment (Starlark standard library + dice builtins).
 pub fn full_environment_docs() -> DocModule {
@@ -21,29 +21,29 @@ pub fn dice_stdlib_docs() -> DocModule {
         .documentation()
 }
 
-/// Documentation for `Dist` type methods (`pmf`, `cdf`, `p_ge`, etc.).
-pub fn dist_type_docs() -> DocType {
-    DocType::from_starlark_value::<StarlarkDist>()
+/// Documentation for `DieRoll` type methods (`pmf`, `cdf`, `p_ge`, etc.).
+pub fn die_roll_type_docs() -> DocType {
+    DocType::from_starlark_value::<StarlarkDieRoll>()
 }
 
-/// Documentation for `LabelDist` type methods (`pmf`, `p_at_least`, `p_at_most`).
-pub fn label_dist_type_docs() -> DocType {
-    DocType::from_starlark_value::<StarlarkLabelDist>()
+/// Documentation for `Outcomes` type methods (`pmf`, `p_at_least`, `p_at_most`).
+pub fn outcomes_type_docs() -> DocType {
+    DocType::from_starlark_value::<StarlarkOutcomes>()
 }
 
-pub fn roll_pool_type_docs() -> DocType {
-    DocType::from_starlark_value::<StarlarkRollPool>()
+pub fn dice_pool_type_docs() -> DocType {
+    DocType::from_starlark_value::<StarlarkDicePool>()
 }
 
 const REFERENCE_INTRO: &str = r#"This reference lists everything built into `.dice` scripts beyond basic Starlark (variables, `for` loops, lists). New here? Work through the [tutorial](../README.md#tutorial) first—it introduces notation like `2d6` and `4d6dl1`, which the playground expands into the functions below.
 
 ## Core ideas
 
-**`Dist`** — a finished numeric roll (or total) with exact chances for each possible result. Example: `2d6` is a `Dist`; so is `4d6dl1`. Use **`output("name", dist)`** to print its table in the playground.
+**`DieRoll`** — a finished numeric roll (or total) with exact chances for each possible result. Example: `2d6` is a `DieRoll`; so is `4d6dl1`. Use **`output("name", roll)`** to print its table in the playground.
 
-**`RollPool`** — several dice rolled together but **not** added yet. Use this when the rule cares about *individual* faces (highest die, count successes, Blades-style pools). Call **`.sum()`** on the pool when you only need the total.
+**`DicePool`** — several dice rolled together but **not** added yet. Use this when the rule cares about *individual* faces (highest die, count successes, Blades-style pools). Call **`.sum()`** on the pool when you only need the total.
 
-**`LabelDist`** — chances for **named** outcomes (miss / partial / hit, crit fail / success, and so on) instead of raw numbers.
+**`Outcomes`** — chances for **named** outcome bands (miss / partial / hit, crit fail / success, and so on) instead of raw numbers.
 
 ## Combining rolls (operators)
 
@@ -62,7 +62,7 @@ Dice notation (`1d20`, `3d6kh2`, …) is sugar for these functions—see the [di
 
 "#;
 
-/// `as_type` builtins render as a whole `Dist` type doc; keep only the constructor section.
+/// `as_type` builtins render as a whole `DieRoll` type doc; keep only the constructor section.
 fn truncate_type_doc_to_constructor(name: &str, md: &str) -> String {
     let needle = format!("\n## {name}.");
     if let Some(idx) = md.find(&needle) {
@@ -133,7 +133,7 @@ fn append_type_methods(
     }
 }
 
-/// Render dice stdlib + `Dist` method reference as Markdown.
+/// Render dice stdlib + `DieRoll` method reference as Markdown.
 pub fn render_stdlib_reference_markdown() -> String {
     let stdlib = dice_stdlib_docs();
     let mut out = String::from("# Dice standard library\n\n");
@@ -146,8 +146,7 @@ pub fn render_stdlib_reference_markdown() -> String {
         &[
             "d",
             "die_faces",
-            "roll_pool",
-            "pool",
+            "dice_pool",
             "sum",
             "drop_lowest",
             "drop_highest",
@@ -162,7 +161,7 @@ pub fn render_stdlib_reference_markdown() -> String {
     append_members(
         &mut out,
         "Pool rules (faces still matter)",
-        "These need a `RollPool` from `roll_pool` / `pool` before you total the dice.",
+        "These need a `DicePool` from `dice_pool` before you total the dice.",
         &[
             "count_ge",
             "count_in",
@@ -178,7 +177,7 @@ pub fn render_stdlib_reference_markdown() -> String {
         &mut out,
         "Named outcomes",
         "Turn numeric totals or special roll rules into labeled results.",
-        &["result_type", "bucket", "classify", "joint_classify"],
+        &["scale", "bucket", "classify", "joint_classify"],
         &stdlib.members,
     );
 
@@ -192,26 +191,26 @@ pub fn render_stdlib_reference_markdown() -> String {
 
     append_type_methods(
         &mut out,
-        "Dist methods",
-        "Ask questions about a numeric `Dist` after you build it (often inside `output(..., roll.p_ge(15))`).",
+        "DieRoll methods",
+        "Ask questions about a numeric `DieRoll` after you build it (often inside `output(..., roll.p_ge(15))`).",
         &["mean", "pmf", "p_ge", "cdf", "support_size"],
-        &dist_type_docs(),
+        &die_roll_type_docs(),
     );
 
     append_type_methods(
         &mut out,
-        "RollPool methods",
+        "DicePool methods",
         "Turn a pool into a single total when the rule no longer cares about separate dice.",
         &["sum"],
-        &roll_pool_type_docs(),
+        &dice_pool_type_docs(),
     );
 
     append_type_methods(
         &mut out,
-        "LabelDist methods",
+        "Outcomes methods",
         "Query named outcome bands (PbtA moves, graded success, etc.).",
         &["pmf", "p_at_least", "p_at_most"],
-        &label_dist_type_docs(),
+        &outcomes_type_docs(),
     );
 
     out
@@ -231,8 +230,7 @@ mod tests {
             "d",
             "die_faces",
             "explode",
-            "roll_pool",
-            "pool",
+            "dice_pool",
             "sum",
             "count_ge",
             "count_in",
@@ -247,7 +245,7 @@ mod tests {
             "shift",
             "output",
             "prob_table",
-            "result_type",
+            "scale",
             "bucket",
             "classify",
             "joint_classify",
@@ -268,8 +266,8 @@ mod tests {
     }
 
     #[test]
-    fn dist_pmf_doc_renders() {
-        let ty = dist_type_docs();
+    fn die_roll_pmf_doc_renders() {
+        let ty = die_roll_type_docs();
         let member = ty.members.get("pmf").expect("pmf method");
         let DocMember::Function(_) = member else {
             panic!("pmf should be a function");

@@ -5,7 +5,7 @@ fn wasm_eval_smoke_two_d6() {
     let src = r#"output("two_d6", d(6) + d(6))"#;
     let r = eval_program("spike.dice", src, EvalProgramOptions::default()).expect("eval");
     match &r.outputs[0] {
-        OutputEntry::Dist { mean, .. } => assert!((*mean - 7.0).abs() < 1e-9),
+        OutputEntry::DieRoll { mean, .. } => assert!((*mean - 7.0).abs() < 1e-9),
         other => panic!("expected dist, got {other:?}"),
     }
 }

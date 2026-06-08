@@ -5,7 +5,7 @@ author: Steve Cooper
 
 # Function reference
 
-This section is the **stdlib and type reference** for `.dice` scripts—written for **game designers** exploring odds, not for Rust contributors. It lists builtins (`d`, `roll_pool`, `sum`, `classify`, …) and methods on `Dist`, `RollPool`, and `LabelDist`, with short table examples where helpful.
+This section is the **stdlib and type reference** for `.dice` scripts—written for **game designers** exploring odds, not for Rust contributors. It lists builtins (`d`, `dice_pool`, `sum`, `classify`, …) and methods on `DieRoll`, `DicePool`, and `Outcomes`, with short table examples where helpful.
 
 | File | Contents |
 |------|----------|
@@ -17,6 +17,6 @@ Do **not** edit `stdlib.md` by hand. Regenerate from the repo root:
 make references
 ```
 
-Change doc strings in `src/engine/starlark_guest/eval.rs`, `dist_value.rs`, and `pool_value.rs`, then run `make references` and commit the updated Markdown.
+Change doc strings in `src/engine/starlark_guest/eval.rs`, `die_roll_value.rs`, and `dice_pool_value.rs`, then run `make references` and commit the updated Markdown.
 
 For learning the language in order, use the [tutorial](../README.md#tutorial). For ready-made mechanics, see the [cookbook](../cookbook/README.md).

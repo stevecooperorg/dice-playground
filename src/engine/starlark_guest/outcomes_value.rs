@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::super::LabelDist;
+use super::super::Outcomes;
 use allocative::Allocative;
 use starlark::any::ProvidesStaticType;
 use starlark::environment::Methods;
@@ -9,56 +9,56 @@ use starlark::values::starlark_value;
 use starlark::values::{NoSerialize, StarlarkValue};
 
 #[derive(Debug, Clone, ProvidesStaticType, NoSerialize, Allocative)]
-pub struct StarlarkLabelDist {
+pub struct StarlarkOutcomes {
     #[allocative(skip)]
-    pub(crate) inner: LabelDist,
+    pub(crate) inner: Outcomes,
 }
 
-impl StarlarkLabelDist {
-    pub fn new(inner: LabelDist) -> Self {
+impl StarlarkOutcomes {
+    pub fn new(inner: Outcomes) -> Self {
         Self { inner }
     }
 
-    pub fn inner(&self) -> &LabelDist {
+    pub fn inner(&self) -> &Outcomes {
         &self.inner
     }
 }
 
-impl fmt::Display for StarlarkLabelDist {
+impl fmt::Display for StarlarkOutcomes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "LabelDist({:?})", self.inner.entries_ordered())
+        write!(f, "Outcomes({:?})", self.inner.entries_ordered())
     }
 }
 
-starlark_simple_value!(StarlarkLabelDist);
+starlark_simple_value!(StarlarkOutcomes);
 
 starlark::methods_static!(
-    LABEL_DIST_METHODS = |builder| {
-        starlark_label_dist_methods(builder);
+    OUTCOMES_METHODS = |builder| {
+        starlark_outcomes_methods(builder);
     }
 );
 
 #[starlark_module]
-fn starlark_label_dist_methods(builder: &mut starlark::environment::MethodsBuilder) {
+fn starlark_outcomes_methods(builder: &mut starlark::environment::MethodsBuilder) {
     /// Chance of landing on **exactly** this named outcome (one band on the ladder).
-    fn pmf(this: &StarlarkLabelDist, label: &str) -> anyhow::Result<f64> {
+    fn pmf(this: &StarlarkOutcomes, label: &str) -> anyhow::Result<f64> {
         this.inner.pmf(label)
     }
 
     /// Chance of this outcome **or any better one** on the scale—e.g. “partial success or full success”.
-    fn p_at_least(this: &StarlarkLabelDist, label: &str) -> anyhow::Result<f64> {
+    fn p_at_least(this: &StarlarkOutcomes, label: &str) -> anyhow::Result<f64> {
         this.inner.p_at_least(label)
     }
 
     /// Chance of this outcome **or any worse one**—e.g. “failure or partial failure”.
-    fn p_at_most(this: &StarlarkLabelDist, label: &str) -> anyhow::Result<f64> {
+    fn p_at_most(this: &StarlarkOutcomes, label: &str) -> anyhow::Result<f64> {
         this.inner.p_at_most(label)
     }
 }
 
-#[starlark_value(type = "LabelDist")]
-impl<'v> StarlarkValue<'v> for StarlarkLabelDist {
+#[starlark_value(type = "Outcomes")]
+impl<'v> StarlarkValue<'v> for StarlarkOutcomes {
     fn get_methods() -> Option<&'static Methods> {
-        Some(LABEL_DIST_METHODS.methods())
+        Some(OUTCOMES_METHODS.methods())
     }
 }

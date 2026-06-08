@@ -2,4 +2,4 @@
 def count_high(faces):
     return len([f for f in faces if f > 4])
 
-output("success_count", pool_map(roll_pool(3, 6), count_high))
+output("success_count", pool_map(dice_pool(3, 6), count_high))

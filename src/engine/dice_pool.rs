@@ -4,12 +4,12 @@ use std::collections::BTreeMap;
 
 use anyhow::{bail, Result};
 
-use super::die::Die;
+use super::die_roll::DieRoll;
 use super::enumerate::for_each_pool_joint;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct RollPool {
-    dice: Vec<Die>,
+pub struct DicePool {
+    dice: Vec<DieRoll>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -20,8 +20,8 @@ pub enum PoolOp {
     KeepLowestSum,
 }
 
-impl RollPool {
-    pub fn from_dice(dice: Vec<Die>) -> Result<Self> {
+impl DicePool {
+    pub fn from_dice(dice: Vec<DieRoll>) -> Result<Self> {
         if dice.is_empty() {
             bail!("roll pool must contain at least one die");
         }
@@ -32,13 +32,13 @@ impl RollPool {
         if count == 0 {
             bail!("roll pool count must be >= 1");
         }
-        let one = Die::die(sides)?;
+        let one = DieRoll::die(sides)?;
         Ok(Self {
             dice: vec![one; count],
         })
     }
 
-    pub fn dice(&self) -> &[Die] {
+    pub fn dice(&self) -> &[DieRoll] {
         &self.dice
     }
 
@@ -68,21 +68,21 @@ impl RollPool {
         Some((self.dice.len(), sides))
     }
 
-    pub fn sum(&self) -> Result<Die> {
+    pub fn sum(&self) -> Result<DieRoll> {
         if let Some((n, sides)) = self.uniform_fair_params() {
-            return Die::pool_sum(n, sides);
+            return DieRoll::pool_sum(n, sides);
         }
         let mut mass = BTreeMap::new();
         for_each_pool_joint(self, |faces, p| {
             let total: i64 = faces.iter().sum();
             *mass.entry(total).or_insert(0.0) += p;
         })?;
-        let mut die = Die::from_mass(mass);
+        let mut die = DieRoll::from_mass(mass);
         die.normalize_in_place()?;
         Ok(die)
     }
 
-    pub fn apply_pool_op(&self, param: usize, op: PoolOp) -> Result<Die> {
+    pub fn apply_pool_op(&self, param: usize, op: PoolOp) -> Result<DieRoll> {
         let n = self.dice.len();
         let mut mass = BTreeMap::new();
         for_each_pool_joint(self, |faces, p| {
@@ -110,13 +110,13 @@ impl RollPool {
             };
             *mass.entry(value).or_insert(0.0) += p;
         })?;
-        let mut die = Die::from_mass(mass);
+        let mut die = DieRoll::from_mass(mass);
         die.normalize_in_place()?;
         Ok(die)
     }
 
     /// Distribution of how many faces are `>= threshold`.
-    pub fn count_ge(&self, threshold: i64) -> Result<Die> {
+    pub fn count_ge(&self, threshold: i64) -> Result<DieRoll> {
         if let Some((n, sides)) = self.uniform_fair_params() {
             let hits = (1..=sides).filter(|&f| f >= threshold).count();
             let p = hits as f64 / sides as f64;
@@ -127,13 +127,13 @@ impl RollPool {
             let c = faces.iter().filter(|&&f| f >= threshold).count() as i64;
             *mass.entry(c).or_insert(0.0) += p;
         })?;
-        let mut die = Die::from_mass(mass);
+        let mut die = DieRoll::from_mass(mass);
         die.normalize_in_place()?;
         Ok(die)
     }
 
     /// Distribution of how many faces appear in `values`.
-    pub fn count_in(&self, values: &[i64]) -> Result<Die> {
+    pub fn count_in(&self, values: &[i64]) -> Result<DieRoll> {
         if let Some((n, sides)) = self.uniform_fair_params() {
             let hits = (1..=sides).filter(|&f| values.contains(&f)).count();
             let p = hits as f64 / sides as f64;
@@ -144,13 +144,13 @@ impl RollPool {
             let c = faces.iter().filter(|f| values.contains(f)).count() as i64;
             *mass.entry(c).or_insert(0.0) += p;
         })?;
-        let mut die = Die::from_mass(mass);
+        let mut die = DieRoll::from_mass(mass);
         die.normalize_in_place()?;
         Ok(die)
     }
 
     /// `k=1` is the highest face in the sorted pool.
-    pub fn order_stat(&self, k: usize) -> Result<Die> {
+    pub fn order_stat(&self, k: usize) -> Result<DieRoll> {
         let n = self.dice.len();
         if k == 0 || k > n {
             bail!("order_stat: k must be 1..={n}, got {k}");
@@ -162,23 +162,23 @@ impl RollPool {
             let face = sorted[k - 1];
             *mass.entry(face).or_insert(0.0) += p;
         })?;
-        let mut die = Die::from_mass(mass);
+        let mut die = DieRoll::from_mass(mass);
         die.normalize_in_place()?;
         Ok(die)
     }
 
-    pub fn map_joint(&self, mut f: impl FnMut(&[i64]) -> i64) -> Result<Die> {
+    pub fn map_joint(&self, mut f: impl FnMut(&[i64]) -> i64) -> Result<DieRoll> {
         let mut mass = BTreeMap::new();
         for_each_pool_joint(self, |faces, p| {
             let out = f(faces);
             *mass.entry(out).or_insert(0.0) += p;
         })?;
-        let mut die = Die::from_mass(mass);
+        let mut die = DieRoll::from_mass(mass);
         die.normalize_in_place()?;
         Ok(die)
     }
 
-    pub fn middle_of(&self, keep: usize) -> Result<Die> {
+    pub fn middle_of(&self, keep: usize) -> Result<DieRoll> {
         let n = self.dice.len();
         if keep == 0 || keep > n {
             bail!("middle_of: keep must be 1..={n}, got {keep}");
@@ -191,16 +191,16 @@ impl RollPool {
             let value: i64 = sorted.iter().skip(start).take(keep).sum();
             *mass.entry(value).or_insert(0.0) += p;
         })?;
-        let mut die = Die::from_mass(mass);
+        let mut die = DieRoll::from_mass(mass);
         die.normalize_in_place()?;
         Ok(die)
     }
 }
 
 /// Binomial: number of successes in `n` i.i.d. trials with probability `p` each.
-fn binomial_success_count(n: usize, p: f64) -> Result<Die> {
+fn binomial_success_count(n: usize, p: f64) -> Result<DieRoll> {
     if n == 0 {
-        return Ok(Die::constant(0));
+        return Ok(DieRoll::constant(0));
     }
     if !(0.0..=1.0).contains(&p) {
         bail!("invalid success probability {p}");
@@ -214,7 +214,7 @@ fn binomial_success_count(n: usize, p: f64) -> Result<Die> {
             mass.insert(k as i64, prob);
         }
     }
-    Ok(Die::from_mass(mass))
+    Ok(DieRoll::from_mass(mass))
 }
 
 fn binomial_coeff(n: usize, k: usize) -> f64 {
@@ -237,14 +237,14 @@ mod tests {
 
     #[test]
     fn roll_pool_sum_3d6_mean() {
-        let pool = RollPool::from_count(3, 6).unwrap();
+        let pool = DicePool::from_count(3, 6).unwrap();
         let total = pool.sum().unwrap();
         assert!((total.mean() - 10.5).abs() < 1e-9);
     }
 
     #[test]
     fn count_ge_3d6_above_4() {
-        let pool = RollPool::from_count(3, 6).unwrap();
+        let pool = DicePool::from_count(3, 6).unwrap();
         let c = pool.count_ge(5).unwrap();
         assert!((c.pmf(0) - 8.0 / 27.0).abs() < 1e-9);
         assert!((c.pmf(1) - 4.0 / 9.0).abs() < 1e-9);
@@ -253,9 +253,9 @@ mod tests {
 
     #[test]
     fn order_stat_highest_is_keep_one() {
-        let pool = RollPool::from_count(3, 6).unwrap();
+        let pool = DicePool::from_count(3, 6).unwrap();
         let hi = pool.order_stat(1).unwrap();
-        let keep = Die::pool_keep_highest(3, 6, 1).unwrap();
+        let keep = DieRoll::pool_keep_highest(3, 6, 1).unwrap();
         for k in 1..=6 {
             assert!((hi.pmf(k) - keep.pmf(k)).abs() < 1e-9);
         }

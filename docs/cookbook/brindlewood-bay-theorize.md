@@ -29,20 +29,20 @@ In the playground, copy the script below into the **editor** and click **Run**. 
 ## The script
 
 ```text
-Outcome = result_type(["INCORRECT", "CORRECT_COMPLICATION", "CORRECT", "CONSPIRACY_REVEAL"])
+Scale = scale(["INCORRECT", "CORRECT_COMPLICATION", "CORRECT", "CONSPIRACY_REVEAL"])
 
 COMPLEXITY = 6
 CLUES = 5
 
 roll = 2d6 + CLUES - COMPLEXITY
-out = bucket(roll, Outcome, [6, 9, 11])
+out = bucket(roll, Scale, [6, 9, 11])
 output("theorize", out)
 output("p_not_wrong", out.p_at_least("CORRECT_COMPLICATION"))
 output("p_clean_correct", out.p_at_least("CORRECT"))
 output("p_conspiracy_reveal", out.p_at_least("CONSPIRACY_REVEAL"))
 
 rows = [
-    ("{} clues in theory".format(c), bucket(2d6 + c - COMPLEXITY, Outcome, [6, 9, 11]).p_at_least("CORRECT_COMPLICATION"))
+    ("{} clues in theory".format(c), bucket(2d6 + c - COMPLEXITY, Scale, [6, 9, 11]).p_at_least("CORRECT_COMPLICATION"))
     for c in range(3, 9)
 ]
 output("p_clean_by_clues", prob_table(rows))

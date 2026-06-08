@@ -1,57 +1,57 @@
 use std::fmt::{self, Display};
 
-use super::super::RollPool;
+use super::super::DicePool;
 use allocative::Allocative;
 use starlark::any::ProvidesStaticType;
 use starlark::starlark_simple_value;
 use starlark::values::starlark_value;
 use starlark::values::{Heap, NoSerialize, StarlarkValue, Value, ValueLike};
 
-use super::dist_value::StarlarkDist;
+use super::die_roll_value::StarlarkDieRoll;
 
 /// Several dice still treated separately until you call `.sum()` (see function reference).
 #[derive(Debug, Clone, ProvidesStaticType, NoSerialize, Allocative)]
-pub struct StarlarkRollPool {
+pub struct StarlarkDicePool {
     #[allocative(skip)]
-    pub(crate) inner: RollPool,
+    pub(crate) inner: DicePool,
 }
 
-impl StarlarkRollPool {
-    pub fn new(inner: RollPool) -> Self {
+impl StarlarkDicePool {
+    pub fn new(inner: DicePool) -> Self {
         Self { inner }
     }
 
-    pub fn inner(&self) -> &RollPool {
+    pub fn inner(&self) -> &DicePool {
         &self.inner
     }
 }
 
-impl Display for StarlarkRollPool {
+impl Display for StarlarkDicePool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "RollPool({} dice)", self.inner.dice().len())
+        write!(f, "DicePool({} dice)", self.inner.dice().len())
     }
 }
 
-starlark_simple_value!(StarlarkRollPool);
+starlark_simple_value!(StarlarkDicePool);
 
 starlark::methods_static!(
-    ROLL_POOL_METHODS = |builder| {
-        roll_pool_methods(builder);
+    DICE_POOL_METHODS = |builder| {
+        dice_pool_methods(builder);
     }
 );
 
 #[starlark_module]
-fn roll_pool_methods(builder: &mut starlark::environment::MethodsBuilder) {
-    /// Add every die in the pool into one total—turns `roll_pool(4, 6)` into the same idea as `4d6`.
-    fn sum(this: &StarlarkRollPool) -> anyhow::Result<StarlarkDist> {
-        Ok(StarlarkDist::new(this.inner.sum()?))
+fn dice_pool_methods(builder: &mut starlark::environment::MethodsBuilder) {
+    /// Add every die in the pool into one total—turns `dice_pool(4, 6)` into the same idea as `4d6`.
+    fn sum(this: &StarlarkDicePool) -> anyhow::Result<StarlarkDieRoll> {
+        Ok(StarlarkDieRoll::new(this.inner.sum()?))
     }
 }
 
-#[starlark_value(type = "RollPool")]
-impl<'v> StarlarkValue<'v> for StarlarkRollPool {
+#[starlark_value(type = "DicePool")]
+impl<'v> StarlarkValue<'v> for StarlarkDicePool {
     fn get_methods() -> Option<&'static starlark::environment::Methods> {
-        Some(ROLL_POOL_METHODS.methods())
+        Some(DICE_POOL_METHODS.methods())
     }
 
     fn add(&self, rhs: Value<'v>, heap: Heap<'v>) -> Option<starlark::Result<Value<'v>>> {
@@ -59,16 +59,16 @@ impl<'v> StarlarkValue<'v> for StarlarkRollPool {
             Ok(d) => d,
             Err(e) => return Some(Err(e.into())),
         };
-        StarlarkDist::new(summed).add(rhs, heap)
+        StarlarkDieRoll::new(summed).add(rhs, heap)
     }
 
     fn sub(&self, rhs: Value<'v>, heap: Heap<'v>) -> starlark::Result<Value<'v>> {
         let left = self.inner.sum()?;
-        if let Some(other) = rhs.downcast_ref::<StarlarkRollPool>() {
+        if let Some(other) = rhs.downcast_ref::<StarlarkDicePool>() {
             let merged = left.difference(&other.inner().sum()?)?;
-            return Ok(heap.alloc(StarlarkDist::new(merged)));
+            return Ok(heap.alloc(StarlarkDieRoll::new(merged)));
         }
-        StarlarkDist::new(left).sub(rhs, heap)
+        StarlarkDieRoll::new(left).sub(rhs, heap)
     }
 
     fn mul(&self, rhs: Value<'v>, heap: Heap<'v>) -> Option<starlark::Result<Value<'v>>> {
@@ -76,7 +76,7 @@ impl<'v> StarlarkValue<'v> for StarlarkRollPool {
             Ok(d) => d,
             Err(e) => return Some(Err(e.into())),
         };
-        StarlarkDist::new(summed).mul(rhs, heap)
+        StarlarkDieRoll::new(summed).mul(rhs, heap)
     }
 
     fn rmul(&self, lhs: Value<'v>, heap: Heap<'v>) -> Option<starlark::Result<Value<'v>>> {
@@ -85,6 +85,6 @@ impl<'v> StarlarkValue<'v> for StarlarkRollPool {
 
     fn floor_div(&self, rhs: Value<'v>, heap: Heap<'v>) -> starlark::Result<Value<'v>> {
         let summed = self.inner.sum()?;
-        StarlarkDist::new(summed).floor_div(rhs, heap)
+        StarlarkDieRoll::new(summed).floor_div(rhs, heap)
     }
 }

@@ -16,16 +16,16 @@ In the playground, copy the script below into the **editor**, then click **Run**
 ## The script
 
 ```text
-Outcome = result_type(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
 roll = 1d20
-out = bucket(roll, Outcome, [5, 10, 15])
+out = bucket(roll, Scale, [5, 10, 15])
 output("check", out)
 output("p_success_plus", out.p_at_least("SUCCESS"))
 ```
 
-- `result_type` defines an **ordered** list of labels (low rank → high rank).
-- `bucket` maps a numeric `Dist` into those labels using upper-bound cuts: with four labels, pass three cuts. Outcomes `≤ 5` map to the first label; the top band is above the last cut.
-- `output` on a `LabelDist` shows a probability table (each label and its exact chance) in scale order in **text** and **json**.
+- `scale` defines an **ordered** list of labels (low rank → high rank).
+- `bucket` maps a numeric `DieRoll` into those labels using upper-bound cuts: with four labels, pass three cuts. Outcomes `≤ 5` map to the first label; the top band is above the last cut.
+- `output` on a `Outcomes` shows a probability table (each label and its exact chance) in scale order in **text** and **json**.
 - `p_at_least("SUCCESS")` sums every label at that rank or higher.
 
 ## Reading the result

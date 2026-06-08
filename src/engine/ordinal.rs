@@ -5,27 +5,27 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 
-use super::Dist;
+use super::DieRoll;
 
 /// User-defined ordered scale (low → high rank).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ResultScale {
+pub struct Scale {
     labels: Vec<String>,
 }
 
-impl ResultScale {
+impl Scale {
     /// Build a scale from an ordered list of unique non-empty labels.
     pub fn new(labels: Vec<String>) -> Result<Self> {
         if labels.is_empty() {
-            bail!("result_type requires at least one label");
+            bail!("scale requires at least one label");
         }
         let mut seen = BTreeSet::new();
         for label in &labels {
             if label.is_empty() {
-                bail!("result_type labels must be non-empty");
+                bail!("scale labels must be non-empty");
             }
             if !seen.insert(label.as_str()) {
-                bail!("duplicate label in result_type: {label}");
+                bail!("duplicate label in scale: {label}");
             }
         }
         Ok(Self { labels })
@@ -55,24 +55,24 @@ impl ResultScale {
     }
 }
 
-/// PMF over labels bound to a [`ResultScale`].
+/// PMF over labels bound to a [`Scale`].
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct LabelDist {
-    scale: ResultScale,
+pub struct Outcomes {
+    scale: Scale,
     mass: BTreeMap<String, f64>,
 }
 
-impl LabelDist {
-    pub fn scale(&self) -> &ResultScale {
+impl Outcomes {
+    pub fn scale(&self) -> &Scale {
         &self.scale
     }
 
     /// Build from label masses (validated against scale, normalized to sum 1).
-    pub fn from_mass(scale: ResultScale, mass: BTreeMap<String, f64>) -> Result<Self> {
+    pub fn from_mass(scale: Scale, mass: BTreeMap<String, f64>) -> Result<Self> {
         Self::validate_and_normalize(scale, mass)
     }
 
-    fn validate_and_normalize(scale: ResultScale, mass: BTreeMap<String, f64>) -> Result<Self> {
+    fn validate_and_normalize(scale: Scale, mass: BTreeMap<String, f64>) -> Result<Self> {
         for key in mass.keys() {
             scale.rank(key)?;
         }
@@ -89,7 +89,7 @@ impl LabelDist {
     /// `cuts` has length `scale.len() - 1`, strictly increasing.
     /// Band 0: `x <= cuts[0]`; band `i` for `0 < i < n-1`: `cuts[i-1]+1 <= x <= cuts[i]`;
     /// top band: `x >= cuts[n-2]+1`.
-    pub fn from_bucket(dist: &Dist, scale: ResultScale, cuts: &[i64]) -> Result<Self> {
+    pub fn from_bucket(dist: &DieRoll, scale: Scale, cuts: &[i64]) -> Result<Self> {
         let n = scale.len();
         if cuts.len() != n.saturating_sub(1) {
             bail!(
@@ -110,16 +110,22 @@ impl LabelDist {
                 continue;
             }
             let idx = bucket_index(x, cuts, n);
-            let label = scale.label_at(idx).ok_or_else(|| {
-                anyhow::anyhow!("bucket_index {idx} out of range for scale len {}", scale.len())
-            })?.to_owned();
+            let label = scale
+                .label_at(idx)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "bucket_index {idx} out of range for scale len {}",
+                        scale.len()
+                    )
+                })?
+                .to_owned();
             *mass.entry(label).or_insert(0.0) += p;
         }
         Self::validate_and_normalize(scale, mass)
     }
 
     /// Map each numeric outcome through `classify(x) -> label` and accumulate mass.
-    pub fn from_classify<F>(dist: &Dist, scale: ResultScale, classify: F) -> Result<Self>
+    pub fn from_classify<F>(dist: &DieRoll, scale: Scale, classify: F) -> Result<Self>
     where
         F: Fn(i64) -> String,
     {
@@ -136,7 +142,7 @@ impl LabelDist {
     }
 
     /// Independent pair `(d1, d2)` classified by `classify(w, b) -> label`.
-    pub fn from_joint<F>(d1: &Dist, d2: &Dist, scale: ResultScale, classify: F) -> Result<Self>
+    pub fn from_joint<F>(d1: &DieRoll, d2: &DieRoll, scale: Scale, classify: F) -> Result<Self>
     where
         F: Fn(i64, i64) -> String,
     {
@@ -218,9 +224,9 @@ mod tests {
 
     #[test]
     fn bucket_three_bands() {
-        let scale = ResultScale::new(vec!["LOW".into(), "MID".into(), "HIGH".into()]).unwrap();
-        let d6 = Dist::die(6).unwrap();
-        let ld = LabelDist::from_bucket(&d6, scale, &[2, 4]).unwrap();
+        let scale = Scale::new(vec!["LOW".into(), "MID".into(), "HIGH".into()]).unwrap();
+        let d6 = DieRoll::die(6).unwrap();
+        let ld = Outcomes::from_bucket(&d6, scale, &[2, 4]).unwrap();
         assert!((ld.p_exact("LOW").unwrap() - 2.0 / 6.0).abs() < 1e-12);
         assert!((ld.p_exact("MID").unwrap() - 2.0 / 6.0).abs() < 1e-12);
         assert!((ld.p_exact("HIGH").unwrap() - 2.0 / 6.0).abs() < 1e-12);
@@ -229,16 +235,16 @@ mod tests {
 
     #[test]
     fn classify_natural_d20_crit_bands() {
-        let scale = ResultScale::new(vec![
+        let scale = Scale::new(vec![
             "CRITICAL_FAIL".into(),
             "FAIL".into(),
             "SUCCESS".into(),
             "CRITICAL_SUCCESS".into(),
         ])
         .unwrap();
-        let d20 = Dist::die(20).unwrap();
+        let d20 = DieRoll::die(20).unwrap();
         let dc = 15_i64;
-        let ld = LabelDist::from_classify(&d20, scale, |n| {
+        let ld = Outcomes::from_classify(&d20, scale, |n| {
             if n == 1 {
                 return "CRITICAL_FAIL".into();
             }
@@ -259,9 +265,9 @@ mod tests {
 
     #[test]
     fn joint_classify_toy() {
-        let scale = ResultScale::new(vec!["A".into(), "B".into()]).unwrap();
-        let d2 = Dist::die(2).unwrap();
-        let ld = LabelDist::from_joint(&d2, &d2, scale, |w, b| {
+        let scale = Scale::new(vec!["A".into(), "B".into()]).unwrap();
+        let d2 = DieRoll::die(2).unwrap();
+        let ld = Outcomes::from_joint(&d2, &d2, scale, |w, b| {
             if w + b >= 3 {
                 "B".into()
             } else {

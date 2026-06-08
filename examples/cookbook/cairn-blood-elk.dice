@@ -4,7 +4,7 @@ HP = 4
 ARMOR = 2
 STR = 11
 
-Outcome = result_type(["NO_EFFECT", "HIT_PROTECTION_LOSS", "SCAR", "STR_DOWN_OK", "CRITICAL_DAMAGE"])
+Scale = scale(["NO_EFFECT", "HIT_PROTECTION_LOSS", "SCAR", "STR_DOWN_OK", "CRITICAL_DAMAGE"])
 
 def damage(horn):
     d = horn - ARMOR
@@ -30,7 +30,7 @@ def blood_elk_hit(horn, save):
         return "STR_DOWN_OK"
     return "CRITICAL_DAMAGE"
 
-out = joint_classify(d(8), d(20), Outcome, blood_elk_hit)
+out = joint_classify(d(8), d(20), Scale, blood_elk_hit)
 output("blood_elk_horns", out)
 output("p_protection_loss_or_worse", out.p_at_least("HIT_PROTECTION_LOSS"))
 output("p_scar_or_worse", out.p_at_least("SCAR"))

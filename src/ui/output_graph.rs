@@ -103,10 +103,10 @@ fn sections_from_outputs(outputs: &[OutputEntry]) -> Vec<ChartSection> {
         .iter()
         .filter_map(|entry| {
             let (title, rows) = match entry {
-                OutputEntry::Dist { name, entries, .. } => {
+                OutputEntry::DieRoll { name, entries, .. } => {
                     (name.clone(), rows_from_dist_entries(entries))
                 }
-                OutputEntry::Ordinal { name, entries, .. }
+                OutputEntry::Outcomes { name, entries, .. }
                 | OutputEntry::Table { name, entries } => {
                     (name.clone(), rows_from_ordinal_entries(entries))
                 }
@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn dist_sections_have_six_rows() {
-        let outputs = vec![OutputEntry::Dist {
+        let outputs = vec![OutputEntry::DieRoll {
             name: "d6".into(),
             entries: (1..=6).map(|i| (i, 1.0 / 6.0)).collect(),
             mean: 3.5,

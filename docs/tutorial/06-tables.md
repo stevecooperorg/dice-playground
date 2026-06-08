@@ -47,7 +47,7 @@ For grids and parameter sweeps:
 1. Build a list of `(label, probability)` rows—often with a **comprehension** over your parameter ranges.
 2. Call **`output` once** with `prob_table(rows)`.
 
-`prob_table` takes a list of `(string label, probability)` tuples. Probabilities are **independent**—they do not need to sum to 1 (unlike `LabelDist` / `bucket` outcomes, which describe a single roll).
+`prob_table` takes a list of `(string label, probability)` tuples. Probabilities are **independent**—they do not need to sum to 1 (unlike `Outcomes` / `bucket` outcomes, which describe a single roll).
 
 Use a plain `output(..., float)` when you want exactly one probability. Use `prob_table` when you want one multi-row table with the same `% / frac / X` columns as distribution output.
 

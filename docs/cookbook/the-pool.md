@@ -17,11 +17,11 @@ In the playground, copy the script below into the **editor** and click **Run**. 
 
 ```text
 for dice in range(1, 11):
-    p = count_in(roll_pool(dice, 6), [1]).p_ge(1)
+    p = count_in(dice_pool(dice, 6), [1]).p_ge(1)
     output("{}d".format(dice), p)
 ```
 
-- `roll_pool(n, 6)` is **n** fair d6 not yet summed.
+- `dice_pool(n, 6)` is **n** fair d6 not yet summed.
 - `count_in(..., [1])` yields a distribution of how many 1s appeared; `.p_ge(1)` is the chance of at least one 1.
 
 Similar “any success die” rules appear in other indie designs; the same pattern works with different target faces or `count_ge` for “8+ on d10” pools.

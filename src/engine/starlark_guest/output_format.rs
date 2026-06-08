@@ -337,7 +337,7 @@ pub fn format_dist_pmf_text(
     shared_sample_denom: Option<u64>,
 ) -> String {
     let mut out = String::new();
-    let _ = writeln!(out, "output {name}: Dist mean={mean:.6}");
+    let _ = writeln!(out, "output {name}: DieRoll mean={mean:.6}");
     write_pmf_body(&mut out, entries, shared_sample_denom);
     out
 }
@@ -416,7 +416,7 @@ mod tests {
     fn small_dist_prints_all_outcomes() {
         let entries: Vec<(i64, f64)> = (3..=10).map(|k| (k, 0.125)).collect();
         let text = format_dist_pmf_text("x", &entries, 6.5, ProbFormat::Decimal, None);
-        assert!(text.contains("output x: Dist mean=6.500000"));
+        assert!(text.contains("output x: DieRoll mean=6.500000"));
         for k in 3..=10 {
             assert!(text.contains(&k.to_string()));
         }
@@ -452,8 +452,8 @@ mod tests {
 
     #[test]
     fn two_d6_sample_space_uses_36() {
-        use crate::engine::Dist;
-        let two_d6 = Dist::pool_sum(2, 6).expect("2d6");
+        use crate::engine::DieRoll;
+        let two_d6 = DieRoll::pool_sum(2, 6).expect("2d6");
         let entries = two_d6.entries();
         assert_eq!(infer_sample_space_denominator(&entries), Some(36));
         let text = format_dist_pmf_text(

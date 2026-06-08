@@ -65,7 +65,7 @@ fn try_parse_dice_expr(rest: &str, prev: Option<char>) -> Option<(String, usize)
     } else if count == 1 {
         format!("d({sides})")
     } else {
-        format!("roll_pool({count}, {sides})")
+        format!("dice_pool({count}, {sides})")
     };
     let needs_sum = |tail: &str| -> bool {
         let tail = tail.trim_start();
@@ -77,7 +77,7 @@ fn try_parse_dice_expr(rest: &str, prev: Option<char>) -> Option<(String, usize)
             Some('+' | '-' | '*' | '/' | ')' | ',' | ']' | '>' | '<' | '=')
         )
     };
-    let expanded = if expanded.starts_with("roll_pool(") && needs_sum(&rest[pos..]) {
+    let expanded = if expanded.starts_with("dice_pool(") && needs_sum(&rest[pos..]) {
         format!("sum({expanded})")
     } else {
         expanded
@@ -138,25 +138,25 @@ mod tests {
     #[test]
     fn desugar_2d10() {
         let out = desugar("t.star", "2d10").unwrap();
-        assert_eq!(out, "roll_pool(2, 10)");
+        assert_eq!(out, "dice_pool(2, 10)");
     }
 
     #[test]
     fn desugar_2d10_plus_auto_sum() {
         let out = desugar("t.star", "2d10 + 3").unwrap();
-        assert_eq!(out, "sum(roll_pool(2, 10)) + 3");
+        assert_eq!(out, "sum(dice_pool(2, 10)) + 3");
     }
 
     #[test]
     fn desugar_8d6_times_ten_auto_sum() {
         let out = desugar("t.star", "8d6 * 10").unwrap();
-        assert_eq!(out, "sum(roll_pool(8, 6)) * 10");
+        assert_eq!(out, "sum(dice_pool(8, 6)) * 10");
     }
 
     #[test]
     fn desugar_8d6_floor_div_two_auto_sum() {
         let out = desugar("t.star", "8d6 // 2").unwrap();
-        assert_eq!(out, "sum(roll_pool(8, 6)) // 2");
+        assert_eq!(out, "sum(dice_pool(8, 6)) // 2");
     }
 
     #[test]
@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn desugar_output_wraps_pool_sum() {
         let out = desugar("t.star", r#"output("x", 2d6)"#).unwrap();
-        assert!(out.contains("sum(roll_pool(2, 6))"));
+        assert!(out.contains("sum(dice_pool(2, 6))"));
     }
 
     #[test]

@@ -31,7 +31,7 @@ In the playground, copy the script below into the **editor** and click **Run**. 
 ## The script
 
 ```text
-Outcome = result_type(["BAD", "MESSY", "CLEAN", "CRITICAL"])
+Scale = scale(["BAD", "MESSY", "CLEAN", "CRITICAL"])
 
 def blades_pool(faces):
     high = max(faces)
@@ -53,10 +53,10 @@ def desperate_label(n):
         return "MESSY"
     return "BAD"
 
-output("0d", classify(keep_lowest(2, 6, 1), Outcome, desperate_label))
+output("0d", classify(keep_lowest(2, 6, 1), Scale, desperate_label))
 for dice in range(1, 8):
-    codes = pool_map(roll_pool(dice, 6), blades_pool)
-    output("{}d".format(dice), classify(codes, Outcome, code_label))
+    codes = pool_map(dice_pool(dice, 6), blades_pool)
+    output("{}d".format(dice), classify(codes, Scale, code_label))
 ```
 
 Script labels map to the table above: `BAD` (1–3), `MESSY` (partial / 4–5), `CLEAN` (full / single 6), `CRITICAL` (two or more 6s).
