@@ -10,6 +10,9 @@ const SAMPLE_PATHS: &[&str] = &[
     "examples/cookbook/exploding-dice.dice",
     "examples/cookbook/ability-scores-4d6dl1.dice",
     "examples/cookbook/fireball-half-damage.dice",
+    "examples/cookbook/blades-in-the-dark.dice",
+    "examples/cookbook/brindlewood-bay-theorize.dice",
+    "examples/cookbook/cairn-blood-elk.dice",
 ];
 
 fn read_sample(path: &str) -> String {
