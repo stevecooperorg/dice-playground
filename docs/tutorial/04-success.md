@@ -32,7 +32,7 @@ In the **text** tab, a line like `output p_at_least_15: P=0.…` is your success
 - Change `15` to your game’s difficulty class and run again.
 - Change the `3` modifier and run again.
 
-This lesson is about the **total** after the roll. Pool games (“any die shows a 1”) use `p_any` on a `DicePool` in [lesson 8](08-pool-success-counts.md).
+This lesson is about the **total** after the roll. Pool games (“any die shows a 1”) use `p_any` on a `DicePool` in [lesson 9](09-pool-success-counts.md).
 
 Builtin details: [function reference](../references/stdlib.md).
 

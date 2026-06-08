@@ -80,6 +80,44 @@ impl DicePool {
         })
     }
 
+    /// Roll two pools together: every die from `self`, then every die from `other`, still independent.
+    ///
+    /// Use this for mixed pools (for example 1d12 with 2d6) before `order_stat`, `count`, or `.sum()`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DicePool;
+    /// let mixed = DicePool::from_count(1, 12).unwrap()
+    ///     .join(&DicePool::from_count(2, 6).unwrap()).unwrap();
+    /// assert_eq!(mixed.dice().len(), 3);
+    /// let hi = mixed.order_stat(1).unwrap();
+    /// assert!((hi.pmf(12) - 1.0 / 12.0).abs() < 1e-9);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn join(&self, other: &Self) -> Result<Self> {
+        let mut dice = self.dice.clone();
+        dice.extend_from_slice(other.dice());
+        Self::from_dice(dice)
+    }
+
+    /// Append one independent die to the pool.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::{DicePool, DieRoll};
+    /// let pool = DicePool::from_count(2, 6).unwrap()
+    ///     .push_die(DieRoll::die(12).unwrap()).unwrap();
+    /// assert_eq!(pool.dice().len(), 3);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn push_die(&self, die: DieRoll) -> Result<Self> {
+        let mut dice = self.dice.clone();
+        dice.push(die);
+        Self::from_dice(dice)
+    }
+
     /// Slice of per-die distributions in roll order.
     ///
     /// # Example
@@ -600,6 +638,18 @@ mod tests {
             )
             .unwrap();
         assert!((p - 7.0 / 27.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn join_mixed_pool_order_stat() {
+        let mixed = DicePool::from_count(1, 12)
+            .unwrap()
+            .join(&DicePool::from_count(2, 6).unwrap())
+            .unwrap();
+        assert_eq!(mixed.dice().len(), 3);
+        let hi = mixed.order_stat(1).unwrap();
+        assert!((hi.pmf(12) - 1.0 / 12.0).abs() < 1e-9);
+        assert!(hi.max() == Some(12));
     }
 
     #[test]

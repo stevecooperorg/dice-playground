@@ -41,4 +41,4 @@ output("ignored_pool_sum", dice_pool(3, 6).ignore(1..4).sum())
 
 ## Next
 
-[Lesson 8: Pool success counts](08-pool-success-counts.md)
+[Lesson 9: Pool success counts](09-pool-success-counts.md)

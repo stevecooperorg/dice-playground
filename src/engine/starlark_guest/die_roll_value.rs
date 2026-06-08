@@ -172,15 +172,11 @@ impl<'v> StarlarkValue<'v> for StarlarkDieRoll {
             return Some(Ok(heap.alloc(StarlarkDieRoll::new(merged))));
         }
         if let Some(pool) = rhs.downcast_ref::<StarlarkDicePool>() {
-            let summed = match pool.inner().sum() {
-                Ok(d) => d,
-                Err(e) => return Some(Err(e.into())),
-            };
-            let merged = match self.inner.convolve(&summed) {
+            let merged = match pool.inner().push_die(self.inner.clone()) {
                 Ok(m) => m,
                 Err(e) => return Some(Err(e.into())),
             };
-            return Some(Ok(heap.alloc(StarlarkDieRoll::new(merged))));
+            return Some(Ok(heap.alloc(StarlarkDicePool::new(merged))));
         }
         if let Some(delta) = rhs.unpack_i32() {
             let shifted = match self.inner.shift(i64::from(delta)) {

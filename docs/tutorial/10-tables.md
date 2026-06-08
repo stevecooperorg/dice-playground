@@ -63,6 +63,6 @@ One block `output success_grid: Table` with a row per modifier/target pair (labe
 
 ## What’s next
 
-[Ordered outcome labels](10-ordered-outcomes.md)—named success bands instead of only numeric totals.
+[Ordered outcome labels](11-ordered-outcomes.md)—named success bands instead of only numeric totals.
 
 See the [user guide index](../README.md) and [standard library reference](../references/stdlib.md) for builtins.

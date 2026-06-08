@@ -35,6 +35,16 @@ On **`DieRoll`** and **`DicePool`**, these four methods use a **FaceSpec**. On a
 
 `count(spec)` and pool `p_*` methods still use **unfiltered** dice: they count how many dice matched, not a kept or ignored sum.
 
+### Joining mixed pools (`+`)
+
+| Expression | Result |
+|------------|--------|
+| `dice_pool(a, s) + dice_pool(b, t)` | One `DicePool` with `a + b` dice (left pool, then right) |
+| `d(12) + dice_pool(2, 6)` | Same as `dice_pool(1, 12) + dice_pool(2, 6)` |
+| `pool + 3` | `pool.sum()` with **+3** on every total (flat modifier) |
+
+See [lesson 7](../tutorial/07-mixed-dice-pools.md).
+
 ## Operations by type
 
 ### `DieRoll` and `DicePool`

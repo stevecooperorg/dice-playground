@@ -13,12 +13,13 @@ const SAMPLE_PATHS: &[&str] = &[
     "examples/tutorial/04-success-chance.dice",
     "examples/tutorial/05-dice-notation.dice",
     "examples/tutorial/06-dice-pools.dice",
-    "examples/tutorial/07-restrict-faces.dice",
-    "examples/tutorial/08-pool-success-counts.dice",
-    "examples/tutorial/09-table-2d10.dice",
-    "examples/tutorial/10-ordered-outcomes.dice",
-    "examples/tutorial/11-dnd5e-d20-check.dice",
-    "examples/tutorial/12-pbta-2d6-move.dice",
+    "examples/tutorial/07-mixed-dice-pools.dice",
+    "examples/tutorial/08-restrict-faces.dice",
+    "examples/tutorial/09-pool-success-counts.dice",
+    "examples/tutorial/10-table-2d10.dice",
+    "examples/tutorial/11-ordered-outcomes.dice",
+    "examples/tutorial/12-dnd5e-d20-check.dice",
+    "examples/tutorial/13-pbta-2d6-move.dice",
 ];
 
 fn manifest_dir() -> PathBuf {
@@ -169,8 +170,18 @@ fn tutorial_06_dice_pools() {
 }
 
 #[test]
-fn tutorial_07_restrict_faces() {
+fn tutorial_07_mixed_dice_pools() {
     let res = eval_sample(SAMPLE_PATHS[6]);
+    assert_eq!(res.outputs.len(), 3);
+    let hi = dist_mean_by_name(&res, "highest");
+    assert!(hi > 6.0 && hi < 8.0);
+    let three_d6_hi = dist_mean_by_name(&res, "same_as_three_d6_highest");
+    assert!(three_d6_hi < hi);
+}
+
+#[test]
+fn tutorial_08_restrict_faces() {
+    let res = eval_sample(SAMPLE_PATHS[7]);
     assert_eq!(res.outputs.len(), 3);
     let die_mean = dist_mean_by_name(&res, "high_die");
     assert!((die_mean - 5.5).abs() < 1e-9);
@@ -179,8 +190,8 @@ fn tutorial_07_restrict_faces() {
 }
 
 #[test]
-fn tutorial_08_pool_success_counts() {
-    let res = eval_sample(SAMPLE_PATHS[7]);
+fn tutorial_09_pool_success_counts() {
+    let res = eval_sample(SAMPLE_PATHS[8]);
     assert_eq!(res.outputs.len(), 2);
     match &res.outputs[0] {
         OutputEntry::DieRoll { name, mean, .. } => {
@@ -199,8 +210,8 @@ fn tutorial_08_pool_success_counts() {
 }
 
 #[test]
-fn tutorial_10_ordered_outcomes() {
-    let res = eval_sample(SAMPLE_PATHS[9]);
+fn tutorial_11_ordered_outcomes() {
+    let res = eval_sample(SAMPLE_PATHS[10]);
     assert_eq!(res.outputs.len(), 2);
     match &res.outputs[0] {
         OutputEntry::Outcomes {
@@ -226,8 +237,8 @@ fn tutorial_10_ordered_outcomes() {
 }
 
 #[test]
-fn tutorial_11_dnd5e_d20_check() {
-    let res = eval_sample(SAMPLE_PATHS[10]);
+fn tutorial_12_dnd5e_d20_check() {
+    let res = eval_sample(SAMPLE_PATHS[11]);
     assert_eq!(res.outputs.len(), 2);
     match &res.outputs[0] {
         OutputEntry::Outcomes {
@@ -253,8 +264,8 @@ fn tutorial_11_dnd5e_d20_check() {
 }
 
 #[test]
-fn tutorial_12_pbta_2d6_move() {
-    let res = eval_sample(SAMPLE_PATHS[11]);
+fn tutorial_13_pbta_2d6_move() {
+    let res = eval_sample(SAMPLE_PATHS[12]);
     assert_eq!(res.outputs.len(), 3);
     match &res.outputs[0] {
         OutputEntry::Outcomes {
@@ -281,8 +292,8 @@ fn tutorial_12_pbta_2d6_move() {
 }
 
 #[test]
-fn tutorial_09_table_2d10() {
-    let res = eval_sample(SAMPLE_PATHS[8]);
+fn tutorial_10_table_2d10() {
+    let res = eval_sample(SAMPLE_PATHS[9]);
     assert_eq!(res.outputs.len(), 1);
     const EPS: f64 = 1e-9;
     match &res.outputs[0] {

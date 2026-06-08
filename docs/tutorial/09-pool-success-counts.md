@@ -42,4 +42,4 @@ Use the same **face spec** as `keep` / `count`: int, `[faces]`, or ranges like `
 
 ## Next
 
-[Lesson 9: Many checks at once](09-tables.md)
+[Lesson 10: Many checks at once](10-tables.md)

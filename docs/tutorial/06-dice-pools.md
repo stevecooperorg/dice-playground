@@ -38,4 +38,4 @@ More pool recipes: [cookbook index](../cookbook/README.md). Conventions: [API co
 
 ## Next
 
-[Lesson 7: Filtering faces (`keep` / `ignore`)](07-restrict-faces.md)
+[Lesson 7: Mixed dice pools (`+`)](07-mixed-dice-pools.md)

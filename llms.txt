@@ -41,7 +41,7 @@ Suffix letters: **`dl`** drop lowest, **`dh`** drop highest, **`kh`** keep highe
 
 | Syntax | Effect |
 |--------|--------|
-| `a + b` | Independent rolls **added** (convolution). Both `DieRoll`, or pool coerced via sum when needed. |
+| `a + b` | Two `DieRoll`s: independent totals **added** (convolution). Two `DicePool`s (or `DieRoll` + `DicePool`): dice **joined** into one pool. `DicePool` + integer: pool is **summed**, then the modifier is applied. |
 | `roll + n`, `roll - n` | Add/subtract integer **to every outcome** (flat modifier). Same idea as `shift(roll, n)`. |
 | `roll * n` | Multiply **each** outcome by n. |
 | `roll // n` | **Floor** divide each outcome by n (Starlark `//`; typical save-for-half). |

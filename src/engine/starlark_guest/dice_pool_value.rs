@@ -135,6 +135,20 @@ impl<'v> StarlarkValue<'v> for StarlarkDicePool {
     }
 
     fn add(&self, rhs: Value<'v>, heap: Heap<'v>) -> Option<starlark::Result<Value<'v>>> {
+        if let Some(other) = rhs.downcast_ref::<StarlarkDicePool>() {
+            let merged = match self.inner.join(other.inner()) {
+                Ok(m) => m,
+                Err(e) => return Some(Err(e.into())),
+            };
+            return Some(Ok(heap.alloc(StarlarkDicePool::new(merged))));
+        }
+        if let Some(roll) = rhs.downcast_ref::<StarlarkDieRoll>() {
+            let merged = match self.inner.push_die(roll.inner().clone()) {
+                Ok(m) => m,
+                Err(e) => return Some(Err(e.into())),
+            };
+            return Some(Ok(heap.alloc(StarlarkDicePool::new(merged))));
+        }
         let summed = match self.inner.sum() {
             Ok(d) => d,
             Err(e) => return Some(Err(e.into())),

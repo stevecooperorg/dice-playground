@@ -47,7 +47,7 @@ With `STAT = 0`, the bands match the core rulebook: 15/36 miss, 15/36 partial, 6
 ## Try this
 
 - Set `STAT` to a typical score for your playbook (+0, +2, +3).
-- Compare `p_full_success` across stats in a small loop ([lesson 9](09-tables.md) style) if you want a chart.
+- Compare `p_full_success` across stats in a small loop ([lesson 10](10-tables.md) style) if you want a chart.
 
 ## What’s next
 

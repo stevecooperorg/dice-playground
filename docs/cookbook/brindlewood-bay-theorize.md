@@ -48,7 +48,7 @@ rows = [
 output("p_clean_by_clues", prob_table(rows))
 ```
 
-- Four labels get **four ranges**: `..6`, `7..9`, `10..11`, `12..` (same idea as the [PbtA 2d6 lesson](../tutorial/12-pbta-2d6-move.md), with an extra top band). Equivalent to cuts `[6, 9, 11]`.
+- Four labels get **four ranges**: `..6`, `7..9`, `10..11`, `12..` (same idea as the [PbtA 2d6 lesson](../tutorial/13-pbta-2d6-move.md), with an extra top band). Equivalent to cuts `[6, 9, 11]`.
 - `p_at_least("CORRECT")` is **10+** (clean correct plus conspiracy reveal).
 - `prob_table` lists how **7+** odds change (any correct theory, including complications) if you put **3–8** clues into the theory at fixed Complexity (3 is the minimum when Complexity is 6—half Complexity, rounded up).
 

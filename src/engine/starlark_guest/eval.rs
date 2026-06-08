@@ -786,6 +786,23 @@ output("two_d6", d(6) + d(6))
     }
 
     #[test]
+    fn eval_mixed_pool_addition() {
+        let src = r#"output("hi", (dice_pool(1, 12) + dice_pool(2, 6)).order_stat(1))"#;
+        let res = eval_source("test.dice", src).expect("eval");
+        match &res.outputs[0] {
+            OutputEntry::DieRoll { mean, .. } => {
+                let mixed = DicePool::from_count(1, 12)
+                    .unwrap()
+                    .join(&DicePool::from_count(2, 6).unwrap())
+                    .unwrap();
+                let expected = mixed.order_stat(1).unwrap().mean();
+                assert!((*mean - expected).abs() < 1e-9);
+            }
+            other => panic!("expected dieroll output, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn eval_dist_subtraction() {
         let src = r#"output("diff", dice_pool(2, 10) - dice_pool(3, 6))"#;
         let res = eval_source("test.dice", src).expect("eval");

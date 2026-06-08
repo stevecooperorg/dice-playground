@@ -41,6 +41,6 @@ Builtin details: [standard library reference](../references/stdlib.md).
 
 ## What’s next
 
-[D&D 5e d20 checks](11-dnd5e-d20-check.md)—nat 1, nat 20, advantage, and modifiers with `classify` (not `bucket` on `1d20 + MOD` alone).
+[D&D 5e d20 checks](12-dnd5e-d20-check.md)—nat 1, nat 20, advantage, and modifiers with `classify` (not `bucket` on `1d20 + MOD` alone).
 
 For **two dice** with custom rules (e.g. white/black PbtA-style), see `games-systems/white-and-black-story.dice` and `joint_classify` in the reference.
