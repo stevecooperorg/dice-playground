@@ -25,6 +25,8 @@ use super::DieRoll;
 pub struct Scale {
     labels: Vec<String>,
     bands: Vec<IntBand>,
+    /// When true, this step is considered before non-early steps when bucketing (rank unchanged).
+    early: Vec<bool>,
 }
 
 impl Scale {
@@ -44,51 +46,26 @@ impl Scale {
         Ok(())
     }
 
-    fn validate_bounded_bands_no_overlap(bands: &[IntBand]) -> Result<()> {
-        for (i, a) in bands.iter().enumerate() {
-            if a.is_unbounded() {
-                continue;
-            }
-            for (j, b) in bands.iter().enumerate().skip(i + 1) {
-                if b.is_unbounded() {
-                    continue;
-                }
-                if bands_overlap(a, b) {
-                    bail!("scale bands overlap at ranks {i} and {j}");
-                }
-            }
-        }
-        Ok(())
-    }
-
     /// Empty scale for fluent construction via [`Scale::with_step`] (Starlark: `scale().step(...)`).
     pub fn empty() -> Self {
         Self {
             labels: Vec::new(),
             bands: Vec::new(),
+            early: Vec::new(),
         }
     }
 
-    /// Append one label (low → high) and band; validates duplicates and bounded overlaps.
-    pub fn with_step(mut self, label: String, band: IntBand) -> Result<Self> {
+    /// Append one label (low → high) and band. Set `early` so this band is checked before non-early steps when bucketing.
+    pub fn with_step(mut self, label: String, band: IntBand, early: bool) -> Result<Self> {
         if label.is_empty() {
             bail!("scale labels must be non-empty");
         }
         if self.labels.iter().any(|l| l == &label) {
             bail!("duplicate label in scale: {label}");
         }
-        if !band.is_unbounded() {
-            for prev in &self.bands {
-                if prev.is_unbounded() {
-                    continue;
-                }
-                if bands_overlap(prev, &band) {
-                    bail!("scale band for {label} overlaps a previous bounded band");
-                }
-            }
-        }
         self.labels.push(label);
         self.bands.push(band);
+        self.early.push(early);
         Ok(self)
     }
 
@@ -106,7 +83,12 @@ impl Scale {
     pub fn new(labels: Vec<String>) -> Result<Self> {
         Self::validate_labels(&labels)?;
         let bands = vec![IntBand::unbounded(); labels.len()];
-        Ok(Self { labels, bands })
+        let early = vec![false; labels.len()];
+        Ok(Self {
+            labels,
+            bands,
+            early,
+        })
     }
 
     /// Build a scale with one inclusive band per label (use [`IntBand::unbounded`] for label-only steps).
@@ -133,13 +115,22 @@ impl Scale {
                 bands.len()
             );
         }
-        Self::validate_bounded_bands_no_overlap(&bands)?;
-        Ok(Self { labels, bands })
+        let early = vec![false; labels.len()];
+        Ok(Self {
+            labels,
+            bands,
+            early,
+        })
     }
 
     /// Inclusive bands in rank order (parallel to [`Scale::labels`]).
     pub fn bands(&self) -> &[IntBand] {
         &self.bands
+    }
+
+    /// Per-step `early` flags (parallel to [`Scale::labels`]); default false when absent in JSON.
+    pub fn early_flags(&self) -> &[bool] {
+        &self.early
     }
 
     /// Band at `rank`, if in range.
@@ -235,10 +226,39 @@ impl Scale {
         self.labels.is_empty()
     }
 
-    /// Replace bands on a scale with the same labels (re-validates overlaps).
-    pub fn with_bands_replaced(self, bands: Vec<IntBand>) -> Result<Self> {
-        Self::with_bands(self.labels, bands)
+    /// Replace bands on a scale with the same labels (keeps `early` flags).
+    pub fn with_bands_replaced(mut self, bands: Vec<IntBand>) -> Result<Self> {
+        if bands.len() != self.labels.len() {
+            bail!(
+                "scale expects {} band(s) for {} label(s), got {}",
+                self.labels.len(),
+                self.labels.len(),
+                bands.len()
+            );
+        }
+        self.bands = bands;
+        Ok(self)
     }
+}
+
+fn band_index_for_outcome(bands: &[IntBand], early: &[bool], x: i64) -> Option<usize> {
+    for (i, band) in bands.iter().enumerate() {
+        if !early.get(i).copied().unwrap_or(false) || band.is_unbounded() {
+            continue;
+        }
+        if band.contains(x) {
+            return Some(i);
+        }
+    }
+    for (i, band) in bands.iter().enumerate() {
+        if early.get(i).copied().unwrap_or(false) || band.is_unbounded() {
+            continue;
+        }
+        if band.contains(x) {
+            return Some(i);
+        }
+    }
+    None
 }
 
 impl<'de> Deserialize<'de> for Scale {
@@ -251,22 +271,27 @@ impl<'de> Deserialize<'de> for Scale {
             labels: Vec<String>,
             #[serde(default)]
             bands: Vec<IntBand>,
+            #[serde(default)]
+            early: Vec<bool>,
         }
         let raw = ScaleRaw::deserialize(deserializer)?;
-        if raw.bands.is_empty() {
-            Scale::new(raw.labels).map_err(serde::de::Error::custom)
+        let mut scale = if raw.bands.is_empty() {
+            Scale::new(raw.labels).map_err(serde::de::Error::custom)?
         } else {
-            Scale::with_bands(raw.labels, raw.bands).map_err(serde::de::Error::custom)
+            Scale::with_bands(raw.labels, raw.bands).map_err(serde::de::Error::custom)?
+        };
+        if !raw.early.is_empty() {
+            if raw.early.len() != scale.labels.len() {
+                return Err(serde::de::Error::custom(format!(
+                    "scale early flags length {} does not match {} label(s)",
+                    raw.early.len(),
+                    scale.labels.len()
+                )));
+            }
+            scale.early = raw.early;
         }
+        Ok(scale)
     }
-}
-
-fn bands_overlap(a: &IntBand, b: &IntBand) -> bool {
-    let lo_a = a.min.unwrap_or(i64::MIN);
-    let hi_a = a.max.unwrap_or(i64::MAX);
-    let lo_b = b.min.unwrap_or(i64::MIN);
-    let hi_b = b.max.unwrap_or(i64::MAX);
-    lo_a <= hi_b && lo_b <= hi_a
 }
 
 pub(crate) fn bands_from_cuts(cuts: &[i64], n_labels: usize) -> Result<Vec<IntBand>> {
@@ -416,29 +441,14 @@ impl Outcomes {
             bail!("scale has no numeric bands; use scale().step(label, band) or bucket(..., cuts)");
         }
         let bands = scale.bands();
+        let early = &scale.early;
         let mut mass = BTreeMap::new();
         for (x, p) in dist.entries() {
             if p <= 0.0 {
                 continue;
             }
-            let mut matches = 0usize;
-            let mut label_idx = None;
-            for (i, band) in bands.iter().enumerate() {
-                if band.is_unbounded() {
-                    continue;
-                }
-                if band.contains(x) {
-                    matches += 1;
-                    label_idx = Some(i);
-                }
-            }
-            if matches == 0 {
-                bail!("outcome {x} is not covered by any band");
-            }
-            if matches > 1 {
-                bail!("outcome {x} lies in more than one band");
-            }
-            let idx = label_idx.context("band index")?;
+            let idx = band_index_for_outcome(bands, early, x)
+                .with_context(|| format!("outcome {x} is not covered by any band"))?;
             let label = scale
                 .label_at(idx)
                 .ok_or_else(|| anyhow::anyhow!("label index {idx} out of range"))?
@@ -450,7 +460,7 @@ impl Outcomes {
 
     /// Split a numeric total into named bands using one inclusive [`IntBand`] per scale label.
     ///
-    /// Each outcome must fall in **exactly one** band; overlapping or gapped bands are errors.
+    /// Bands may overlap; **early** steps match first (in order), then other steps (in order). Gaps are errors.
     ///
     /// # Example
     ///
@@ -646,49 +656,81 @@ impl Outcomes {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use super::*;
 
-    fn scale_from_d20_adjusted_target(labels: &[String], dc: i64, mod_: i64) -> Result<Scale> {
+    fn scale_from_d20_early(labels: &[String], dc: i64, mod_: i64) -> Result<Scale> {
         if labels.len() != 4 {
             bail!("expected 4 labels");
         }
         let t = dc - mod_;
-        let mut s = Scale::empty().with_step(labels[0].clone(), IntBand::through(1, 1)?)?;
-        let fail = if t >= 20 {
-            IntBand::through(2, 19)?
-        } else if t >= 2 {
-            IntBand::through(2, t - 1)?
-        } else {
-            IntBand::unbounded()
-        };
-        s = s.with_step(labels[1].clone(), fail)?;
-        let success = if t <= 19 {
-            IntBand::through(t.max(2), 19)?
-        } else {
-            IntBand::unbounded()
-        };
-        s = s.with_step(labels[2].clone(), success)?;
-        s.with_step(labels[3].clone(), IntBand::through(20, 20)?)
+        Scale::empty()
+            .with_step(labels[0].clone(), IntBand::through(1, 1)?, true)?
+            .with_step(labels[1].clone(), IntBand::at_most(t - 1), false)?
+            .with_step(labels[2].clone(), IntBand::at_least(t), false)?
+            .with_step(labels[3].clone(), IntBand::through(20, 20)?, true)
     }
 
     #[test]
-    fn with_step_rejects_overlap() {
-        let err = Scale::empty()
-            .with_step("A".into(), IntBand::through(1, 5).unwrap())
+    fn from_scale_early_steps_match_before_normal() {
+        let scale = Scale::empty()
+            .with_step("PIN".into(), IntBand::through(1, 1).unwrap(), true)
             .unwrap()
-            .with_step("B".into(), IntBand::through(3, 10).unwrap())
-            .unwrap_err();
-        assert!(err.to_string().contains("overlap"));
+            .with_step("BROAD".into(), IntBand::through(1, 5).unwrap(), false)
+            .unwrap();
+        let d5 = DieRoll::die(5).unwrap();
+        let o = Outcomes::from_scale(&d5, scale).unwrap();
+        assert!((o.p_exact("PIN").unwrap() - 1.0 / 5.0).abs() < 1e-12);
+        assert!((o.p_exact("BROAD").unwrap() - 4.0 / 5.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn from_scale_early_pin_wins_despite_later_declaration() {
+        let scale = Scale::empty()
+            .with_step("BROAD".into(), IntBand::through(1, 5).unwrap(), false)
+            .unwrap()
+            .with_step("PIN".into(), IntBand::through(1, 1).unwrap(), true)
+            .unwrap();
+        let one = DieRoll::from_mass(BTreeMap::from([(1, 1.0)]));
+        let o = Outcomes::from_scale(&one, scale).unwrap();
+        assert!((o.p_exact("PIN").unwrap() - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn from_scale_without_early_broad_first_mislabels_pin() {
+        let scale = Scale::empty()
+            .with_step("BROAD".into(), IntBand::through(1, 5).unwrap(), false)
+            .unwrap()
+            .with_step("PIN".into(), IntBand::through(1, 1).unwrap(), false)
+            .unwrap();
+        let one = DieRoll::from_mass(BTreeMap::from([(1, 1.0)]));
+        let o = Outcomes::from_scale(&one, scale).unwrap();
+        assert!((o.p_exact("BROAD").unwrap() - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn early_d20_p_at_least_success_includes_crit_success() {
+        let labels = vec![
+            "CRITICAL_FAIL".into(),
+            "FAIL".into(),
+            "SUCCESS".into(),
+            "CRITICAL_SUCCESS".into(),
+        ];
+        let scale = scale_from_d20_early(&labels, 15, 5).unwrap();
+        let o = Outcomes::from_scale(&DieRoll::die(20).unwrap(), scale).unwrap();
+        let hit = o.p_exact("SUCCESS").unwrap() + o.p_exact("CRITICAL_SUCCESS").unwrap();
+        assert!((o.p_at_least("SUCCESS").unwrap() - hit).abs() < 1e-12);
     }
 
     #[test]
     fn with_step_builds_pbta_scale() {
         let scale = Scale::empty()
-            .with_step("MISS".into(), IntBand::at_most(6))
+            .with_step("MISS".into(), IntBand::at_most(6), false)
             .unwrap()
-            .with_step("PARTIAL".into(), IntBand::through(7, 9).unwrap())
+            .with_step("PARTIAL".into(), IntBand::through(7, 9).unwrap(), false)
             .unwrap()
-            .with_step("FULL".into(), IntBand::at_least(10))
+            .with_step("FULL".into(), IntBand::at_least(10), false)
             .unwrap();
         assert_eq!(scale.len(), 3);
     }
@@ -779,7 +821,7 @@ mod tests {
             })
             .unwrap()
         };
-        let scale = scale_from_d20_adjusted_target(&labels, 15, 0).unwrap();
+        let scale = scale_from_d20_early(&labels, 15, 0).unwrap();
         let by_bucket = Outcomes::from_scale(&DieRoll::die(20).unwrap(), scale).unwrap();
         for label in ["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"] {
             assert!(
@@ -797,7 +839,7 @@ mod tests {
             "SUCCESS".into(),
             "CRITICAL_SUCCESS".into(),
         ];
-        let scale = scale_from_d20_adjusted_target(&labels, 10, 9).unwrap();
+        let scale = scale_from_d20_early(&labels, 10, 9).unwrap();
         let o = Outcomes::from_scale(&DieRoll::die(20).unwrap(), scale).unwrap();
         assert!((o.p_exact("CRITICAL_FAIL").unwrap() - 1.0 / 20.0).abs() < 1e-12);
         assert!((o.p_exact("FAIL").unwrap() - 0.0).abs() < 1e-12);
@@ -812,7 +854,7 @@ mod tests {
             "SUCCESS".into(),
             "CRITICAL_SUCCESS".into(),
         ];
-        let scale = scale_from_d20_adjusted_target(&labels, 10, -15).unwrap();
+        let scale = scale_from_d20_early(&labels, 10, -15).unwrap();
         let o = Outcomes::from_scale(&DieRoll::die(20).unwrap(), scale).unwrap();
         assert!((o.p_exact("SUCCESS").unwrap() - 0.0).abs() < 1e-12);
         assert!((o.p_exact("FAIL").unwrap() - 18.0 / 20.0).abs() < 1e-12);
@@ -843,15 +885,16 @@ mod tests {
     }
 
     #[test]
-    fn with_bands_rejects_overlap() {
-        let err = Scale::with_bands(
+    fn with_bands_allows_overlap() {
+        let scale = Scale::with_bands(
             vec!["A".into(), "B".into()],
             vec![
                 IntBand::through(1, 5).unwrap(),
                 IntBand::through(3, 6).unwrap(),
             ],
-        );
-        assert!(err.is_err());
+        )
+        .unwrap();
+        assert_eq!(scale.len(), 2);
     }
 
     #[test]

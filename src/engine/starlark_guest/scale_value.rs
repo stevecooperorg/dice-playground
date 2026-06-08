@@ -45,12 +45,17 @@ impl fmt::Display for StarlarkScale {
             return write!(f, "scale()");
         }
         write!(f, "scale()")?;
-        for (label, band) in labels.iter().zip(bands.iter()) {
+        let early_flags = self.inner.early_flags();
+        for (i, (label, band)) in labels.iter().zip(bands.iter()).enumerate() {
             if band.is_unbounded() {
-                write!(f, ".step({label:?})")?;
+                write!(f, ".step({label:?}")?;
             } else {
-                write!(f, ".step({label:?}, {})", format_band(*band))?;
+                write!(f, ".step({label:?}, {}", format_band(*band))?;
             }
+            if early_flags.get(i).copied().unwrap_or(false) {
+                write!(f, ", early=True")?;
+            }
+            write!(f, ")")?;
         }
         Ok(())
     }
@@ -69,10 +74,13 @@ fn starlark_scale_methods(builder: &mut starlark::environment::MethodsBuilder) {
     /// Append one outcome label (low → high). With no band, the step is for `classify` only.
     ///
     /// With a band (`IntBand` or desugared `..6`, `7..9`, `10..`), the step buckets numeric totals.
+    /// Bands may overlap: **early** steps (see `early=True`) are checked first, then other steps, each in declaration order.
+    /// Declaration order still defines ladder rank for `p_at_least` / `p_at_most`.
     fn step(
         this: &StarlarkScale,
         label: &str,
         #[starlark(args)] band: UnpackTuple<Value<'_>>,
+        #[starlark(default = false)] early: bool,
     ) -> anyhow::Result<StarlarkScale> {
         let band = match band.items.len() {
             0 => IntBand::unbounded(),
@@ -84,9 +92,11 @@ fn starlark_scale_methods(builder: &mut starlark::environment::MethodsBuilder) {
                 .inner(),
             n => anyhow::bail!("scale.step expects at most one band, got {n} extra argument(s)"),
         };
-        Ok(StarlarkScale::new(
-            this.inner.clone().with_step(label.to_owned(), band)?,
-        ))
+        Ok(StarlarkScale::new(this.inner.clone().with_step(
+            label.to_owned(),
+            band,
+            early,
+        )?))
     }
 }
 

@@ -1592,7 +1592,9 @@ def scale() -> Scale
 
 Start an ordered outcome scale; chain `.step(label)` or `.step(label, band)` on the result.
 
-(`with` is reserved in Starlark.) Example: `scale().step("MISS", ..6).step("PARTIAL", 7..9)`.
+Overlapping bands are allowed: **`early=True`** steps match first, then other steps (declaration order).
+Declaration order still defines ladder rank for `p_at_least` / `p_at_most`. (`with` is reserved in Starlark.)
+Example: `scale().step("MISS", ..6).step("PARTIAL", 7..9)`.
 
 ---
 
@@ -1621,7 +1623,8 @@ Split a numeric total into named bands.
 #### Details
 
 With bands on `scale` (from `scale().step(..., band)`), call `bucket(roll, scale)` or
-`roll.bucket(scale)`. Otherwise pass **N−1** cut ints or **N** explicit bands (override).
+`roll.bucket(scale)`. Overlapping bands: **`early=True`** steps first, then other steps in order.
+Otherwise pass **N−1** cut ints or **N** explicit bands (override).
 
 ---
 
@@ -2099,12 +2102,14 @@ Build ordered outcome labels and optional numeric bands after `scale()`.
 ## step
 
 ```python
-def step(label: str, *band) -> Scale
+def step(label: str, *band, early: bool = False) -> Scale
 ```
 
 Append one outcome label (low → high). With no band, the step is for `classify` only.
 
 With a band (`IntBand` or desugared `..6`, `7..9`, `10..`), the step buckets numeric totals.
+Bands may overlap: **early** steps (see `early=True`) are checked first, then other steps, each in declaration order.
+Declaration order still defines ladder rank for `p_at_least` / `p_at_most`.
 
 ---
 

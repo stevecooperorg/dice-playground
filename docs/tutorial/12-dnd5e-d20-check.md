@@ -23,6 +23,19 @@ T = DC - MOD
 
 So you build a **four-band scale** on faces `1..20`, then `natural.bucket(Scale)`—the same pattern as PbtA in [lesson 13](13-pbta-2d6-move.md), but the bands move when `DC` or `MOD` change.
 
+## Overlapping bands (`early=True`)
+
+Miss and hit use **open** ranges (same idea as PbtA `..6` and `10..`):
+
+- **Fail:** `at_most(T - 1)` — every face strictly below the target.
+- **Success:** `at_least(T)` — target or higher.
+
+Nat **1** and nat **20** sit in those ranges too. Use **`early=True`** on the narrow crit steps so they win when bucketing, without moving them ahead of fail/success in the ladder (so `p_at_least("SUCCESS")` still counts ordinary and critical successes).
+
+Declaration order (ladder rank): crit fail → fail → success → crit success. Match order: both **`early`** crit steps first (in that order), then fail and success.
+
+Wrap the scale in a Starlark **`def`** so you can reuse the same bands for any DC and modifier—`check_scale(DC, MOD)` returns a `Scale` you pass to `bucket` inline. Names that start with `d20` right after `def` break parsing (`d20test` becomes `d(20)` + `test`); use something like `check_scale` or `make_d20test` instead.
+
 ## Try it
 
 In the playground, copy the script below into the **editor**, then click **Run** (or press **Shift+Enter**).
@@ -30,36 +43,28 @@ In the playground, copy the script below into the **editor**, then click **Run**
 ## The script
 
 ```text
-def natural_check_scale(labels, dc, mod):
-    t = dc - mod
-    s = scale().step(labels[0], 1..1)
-    if t >= 20:
-        s = s.step(labels[1], 2..19).step(labels[2])
-    elif t >= 2:
-        s = s.step(labels[1], through(2, t - 1))
-        if t <= 19:
-            s = s.step(labels[2], through(t, 19))
-        else:
-            s = s.step(labels[2])
-    else:
-        s = s.step(labels[1]).step(labels[2], 2..19)
-    return s.step(labels[3], 20..20)
+def check_scale(DC, MOD):
+    T = DC - MOD
+    return (
+        scale()
+        .step("CRITICAL_FAIL", 1..1, early=True)
+        .step("FAIL", at_most(T - 1))
+        .step("SUCCESS", at_least(T))
+        .step("CRITICAL_SUCCESS", 20..20, early=True)
+    )
 
-LABELS = ["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"]
 DC = 15
 MOD = 5
-
-Scale = natural_check_scale(LABELS, DC, MOD)
 natural = 2d20kh1
-out = natural.bucket(Scale)
+out = natural.bucket(check_scale(DC, MOD))
 output("advantage_check", out)
 output("p_hit_or_better", out.p_at_least("SUCCESS"))
 ```
 
-- **`natural_check_scale`** builds crit pins on faces 1 and 20, miss/hit split at `T = DC - MOD` (here `T = 10`), including edge cases when `T` is outside `2..19`.
-- When `T` is always in range, you can inline: `scale().step("CRITICAL_FAIL", 1..1).step("FAIL", 2..(T - 1)).step("SUCCESS", T..19).step("CRITICAL_SUCCESS", 20..20)`.
+- **`check_scale`** builds the four-band scale from `T = DC - MOD`; call it wherever you need a check (`1d20.bucket(check_scale(12, 4))`, loops over DCs, and so on).
+- **`at_most` / `at_least`** accept expressions; use them when `T` comes from `DC` and `MOD` (range sugar `..(T - 1)` only works with numeric literals in source).
 - **`2d20kh1`** is **advantage**. Use **`1d20`** for a normal roll or **`2d20kl1`** for disadvantage.
-- Nat 20 still counts as `CRITICAL_SUCCESS` even if `MOD` is negative; nat 1 still counts as `CRITICAL_FAIL` even with a high `MOD`.
+- Without **`early=True`** on crit bands, overlapping open ranges would mis-label nat 1 or nat 20—see [lesson 11](11-ordered-outcomes.md).
 
 ## Reading the result
 
@@ -67,11 +72,11 @@ You get a four-row probability breakdown (one row per outcome label) plus `p_at_
 
 ## Try this
 
-- Set `MOD` and `DC` to match a character you care about.
+- Change `DC` and `MOD` (or add a `for` loop) and call `check_scale(DC, MOD)` for each combination.
 - Swap `2d20kh1` for `1d20` and compare probabilities.
 - Compare with lesson 11’s fixed bands on `1d20`—notice how crit + DC logic differs.
 
-Builtin details: [standard library reference](../references/stdlib.md) (`scale`, `Scale.step`, `bucket`, `keep_highest`, `keep_lowest`). Use `classify` when house rules do not fit four face bands.
+Builtin details: [standard library reference](../references/stdlib.md) (`scale`, `Scale.step`, `bucket`, `at_most`, `at_least`, `keep_highest`, `keep_lowest`). Use `classify` when house rules do not fit four face bands.
 
 ## What’s next
 

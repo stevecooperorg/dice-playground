@@ -30,6 +30,7 @@ output("p_success_plus", out.p_at_least("SUCCESS"))
 ```
 
 - `scale()` starts an empty ladder; each `.step(label, band)` adds one rank (low → high). Omit the band when you only need labels for `classify`.
+- Bands may overlap; use **`early=True`** on narrow steps so they match before broader bands without reordering the ladder (see [lesson 12](12-dnd5e-d20-check.md)).
 - Bands on `Scale` map each total into a label (`..5`, `6..10`, `11..15`, `16..`). `roll.bucket(Scale)` uses them (same odds as `bucket(roll, scale, [5, 10, 15])` with a label-only scale).
 - `output` on a `Outcomes` shows a probability table (each label and its exact chance) in scale order in **text** and **json**.
 - `p_at_least("SUCCESS")` sums every label at that rank or higher.

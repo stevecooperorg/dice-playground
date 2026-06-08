@@ -506,7 +506,9 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
 
     /// Start an ordered outcome scale; chain `.step(label)` or `.step(label, band)` on the result.
     ///
-    /// (`with` is reserved in Starlark.) Example: `scale().step("MISS", ..6).step("PARTIAL", 7..9)`.
+    /// Overlapping bands are allowed: **`early=True`** steps match first, then other steps (declaration order).
+    /// Declaration order still defines ladder rank for `p_at_least` / `p_at_most`. (`with` is reserved in Starlark.)
+    /// Example: `scale().step("MISS", ..6).step("PARTIAL", 7..9)`.
     #[starlark(as_type = StarlarkScale)]
     fn scale() -> anyhow::Result<StarlarkScale> {
         Ok(StarlarkScale::new(Scale::empty()))
@@ -536,7 +538,8 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// Split a numeric total into named bands.
     ///
     /// With bands on `scale` (from `scale().step(..., band)`), call `bucket(roll, scale)` or
-    /// `roll.bucket(scale)`. Otherwise pass **N−1** cut ints or **N** explicit bands (override).
+    /// `roll.bucket(scale)`. Overlapping bands: **`early=True`** steps first, then other steps in order.
+    /// Otherwise pass **N−1** cut ints or **N** explicit bands (override).
     ///
     /// # Arguments
     /// * `dist`: Numeric roll (e.g. `2d6 + stat`).
@@ -846,23 +849,14 @@ output("p_success", out.p_at_least("SUCCESS"))
     #[test]
     fn eval_classify_d20_crit_bands() {
         let src = r#"
-def natural_check_scale(labels, dc, mod):
-    t = dc - mod
-    s = scale().step(labels[0], 1..1)
-    if t >= 20:
-        s = s.step(labels[1], 2..19).step(labels[2])
-    elif t >= 2:
-        s = s.step(labels[1], through(2, t - 1))
-        if t <= 19:
-            s = s.step(labels[2], through(t, 19))
-        else:
-            s = s.step(labels[2])
-    else:
-        s = s.step(labels[1]).step(labels[2], 2..19)
-    return s.step(labels[3], 20..20)
-
-LABELS = ["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"]
-Scale = natural_check_scale(LABELS, 15, 0)
+T = 15
+Scale = (
+    scale()
+    .step("CRITICAL_FAIL", 1..1, early=True)
+    .step("FAIL", at_most(T - 1))
+    .step("SUCCESS", at_least(T))
+    .step("CRITICAL_SUCCESS", 20..20, early=True)
+)
 out = d(20).bucket(Scale)
 output("check", out)
 "#;
