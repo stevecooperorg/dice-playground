@@ -94,6 +94,19 @@ fn starlark_die_roll_methods(builder: &mut starlark::environment::MethodsBuilder
     fn support_size(this: &StarlarkDieRoll) -> anyhow::Result<i32> {
         i32::try_from(this.inner.support_size()).context("support_size fits in i32")
     }
+
+    /// Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+    ///
+    /// Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+    ///
+    /// # Arguments
+    /// * `min`: Lower bound (inclusive).
+    /// * `max`: Upper bound (inclusive).
+    fn clamp(this: &StarlarkDieRoll, min: i32, max: i32) -> anyhow::Result<StarlarkDieRoll> {
+        Ok(StarlarkDieRoll::new(
+            this.inner.clamp(i64::from(min), i64::from(max))?,
+        ))
+    }
 }
 
 #[starlark_value(type = "DieRoll")]

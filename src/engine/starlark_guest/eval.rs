@@ -260,6 +260,18 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
         ))
     }
 
+    /// Rolemaster **open-ended roll** on **1–100** (d100): low open on **01–05**, high open on **96–00**;
+    /// rerolls chain on **96–00** only. `max_chain` caps consecutive **96–00** rerolls (default 8).
+    #[starlark(as_type = StarlarkDieRoll)]
+    fn open_ended_d100(#[starlark(default = 8)] max_chain: i32) -> anyhow::Result<StarlarkDieRoll> {
+        if max_chain < 0 {
+            anyhow::bail!("max_chain must be >= 0");
+        }
+        Ok(StarlarkDieRoll::new(DieRoll::open_ended_d100(
+            u32::try_from(max_chain).context("max_chain")?,
+        )?))
+    }
+
     /// Roll `count` separate fair dice—**not** added together yet.
     ///
     /// Use when the rule looks at individual results (highest die, count 10s, etc.). Add with
@@ -905,6 +917,22 @@ output("p18", roll.p_ge(18))
                 assert!(*value > 0.0 && *value < 1.0);
             }
             other => panic!("expected prob, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn eval_clamp_on_shifted_pool() {
+        let src = r#"
+roll = (sum(dice_pool(3, 6)) + 5).clamp(3, 18)
+output("capped", roll)
+"#;
+        let res = eval_source("test.star", src).expect("eval");
+        assert_eq!(res.outputs.len(), 1);
+        match &res.outputs[0] {
+            OutputEntry::DieRoll { mean, .. } => {
+                assert!(*mean > 8.0 && *mean < 18.0);
+            }
+            other => panic!("expected dist, got {other:?}"),
         }
     }
 

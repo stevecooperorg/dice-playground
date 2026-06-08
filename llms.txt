@@ -85,6 +85,11 @@ explode(dist: DieRoll, max_depth: int = 2) -> DieRoll
 On max face, roll again and add, up to `max_depth` extra explosions.
 
 ```python
+open_ended_d100(max_chain: int = 8) -> DieRoll
+```
+Rolemaster Standard System **open-ended roll** on **1–100** (01–05 subtract rerolls, **96–00** add rerolls; chain on **96–00**). `max_chain` caps consecutive **96–00** rerolls after an open trigger.
+
+```python
 shift(dist: DieRoll, delta: int) -> DieRoll
 ```
 Add `delta` to every outcome (`roll + delta` is usually clearer).
@@ -170,6 +175,7 @@ roll.mean() -> float
 roll.pmf(value: int) -> float      # P(total == value)
 roll.p_ge(value: int) -> float     # P(total >= value) — DC checks
 roll.cdf(value: int) -> float      # P(total <= value)
+roll.clamp(min: int, max: int) -> DieRoll   # cap each outcome, merge at bounds
 roll.support_size() -> int         # count of outcomes with P > 0
 ```
 

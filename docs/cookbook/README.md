@@ -19,5 +19,7 @@ New to the language? Start with the [tutorial](../README.md#tutorial).
 | [Blades in the Dark](blades-in-the-dark.md) | Highest d6, crit on two 6s, desperate 0d |
 | [Brindlewood Bay — Theorize](brindlewood-bay-theorize.md) | 2d6 + clues − complexity, 12+ twist |
 | [Cairn 2e — Blood Elk](cairn-blood-elk.md) | Armor, scars at 0 HP, critical damage save |
+| [Rolemaster — open-ended d100](rolemaster-open-ended.md) | RMSS percentile — low/high open on 01–05 / 96–100 |
+| [Fudge — 4dF](fudge-4df.md) | Four fudge dice via `die_faces` (−4…+4) |
 
 For builtins and types, see the [function reference](../references/stdlib.md).

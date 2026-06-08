@@ -1,0 +1,6 @@
+# Rolemaster open-ended roll (1–100 / d100): low open 01–05, high open 96–00; chain on 96–00 rerolls.
+oe = open_ended_d100(8)
+output("open_ended_d100", oe)
+output("p_unmodified_mid", oe.pmf(50))
+output("p_at_least_150", oe.p_ge(150))
+output("p_zero_or_below", oe.cdf(0))

@@ -153,6 +153,7 @@ pub fn render_stdlib_reference_markdown() -> String {
             "keep_highest",
             "keep_lowest",
             "explode",
+            "open_ended_d100",
             "shift",
         ],
         &stdlib.members,
@@ -193,7 +194,7 @@ pub fn render_stdlib_reference_markdown() -> String {
         &mut out,
         "DieRoll methods",
         "Ask questions about a numeric `DieRoll` after you build it (often inside `output(..., roll.p_ge(15))`).",
-        &["mean", "pmf", "p_ge", "cdf", "support_size"],
+        &["mean", "pmf", "p_ge", "cdf", "clamp", "support_size"],
         &die_roll_type_docs(),
     );
 
@@ -230,6 +231,7 @@ mod tests {
             "d",
             "die_faces",
             "explode",
+            "open_ended_d100",
             "dice_pool",
             "sum",
             "count_ge",

@@ -345,6 +345,26 @@ impl DieRoll {
         Ok(dist)
     }
 
+    /// Clamp every outcome to `[min, max]`, merging probability when values collide.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let boosted = DieRoll::pool_sum(3, 6).unwrap().shift(5).unwrap();
+    /// let capped = boosted.clamp(3, 18).unwrap();
+    /// assert_eq!(capped.min(), Some(8));
+    /// assert_eq!(capped.max(), Some(18));
+    /// assert!(capped.pmf(18) > boosted.pmf(18));
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn clamp(&self, min: i64, max: i64) -> Result<Self> {
+        if min > max {
+            bail!("clamp min must be <= max, got {min}..{max}");
+        }
+        self.map_outcomes(|k| k.clamp(min, max))
+    }
+
     /// Multiply every outcome by `factor` (e.g. tens die reading `d4 * 10`).
     ///
     /// # Example
@@ -390,6 +410,45 @@ impl DieRoll {
         let mut dist = Self { mass: out };
         dist.normalize_in_place()?;
         Ok(dist)
+    }
+
+    /// Rolemaster **open-ended roll** on a **1–100** (`d100`) result—two d10s as 01–100, **00** = 100.
+    ///
+    /// Implements the full open-ended procedure: **low open-ended** on **01–05** (subtract rerolls),
+    /// **high open-ended** on **96–00** (add rerolls). Rerolls chain only while they show **96–00**
+    /// (faces 96–100 in this model). **06–95** on the first roll stops with no reroll.
+    /// `max_chain` caps consecutive **96–00** rerolls after an open trigger (like `explode` depth).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dice_playground::engine::DieRoll;
+    /// let oe = DieRoll::open_ended_d100(4).unwrap();
+    /// assert!((oe.pmf(50) - 0.01).abs() < 1e-12);
+    /// assert!(oe.min().unwrap() < 0);
+    /// assert!(oe.max().unwrap() > 100);
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    pub fn open_ended_d100(max_chain: u32) -> Result<Self> {
+        let chain = reroll_sum_chain(max_chain)?;
+        let mut mass = BTreeMap::new();
+        let p_each = 0.01;
+        for first in 1..=100 {
+            if (6..=95).contains(&first) {
+                *mass.entry(first).or_insert(0.0) += p_each;
+            } else if (1..=5).contains(&first) {
+                for (t, pt) in chain.entries() {
+                    *mass.entry(first - t).or_insert(0.0) += p_each * pt;
+                }
+            } else {
+                for (t, pt) in chain.entries() {
+                    *mass.entry(first + t).or_insert(0.0) += p_each * pt;
+                }
+            }
+        }
+        let mut out = Self { mass };
+        out.normalize_in_place()?;
+        Ok(out)
     }
 
     /// Exploding die: on max face, reroll and add (up to `max_depth` extra explosions).
@@ -522,6 +581,27 @@ impl Default for DieRoll {
     }
 }
 
+/// Sum of d100 rerolls after a low/high open trigger; further rolls while the face is **96–00**.
+fn reroll_sum_chain(max_chain: u32) -> Result<DieRoll> {
+    let mut g = DieRoll::die(100)?;
+    for _ in 0..max_chain {
+        let tail = g.clone();
+        let mut mass = BTreeMap::new();
+        let p_each = 0.01;
+        for r in 1..=95 {
+            *mass.entry(r).or_insert(0.0) += p_each;
+        }
+        for r in 96..=100 {
+            for (t, pt) in tail.entries() {
+                *mass.entry(r + t).or_insert(0.0) += p_each * pt;
+            }
+        }
+        g = DieRoll { mass };
+        g.normalize_in_place()?;
+    }
+    Ok(g)
+}
+
 /// Starlark-compatible `a // b` for signed integers.
 pub(crate) fn starlark_floor_div_i64(a: i64, b: i64) -> Result<i64> {
     if b == 0 {
@@ -562,5 +642,63 @@ mod floor_div_tests {
         assert_eq!(half.max(), Some(24));
         let p14 = full.pmf(28) + full.pmf(29);
         assert!((half.pmf(14) - p14).abs() < 1e-12);
+    }
+
+    #[test]
+    fn clamp_3d6_plus_five() {
+        let roll = DieRoll::pool_sum(3, 6).unwrap().shift(5).unwrap();
+        let capped = roll.clamp(3, 18).unwrap();
+        assert_eq!(capped.min(), Some(8));
+        assert_eq!(capped.max(), Some(18));
+        assert!((capped.pmf(10) - roll.pmf(10)).abs() < 1e-12);
+        let tail: f64 = (19..=23).map(|k| roll.pmf(k)).sum();
+        assert!((capped.pmf(18) - roll.pmf(18) - tail).abs() < 1e-12);
+    }
+
+    #[test]
+    fn clamp_rejects_inverted_bounds() {
+        let d6 = DieRoll::die(6).unwrap();
+        assert!(d6.clamp(10, 3).is_err());
+    }
+
+    #[test]
+    #[ignore = "manual benchmark for open-ended chain cost"]
+    fn bench_open_ended_chain_sizes() {
+        for k in 1..=8 {
+            let t = std::time::Instant::now();
+            let oe = DieRoll::open_ended_d100(k).unwrap();
+            eprintln!(
+                "max_chain={k} support={} ms={}",
+                oe.support_size(),
+                t.elapsed().as_millis()
+            );
+        }
+    }
+
+    #[test]
+    fn open_ended_d100_flat_midrange() {
+        let oe = DieRoll::open_ended_d100(4).unwrap();
+        assert!((oe.pmf(50) - 0.01).abs() < 1e-12);
+        assert!((oe.pmf(95) - 0.01).abs() < 1e-12);
+    }
+
+    #[test]
+    fn open_ended_d100_rmss_low_example_path() {
+        let oe = DieRoll::open_ended_d100(4).unwrap();
+        let one_path = 1.0 / 1_000_000.0;
+        assert!(
+            oe.pmf(-96) >= one_path,
+            "RMSS low open example 04−97−03 should contribute mass at −96"
+        );
+    }
+
+    #[test]
+    fn open_ended_d100_rmss_high_example_path() {
+        let oe = DieRoll::open_ended_d100(4).unwrap();
+        let one_path = 1.0 / 1_000_000.0;
+        assert!(
+            oe.pmf(199) >= one_path,
+            "RMSS high open example 99+96+04 should contribute mass at 199"
+        );
     }
 }

@@ -97,6 +97,32 @@ Less common than `p_ge` for “beat the DC” checks; useful when rules ask “a
 
 ---
 
+## die\_faces.clamp
+
+```python
+def die_faces.clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
 ## die\_faces.mean
 
 ```python
@@ -352,6 +378,128 @@ Common in games where max on a die triggers another die (Savage Worlds–style).
 
 ---
 
+## open_ended_d100
+
+```python
+def open_ended_d100(max_chain: int = 8) -> DieRoll
+```
+
+Rolemaster **open-ended roll** on **1–100** (d100): low open on **01–05**, high open on **96–00**; rerolls chain on **96–00** only. `max_chain` caps consecutive **96–00** rerolls (default 8).
+
+---
+
+## open\_ended\_d100.cdf
+
+```python
+def open_ended_d100.cdf(value: int) -> float
+```
+
+Chance the total is **this number or lower** (cumulative from the bottom).
+
+#### Parameters
+
+* `value`: (required)
+
+  Upper cap (inclusive).
+
+
+
+#### Details
+
+Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
+
+---
+
+## open\_ended\_d100.clamp
+
+```python
+def open_ended_d100.clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
+## open\_ended\_d100.mean
+
+```python
+def open_ended_d100.mean() -> float
+```
+
+Average result if you rolled this distribution many times—the **mean** on the output table.
+
+---
+
+## open\_ended\_d100.p\_ge
+
+```python
+def open_ended_d100.p_ge(value: int) -> float
+```
+
+Chance of **meeting or beating** a target number—your go-to for “need 15+ on 2d10”.
+
+#### Parameters
+
+* `value`: (required)
+
+  Target total (inclusive)—success if roll ≥ this.
+
+
+
+#### Details
+
+Example: `output("success", (2d10 + 3).p_ge(15))`.
+
+---
+
+## open\_ended\_d100.pmf
+
+```python
+def open_ended_d100.pmf(value: int) -> float
+```
+
+Chance of rolling **exactly** this number (one outcome, not “this or higher”).
+
+#### Parameters
+
+* `value`: (required)
+
+  The total you care about.
+
+
+
+#### Details
+
+Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
+
+---
+
+## open\_ended\_d100.support\_size
+
+```python
+def open_ended_d100.support_size() -> int
+```
+
+How many different totals can occur with non-zero chance (size of the result table).
+
+---
+
 ## shift
 
 ```python
@@ -427,6 +575,32 @@ Chance the total is **this number or lower** (cumulative from the bottom).
 #### Details
 
 Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
+
+---
+
+## count\_ge.clamp
+
+```python
+def count_ge.clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
 
 ---
 
@@ -538,6 +712,32 @@ Less common than `p_ge` for “beat the DC” checks; useful when rules ask “a
 
 ---
 
+## count\_in.clamp
+
+```python
+def count_in.clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
 ## count\_in.mean
 
 ```python
@@ -643,6 +843,32 @@ Chance the total is **this number or lower** (cumulative from the bottom).
 #### Details
 
 Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
+
+---
+
+## order\_stat.clamp
+
+```python
+def order_stat.clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
 
 ---
 
@@ -754,6 +980,32 @@ Less common than `p_ge` for “beat the DC” checks; useful when rules ask “a
 
 ---
 
+## middle\_of.clamp
+
+```python
+def middle_of.clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+
+---
+
 ## middle\_of.mean
 
 ```python
@@ -860,6 +1112,32 @@ Chance the total is **this number or lower** (cumulative from the bottom).
 #### Details
 
 Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
+
+---
+
+## pool\_map.clamp
+
+```python
+def pool_map.clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
 
 ---
 
@@ -981,6 +1259,32 @@ Chance the total is **this number or lower** (cumulative from the bottom).
 #### Details
 
 Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
+
+---
+
+## success\_pool.clamp
+
+```python
+def success_pool.clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
 
 ---
 
@@ -1313,6 +1617,32 @@ Chance the total is **this number or lower** (cumulative from the bottom).
 #### Details
 
 Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
+
+---
+
+## clamp
+
+```python
+def clamp(min: int, max: int) -> DieRoll
+```
+
+Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+
+#### Parameters
+
+* `min`: (required)
+
+  Lower bound (inclusive).
+
+* `max`: (required)
+
+  Upper bound (inclusive).
+
+
+
+#### Details
+
+Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
 
 ---
 
