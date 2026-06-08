@@ -42,17 +42,17 @@ starlark::methods_static!(
 fn starlark_label_dist_methods(builder: &mut starlark::environment::MethodsBuilder) {
     /// Chance of landing on **exactly** this named outcome (one band on the ladder).
     fn pmf(this: &StarlarkLabelDist, label: &str) -> anyhow::Result<f64> {
-        Ok(this.inner.pmf(label)?)
+        this.inner.pmf(label)
     }
 
     /// Chance of this outcome **or any better one** on the scale—e.g. “partial success or full success”.
     fn p_at_least(this: &StarlarkLabelDist, label: &str) -> anyhow::Result<f64> {
-        Ok(this.inner.p_at_least(label)?)
+        this.inner.p_at_least(label)
     }
 
     /// Chance of this outcome **or any worse one**—e.g. “failure or partial failure”.
     fn p_at_most(this: &StarlarkLabelDist, label: &str) -> anyhow::Result<f64> {
-        Ok(this.inner.p_at_most(label)?)
+        this.inner.p_at_most(label)
     }
 }
 

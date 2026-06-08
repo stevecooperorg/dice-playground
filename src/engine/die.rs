@@ -18,6 +18,7 @@ impl Die {
         }
     }
 
+    #[allow(clippy::self_named_constructors)]
     pub fn die(sides: i64) -> Result<Self> {
         if sides < 1 {
             bail!("die sides must be >= 1, got {sides}");

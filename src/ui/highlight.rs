@@ -83,6 +83,11 @@ fn push_span(spans: &mut Vec<ColoredSpan>, text: &str, kind: TokenKind) {
     });
 }
 
+fn next_char(rest: &str) -> Option<(char, usize)> {
+    let ch = rest.chars().next()?;
+    Some((ch, ch.len_utf8()))
+}
+
 fn highlight_code_segment(line: &str, spans: &mut Vec<ColoredSpan>) {
     let bytes = line.as_bytes();
     let mut i = 0usize;
@@ -94,8 +99,9 @@ fn highlight_code_segment(line: &str, spans: &mut Vec<ColoredSpan>) {
             continue;
         }
 
-        let ch = line[i..].chars().next().expect("char");
-        let ch_len = ch.len_utf8();
+        let Some((ch, ch_len)) = next_char(&line[i..]) else {
+            break;
+        };
 
         if ch == '#' {
             push_span(spans, &line[i..], TokenKind::Comment);
@@ -107,12 +113,14 @@ fn highlight_code_segment(line: &str, spans: &mut Vec<ColoredSpan>) {
             let start = i;
             i += ch_len;
             while i < line.len() {
-                let c = line[i..].chars().next().expect("char");
-                let c_len = c.len_utf8();
+                let Some((c, c_len)) = next_char(&line[i..]) else {
+                    break;
+                };
                 i += c_len;
                 if c == '\\' && i < line.len() {
-                    let esc = line[i..].chars().next().expect("esc");
-                    i += esc.len_utf8();
+                    if let Some((_, esc_len)) = next_char(&line[i..]) {
+                        i += esc_len;
+                    }
                     continue;
                 }
                 if c == quote {
@@ -147,9 +155,11 @@ fn highlight_code_segment(line: &str, spans: &mut Vec<ColoredSpan>) {
             let start = i;
             i += ch_len;
             while i < line.len() {
-                let c = line[i..].chars().next().expect("char");
+                let Some((c, c_len)) = next_char(&line[i..]) else {
+                    break;
+                };
                 if c == '_' || c.is_ascii_alphanumeric() {
-                    i += c.len_utf8();
+                    i += c_len;
                 } else {
                     break;
                 }
@@ -168,9 +178,11 @@ fn highlight_code_segment(line: &str, spans: &mut Vec<ColoredSpan>) {
             let start = i;
             i += ch_len;
             while i < line.len() {
-                let c = line[i..].chars().next().expect("char");
+                let Some((c, c_len)) = next_char(&line[i..]) else {
+                    break;
+                };
                 if c.is_ascii_whitespace() {
-                    i += c.len_utf8();
+                    i += c_len;
                 } else {
                     break;
                 }

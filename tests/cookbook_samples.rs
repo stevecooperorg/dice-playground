@@ -47,21 +47,28 @@ fn cookbook_manifest_covers_all_files() {
     );
 }
 
-fn eval_sample(rel: &str) -> dice_playground::engine::EvalResult {
+fn eval_sample(rel: &str) -> anyhow::Result<dice_playground::engine::EvalResult> {
     let content = read_sample(rel);
-    let expanded = desugar_if_needed(rel, &content).expect("desugar");
-    eval_source(rel, &expanded).expect("eval")
+    let expanded = desugar_if_needed(rel, &content)?;
+    eval_source(rel, &expanded)
+}
+
+fn eval_sample_or_panic(rel: &str) -> dice_playground::engine::EvalResult {
+    match eval_sample(rel) {
+        Ok(res) => res,
+        Err(e) => panic!("eval_sample {rel}: {e:#}"),
+    }
 }
 
 #[test]
 fn cookbook_the_pool() {
-    let res = eval_sample(SAMPLE_PATHS[0]);
+    let res = eval_sample_or_panic(SAMPLE_PATHS[0]);
     assert_eq!(res.outputs.len(), 10);
 }
 
 #[test]
 fn cookbook_ability_4d6dl1_mean() {
-    let res = eval_sample(SAMPLE_PATHS[3]);
+    let res = eval_sample_or_panic(SAMPLE_PATHS[3]);
     match &res.outputs[0] {
         dice_playground::engine::OutputEntry::Dist { mean, .. } => {
             assert!((*mean - 12.244598765432098).abs() < 1e-9);
@@ -72,7 +79,7 @@ fn cookbook_ability_4d6dl1_mean() {
 
 #[test]
 fn cookbook_fireball_half_damage() {
-    let res = eval_sample(SAMPLE_PATHS[4]);
+    let res = eval_sample_or_panic(SAMPLE_PATHS[4]);
     assert_eq!(res.outputs.len(), 2);
     match (&res.outputs[0], &res.outputs[1]) {
         (

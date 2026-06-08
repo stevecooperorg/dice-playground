@@ -49,6 +49,10 @@ impl ResultScale {
     pub fn len(&self) -> usize {
         self.labels.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.labels.is_empty()
+    }
 }
 
 /// PMF over labels bound to a [`ResultScale`].
@@ -106,10 +110,9 @@ impl LabelDist {
                 continue;
             }
             let idx = bucket_index(x, cuts, n);
-            let label = scale
-                .label_at(idx)
-                .expect("bucket_index in range")
-                .to_owned();
+            let label = scale.label_at(idx).ok_or_else(|| {
+                anyhow::anyhow!("bucket_index {idx} out of range for scale len {}", scale.len())
+            })?.to_owned();
             *mass.entry(label).or_insert(0.0) += p;
         }
         Self::validate_and_normalize(scale, mass)
@@ -201,8 +204,8 @@ fn bucket_index(x: i64, cuts: &[i64], n_labels: usize) -> usize {
     if x <= cuts[0] {
         return 0;
     }
-    for i in 1..n_labels - 1 {
-        if x <= cuts[i] {
+    for (i, cut) in cuts.iter().enumerate().take(n_labels - 1).skip(1) {
+        if x <= *cut {
             return i;
         }
     }

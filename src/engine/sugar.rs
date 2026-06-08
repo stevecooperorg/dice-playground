@@ -7,6 +7,11 @@ pub fn desugar_if_needed(path: &str, source: &str) -> anyhow::Result<String> {
     desugar(path, source)
 }
 
+fn next_char(rest: &str) -> Option<(char, usize)> {
+    let ch = rest.chars().next()?;
+    Some((ch, ch.len_utf8()))
+}
+
 /// Byte length of a dice literal at the start of `rest`, if any (for syntax highlighting).
 pub fn dice_literal_len_at(rest: &str, prev: Option<char>) -> Option<usize> {
     try_parse_dice_expr(rest, prev).map(|(_, len)| len)
@@ -22,9 +27,11 @@ pub fn desugar(_path: &str, source: &str) -> anyhow::Result<String> {
             out.push_str(&expr);
             i += len;
         } else {
-            let ch = source[i..].chars().next().expect("char");
+            let Some((ch, ch_len)) = next_char(&source[i..]) else {
+                break;
+            };
             out.push(ch);
-            i += ch.len_utf8();
+            i += ch_len;
         }
     }
     Ok(out)

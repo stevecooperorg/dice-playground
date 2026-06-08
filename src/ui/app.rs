@@ -24,7 +24,7 @@ fn scroll_into_view_smooth(el: &Element) {
     let opts = ScrollIntoViewOptions::new();
     opts.set_behavior(ScrollBehavior::Smooth);
     opts.set_block(ScrollLogicalPosition::Start);
-    let _ = el.scroll_into_view_with_scroll_into_view_options(&opts);
+    el.scroll_into_view_with_scroll_into_view_options(&opts);
 }
 
 #[component]
