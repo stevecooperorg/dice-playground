@@ -383,8 +383,7 @@ fn write_pmf_body(out: &mut String, entries: &[(i64, f64)], shared_sample_denom:
 /// Single probability as the same multi-column layout (one data row).
 pub fn format_prob_multi_column(name: &str, value: f64, sample_denom: Option<u64>) -> String {
     let mut out = String::new();
-    let _ = writeln!(out, "output {name}: Prob");
-    append_distribution_table(&mut out, &[("P".to_owned(), value)], sample_denom);
+    append_distribution_table(&mut out, &[(name.to_owned(), value)], sample_denom);
     out
 }
 

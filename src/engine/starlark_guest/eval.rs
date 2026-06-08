@@ -102,7 +102,9 @@ impl fmt::Display for EvalResult {
 pub fn format_eval_result_text(result: &EvalResult, _prob: ProbFormat) -> String {
     let shared_sample_denom = sample_space_denom_for_eval(result);
     let mut out = String::new();
-    let _ = writeln!(out, "return: {}", result.return_value);
+    if result.return_value != "None" {
+        let _ = writeln!(out, "return: {}", result.return_value);
+    }
     for entry in &result.outputs {
         match entry {
             OutputEntry::Dist {
