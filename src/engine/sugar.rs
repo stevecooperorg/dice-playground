@@ -166,9 +166,15 @@ mod tests {
 
     #[test]
     fn desugar_pool_suffixes() {
-        assert!(desugar("t.star", "4d6dh1").unwrap().contains("drop_highest(4, 6, 1)"));
-        assert!(desugar("t.star", "4d6kh2").unwrap().contains("keep_highest(4, 6, 2)"));
-        assert!(desugar("t.star", "3d12kl1").unwrap().contains("keep_lowest(3, 12, 1)"));
+        assert!(desugar("t.star", "4d6dh1")
+            .unwrap()
+            .contains("drop_highest(4, 6, 1)"));
+        assert!(desugar("t.star", "4d6kh2")
+            .unwrap()
+            .contains("keep_highest(4, 6, 2)"));
+        assert!(desugar("t.star", "3d12kl1")
+            .unwrap()
+            .contains("keep_lowest(3, 12, 1)"));
     }
 
     #[test]

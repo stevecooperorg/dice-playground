@@ -32,12 +32,8 @@ fn run_check(path: &str, source: &str) -> Result<Vec<UiDiagnostic>, String> {
 
 fn run_eval(path: &str, source: &str, prob_format: &str) -> Result<EvalResponse, String> {
     let prob_format = parse_prob_format(prob_format);
-    let body = lang_eval(
-        path,
-        source,
-        EvalProgramOptions { prob_format },
-    )
-    .map_err(|e| format!("{e:#}"))?;
+    let body = lang_eval(path, source, EvalProgramOptions { prob_format })
+        .map_err(|e| format!("{e:#}"))?;
     Ok(EvalResponse {
         return_value: body.return_value,
         text: body.text,

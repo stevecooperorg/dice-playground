@@ -38,7 +38,10 @@ fn cookbook_manifest_covers_all_files() {
         .map(|p| p.strip_prefix("examples/cookbook/").unwrap().to_string())
         .collect();
     listed.sort();
-    assert_eq!(on_disk, listed, "every examples/cookbook/* script must be listed in SAMPLE_PATHS");
+    assert_eq!(
+        on_disk, listed,
+        "every examples/cookbook/* script must be listed in SAMPLE_PATHS"
+    );
 }
 
 fn eval_sample(rel: &str) -> dice_playground::engine::EvalResult {

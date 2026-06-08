@@ -141,10 +141,7 @@ impl RollPool {
         }
         let mut mass = BTreeMap::new();
         for_each_pool_joint(self, |faces, p| {
-            let c = faces
-                .iter()
-                .filter(|f| values.contains(f))
-                .count() as i64;
+            let c = faces.iter().filter(|f| values.contains(f)).count() as i64;
             *mass.entry(c).or_insert(0.0) += p;
         })?;
         let mut die = Die::from_mass(mass);

@@ -129,7 +129,10 @@ fn highlight_code_segment(line: &str, spans: &mut Vec<ColoredSpan>) {
             while i < line.len() && bytes[i].is_ascii_digit() {
                 i += 1;
             }
-            if i < line.len() && bytes[i] == b'.' && i + 1 < line.len() && bytes[i + 1].is_ascii_digit()
+            if i < line.len()
+                && bytes[i] == b'.'
+                && i + 1 < line.len()
+                && bytes[i + 1].is_ascii_digit()
             {
                 i += 1;
                 while i < line.len() && bytes[i].is_ascii_digit() {

@@ -2,28 +2,29 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::{self, Write as _};
 
-use super::super::{Counterbalance, Die, Dist, LabelDist, ResultScale, RollPool, successes_dist};
+use super::super::{successes_dist, Counterbalance, Die, Dist, LabelDist, ResultScale, RollPool};
 use anyhow::Context;
-use starlark::values::list::AllocList;
 use serde::Serialize;
 use starlark::any::ProvidesStaticType;
 use starlark::environment::{Globals, GlobalsBuilder, Module};
 use starlark::eval::Evaluator;
 use starlark::syntax::{AstModule, Dialect, DialectTypes};
 use starlark::values::float::StarlarkFloat;
-use starlark::values::none::NoneType;
+use starlark::values::list::AllocList;
 use starlark::values::list::UnpackList;
+use starlark::values::none::NoneType;
 use starlark::values::tuple::UnpackTuple;
 use starlark::values::{UnpackValue, Value, ValueLike};
 
 use super::dist_value::StarlarkDist;
 use super::label_value::StarlarkLabelDist;
+use super::output_format::{
+    format_dist_pmf_text, format_ordinal_pmf_text, format_prob_multi_column,
+    format_prob_table_text, infer_sample_space_denominator, infer_sample_space_denominator_probs,
+    ProbFormat,
+};
 use super::pool_value::StarlarkRollPool;
 use super::prob_table_value::StarlarkProbTable;
-use super::output_format::{
-    format_dist_pmf_text, format_ordinal_pmf_text, format_prob_multi_column, format_prob_table_text,
-    infer_sample_space_denominator, infer_sample_space_denominator_probs, ProbFormat,
-};
 use super::scale_value::StarlarkResultScale;
 
 /// Collector populated by `output()` during evaluation.
@@ -244,12 +245,16 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     /// * `dist`: Usually a single die from `d(...)`.
     /// * `max_depth`: Cap on how many times the die can explode (0 = no explode).
     #[starlark(as_type = StarlarkDist)]
-    fn explode(dist: &StarlarkDist, #[starlark(default = 2)] max_depth: i32) -> anyhow::Result<StarlarkDist> {
+    fn explode(
+        dist: &StarlarkDist,
+        #[starlark(default = 2)] max_depth: i32,
+    ) -> anyhow::Result<StarlarkDist> {
         if max_depth < 0 {
             anyhow::bail!("max_depth must be >= 0");
         }
         Ok(StarlarkDist::new(
-            dist.inner().explode(u32::try_from(max_depth).context("max_depth")?)?,
+            dist.inner()
+                .explode(u32::try_from(max_depth).context("max_depth")?)?,
         ))
     }
 
@@ -264,14 +269,20 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
     #[starlark(as_type = StarlarkRollPool)]
     fn roll_pool(count: i32, sides: i32) -> anyhow::Result<StarlarkRollPool> {
         let n = usize::try_from(count).context("roll_pool count must be non-negative")?;
-        Ok(StarlarkRollPool::new(RollPool::from_count(n, i64::from(sides))?))
+        Ok(StarlarkRollPool::new(RollPool::from_count(
+            n,
+            i64::from(sides),
+        )?))
     }
 
     /// Shorthand for `roll_pool`—same arguments, same meaning.
     #[starlark(as_type = StarlarkRollPool)]
     fn pool(count: i32, sides: i32) -> anyhow::Result<StarlarkRollPool> {
         let n = usize::try_from(count).context("roll_pool count must be non-negative")?;
-        Ok(StarlarkRollPool::new(RollPool::from_count(n, i64::from(sides))?))
+        Ok(StarlarkRollPool::new(RollPool::from_count(
+            n,
+            i64::from(sides),
+        )?))
     }
 
     /// Total a dice pool, or leave a `Dist` unchanged.
@@ -379,8 +390,7 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
             let v = match out.unpack_i32() {
                 Some(x) => i64::from(x),
                 None => {
-                    *err.borrow_mut() =
-                        Some(anyhow::anyhow!("pool_map: function must return int"));
+                    *err.borrow_mut() = Some(anyhow::anyhow!("pool_map: function must return int"));
                     return;
                 }
             };
@@ -563,7 +573,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
             scale_inner.rank(&label)?;
             *mass.entry(label).or_insert(0.0) += p;
         }
-        Ok(StarlarkLabelDist::new(LabelDist::from_mass(scale_inner, mass)?))
+        Ok(StarlarkLabelDist::new(LabelDist::from_mass(
+            scale_inner,
+            mass,
+        )?))
     }
 
     /// Label outcomes that depend on **two** dice together—advantage, disadvantage, or paired rolls.
@@ -609,7 +622,10 @@ pub(crate) fn dice_module(builder: &mut GlobalsBuilder) {
             scale_inner.rank(&label)?;
             *mass.entry(label).or_insert(0.0) += p;
         }
-        Ok(StarlarkLabelDist::new(LabelDist::from_mass(scale_inner, mass)?))
+        Ok(StarlarkLabelDist::new(LabelDist::from_mass(
+            scale_inner,
+            mass,
+        )?))
     }
 
     /// One table of labeled probabilities—grids of “chance to hit DC X at modifier Y”.
@@ -904,7 +920,11 @@ output("counts", pool_map(roll_pool(3, 6), count_high))
         let res = eval_source("test.dice", src).expect("eval");
         match &res.outputs[0] {
             OutputEntry::Dist { entries, .. } => {
-                let p3: f64 = entries.iter().find(|(k, _)| *k == 3).map(|(_, p)| *p).unwrap_or(0.0);
+                let p3: f64 = entries
+                    .iter()
+                    .find(|(k, _)| *k == 3)
+                    .map(|(_, p)| *p)
+                    .unwrap_or(0.0);
                 assert!((p3 - 1.0 / 27.0).abs() < 1e-9);
             }
             other => panic!("expected dist, got {other:?}"),

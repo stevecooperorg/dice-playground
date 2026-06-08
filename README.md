@@ -4,21 +4,28 @@
 
 ## What is this?
 
-If you design tabletop RPGs, you often need to know how a dice system behaves: how likely a check is to succeed, what a pool’s average looks like, or how advantage changes the odds. You can answer those questions by writing small scripts that describe the rolls and letting a tool compute the exact probabilities (not Monte Carlo guesses).
+**Dice Playground** is a browser app for `.dice` scripts that compute **exact** probabilities—meet DC 15 on `1d20+7`, miss / partial / hit on a `2d6+mod` move, every total on `4d6dl1`, and similar—not approximations from rolling thousands of times.
 
-**Dice Playground** is a browser app for that. You write scripts in a Starlark-based language with `.dice` sugar, run them in the editor, and read precise distributions and probabilities under **Output**. The site bundles a **[user guide](docs/README.md)** (tutorial, cookbook, and function reference).
+For one number—success on a target—you can keep the script small. A classic “roll plus bonus, need at least *N*” check might look like:
 
-Under the hood: exact probability for every outcome (no sampling), **Starlark + `.dice` sugar**, and a **Leptos WASM** UI in one crate (plus an optional `dice` CLI for local development—see below).
+```text
+roll = 2d10 + 3
+output("p_at_least_15", roll.p_ge(15))
+```
 
-## Example: D&D ability scores (4d6, drop lowest)
+Run it in the **editor** (**Run** or **Shift+Enter**). **Output** gives a single probability (here, meeting or beating 15 on `2d10+3`).
 
-Classic character creation: roll four six-sided dice, drop the lowest, sum the other three. In a `.dice` script:
+For a full distribution, D&D-style ability scores are the familiar case: roll four d6, drop the lowest, sum the rest:
 
 ```text
 output("ability", 4d6dl1)
 ```
 
-In the playground, paste that into the **editor**, and click **Run**. The **text** tab under **Output** shows the **exact** distribution—every total and its probability—not a simulation. For this roll the average is about **12.24**; you can also see how often you get an 18, a 3, or anything in between. More notation (`2d6`, keep-highest pools, modifiers) is in [lesson 5](docs/tutorial/05-dice-notation.md) of the tutorial.
+Same steps in the playground. The **text** tab lists every total and its exact probability—not a simulation. For this roll the average is about **12.24**; you can read off how often you roll an 18, a 3, or anything between.
+
+Longer scripts cover the rest of the table: advantage on the d20 (`2d20kh1`), natural 1 and 20 before modifiers, keep-highest pools (`3d6kh2`), exploding dice, save-for-half on `8d6`, or a grid of success rates across modifiers. Familiar faces use dice notation (`2d6`, `4d6dl1`, …); conditions, loops, and several named outputs use **Starlark**. Results appear as **text**, **JSON**, or a **graph**. Step-by-step notation is [lesson 5](docs/tutorial/05-dice-notation.md); worked recipes are in the cookbook (linked from the **[user guide](docs/README.md)**).
+
+Implementation: exact probability (no sampling), Starlark with `.dice` sugar, Leptos WASM front end in one crate; optional **`dice` CLI** and LSP (see below).
 
 ## Learn the language
 

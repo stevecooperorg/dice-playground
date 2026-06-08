@@ -58,7 +58,11 @@ fn format_prob_decimal_fallback(p: f64) -> String {
     format!("{p:.3}")
 }
 
-pub fn format_probability_with_denom(p: f64, style: ProbFormat, sample_denom: Option<u64>) -> String {
+pub fn format_probability_with_denom(
+    p: f64,
+    style: ProbFormat,
+    sample_denom: Option<u64>,
+) -> String {
     match style {
         ProbFormat::Decimal => format_prob_decimal_fallback(p),
         ProbFormat::Percent => format!("{:.1}%", p * 100.0),
@@ -261,20 +265,13 @@ fn render_multi_format_table(rows: &[(String, f64)], sample_denom: Option<u64>) 
             outcome_cell,
             pad_left(&format_probability_percent_plain(*p), pct_width),
             pad_left(&format_probability_fraction(*p), frac_width),
-            pad_left(
-                &format_sample_space_numerator(*p, sample_denom),
-                rel_width,
-            ),
+            pad_left(&format_sample_space_numerator(*p, sample_denom), rel_width,),
         );
     }
     out
 }
 
-fn append_distribution_table(
-    out: &mut String,
-    rows: &[(String, f64)],
-    sample_denom: Option<u64>,
-) {
+fn append_distribution_table(out: &mut String, rows: &[(String, f64)], sample_denom: Option<u64>) {
     if rows.is_empty() {
         return;
     }
@@ -345,11 +342,7 @@ pub fn format_dist_pmf_text(
     out
 }
 
-fn write_pmf_body(
-    out: &mut String,
-    entries: &[(i64, f64)],
-    shared_sample_denom: Option<u64>,
-) {
+fn write_pmf_body(out: &mut String, entries: &[(i64, f64)], shared_sample_denom: Option<u64>) {
     let n = entries.len();
     if n == 0 {
         return;
@@ -464,8 +457,17 @@ mod tests {
         let two_d6 = Dist::pool_sum(2, 6).expect("2d6");
         let entries = two_d6.entries();
         assert_eq!(infer_sample_space_denominator(&entries), Some(36));
-        let text = format_dist_pmf_text("two_d6", &entries, two_d6.mean(), ProbFormat::SampleSpace, None);
-        assert!(text.contains("X/36"), "expected X/36 header for 2d6, got:\n{text}");
+        let text = format_dist_pmf_text(
+            "two_d6",
+            &entries,
+            two_d6.mean(),
+            ProbFormat::SampleSpace,
+            None,
+        );
+        assert!(
+            text.contains("X/36"),
+            "expected X/36 header for 2d6, got:\n{text}"
+        );
         // count column is numerators only (e.g. 6 for the 7 outcome), not 6/36
         assert!(!text.contains("6/36"));
     }

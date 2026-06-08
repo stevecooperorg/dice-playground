@@ -10,9 +10,7 @@ pub fn joint_cell_count_pool(pool: &RollPool) -> Result<usize> {
     let mut cells = 1usize;
     for die in pool.dice() {
         let n = die.support_size();
-        cells = cells
-            .checked_mul(n)
-            .context("joint support overflow")?;
+        cells = cells.checked_mul(n).context("joint support overflow")?;
         if cells > MAX_JOINT_CELLS {
             bail!(
                 "support explosion: pool has at least {cells} joint outcomes (max {MAX_JOINT_CELLS}); use a smaller pool"
@@ -23,11 +21,7 @@ pub fn joint_cell_count_pool(pool: &RollPool) -> Result<usize> {
 }
 
 /// Enumerate all joint outcomes of a uniform fair `n`d`sides` pool.
-pub fn for_each_uniform_joint(
-    n: usize,
-    sides: i64,
-    mut f: impl FnMut(&[i64], f64),
-) -> Result<()> {
+pub fn for_each_uniform_joint(n: usize, sides: i64, mut f: impl FnMut(&[i64], f64)) -> Result<()> {
     if sides < 1 {
         bail!("sides must be >= 1");
     }

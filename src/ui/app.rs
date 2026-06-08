@@ -67,9 +67,7 @@ pub fn App() -> impl IntoView {
             .unwrap_or_else(|| "untitled.dice".to_owned())
     });
 
-    let has_diagnostics = move || {
-        !error_banner.get().is_empty() || !diagnostics.get().is_empty()
-    };
+    let has_diagnostics = move || !error_banner.get().is_empty() || !diagnostics.get().is_empty();
 
     let has_output = move || !result_text.get().is_empty() || !result_json.get().is_empty();
 
@@ -138,9 +136,8 @@ pub fn App() -> impl IntoView {
                 Ok(r) => {
                     set_error_banner.set(String::new());
                     set_result_text.set(r.text);
-                    set_result_json.set(
-                        serde_json::to_string_pretty(&r.outputs).unwrap_or_default(),
-                    );
+                    set_result_json
+                        .set(serde_json::to_string_pretty(&r.outputs).unwrap_or_default());
                     set_result_outputs.set(r.outputs);
                     set_scroll_after_run.set(Some(ScrollAfterRun::Output));
                 }

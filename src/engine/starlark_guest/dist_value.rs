@@ -1,7 +1,7 @@
 use std::fmt::{self, Display};
 
-use super::pool_value::StarlarkRollPool;
 use super::super::Dist;
+use super::pool_value::StarlarkRollPool;
 use allocative::Allocative;
 use anyhow::{anyhow, Context};
 use starlark::any::ProvidesStaticType;
@@ -167,7 +167,9 @@ fn dist_mul<'v>(
 ) -> Option<starlark::Result<Value<'v>>> {
     let factor = rhs.unpack_i32()?;
     if factor <= 0 {
-        return Some(Err(anyhow!("scale factor must be positive, got {factor}").into()));
+        return Some(Err(
+            anyhow!("scale factor must be positive, got {factor}").into()
+        ));
     }
     let scaled = match dist.inner.scale_outcomes(i64::from(factor)) {
         Ok(d) => d,

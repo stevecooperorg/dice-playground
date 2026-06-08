@@ -76,10 +76,7 @@ impl LabelDist {
         if total <= 0.0 {
             bail!("label distribution has no mass");
         }
-        let mass = mass
-            .into_iter()
-            .map(|(k, p)| (k, p / total))
-            .collect();
+        let mass = mass.into_iter().map(|(k, p)| (k, p / total)).collect();
         Ok(Self { scale, mass })
     }
 
@@ -218,12 +215,7 @@ mod tests {
 
     #[test]
     fn bucket_three_bands() {
-        let scale = ResultScale::new(vec![
-            "LOW".into(),
-            "MID".into(),
-            "HIGH".into(),
-        ])
-        .unwrap();
+        let scale = ResultScale::new(vec!["LOW".into(), "MID".into(), "HIGH".into()]).unwrap();
         let d6 = Dist::die(6).unwrap();
         let ld = LabelDist::from_bucket(&d6, scale, &[2, 4]).unwrap();
         assert!((ld.p_exact("LOW").unwrap() - 2.0 / 6.0).abs() < 1e-12);

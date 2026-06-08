@@ -2,11 +2,11 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::Context;
-use dice_playground::engine::{
-    desugar_if_needed, eval_source, format_eval_result_text, render_stdlib_reference_markdown, Dist,
-    OutputEntry, ProbFormat,
-};
 use clap::{Parser, ValueEnum};
+use dice_playground::engine::{
+    desugar_if_needed, eval_source, format_eval_result_text, render_stdlib_reference_markdown,
+    Dist, OutputEntry, ProbFormat,
+};
 
 #[derive(Parser)]
 #[command(
@@ -123,12 +123,7 @@ fn print_outputs_csv(outputs: &[OutputEntry]) -> anyhow::Result<()> {
             }
             OutputEntry::Table { name, entries } => {
                 for (label, prob) in entries {
-                    wtr.write_record([
-                        name.as_str(),
-                        "table",
-                        label.as_str(),
-                        &prob.to_string(),
-                    ])?;
+                    wtr.write_record([name.as_str(), "table", label.as_str(), &prob.to_string()])?;
                 }
             }
         }

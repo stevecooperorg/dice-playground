@@ -83,9 +83,7 @@ pub fn HighlightedEditor(
 
     let highlighted_lines = Memo::new(move |_| {
         let text = value.get();
-        text.split('\n')
-            .map(highlight_line)
-            .collect::<Vec<_>>()
+        text.split('\n').map(highlight_line).collect::<Vec<_>>()
     });
 
     let sync_scroll = move || {

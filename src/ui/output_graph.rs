@@ -110,9 +110,7 @@ fn sections_from_outputs(outputs: &[OutputEntry]) -> Vec<ChartSection> {
                 | OutputEntry::Table { name, entries } => {
                     (name.clone(), rows_from_ordinal_entries(entries))
                 }
-                OutputEntry::Prob { name, value } => {
-                    (name.clone(), rows_from_prob(*value))
-                }
+                OutputEntry::Prob { name, value } => (name.clone(), rows_from_prob(*value)),
             };
             if rows.is_empty() {
                 return None;

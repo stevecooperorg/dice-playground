@@ -33,8 +33,7 @@ fn eval_sample(rel: &str) -> dice_playground::engine::EvalResult {
     let path_str = path.to_string_lossy();
     let expanded = desugar_if_needed(&path_str, &content)
         .unwrap_or_else(|e| panic!("desugar {}: {e}", path.display()));
-    eval_source(&path_str, &expanded)
-        .unwrap_or_else(|e| panic!("eval {}: {e:#}", path.display()))
+    eval_source(&path_str, &expanded).unwrap_or_else(|e| panic!("eval {}: {e:#}", path.display()))
 }
 
 #[test]
@@ -100,14 +99,10 @@ fn tutorial_03_modifier_shift() {
     let (base_mean, shifted_mean) = match (&res.outputs[0], &res.outputs[1]) {
         (
             OutputEntry::Dist {
-                name: n0,
-                mean: m0,
-                ..
+                name: n0, mean: m0, ..
             },
             OutputEntry::Dist {
-                name: n1,
-                mean: m1,
-                ..
+                name: n1, mean: m1, ..
             },
         ) => {
             assert_eq!(n0, "roll_base");
@@ -135,12 +130,7 @@ fn tutorial_04_success_chance() {
 
 fn dist_mean_by_name(res: &dice_playground::engine::EvalResult, name: &str) -> f64 {
     for out in &res.outputs {
-        if let OutputEntry::Dist {
-            name: n,
-            mean,
-            ..
-        } = out
-        {
+        if let OutputEntry::Dist { name: n, mean, .. } = out {
             if n == name {
                 return *mean;
             }

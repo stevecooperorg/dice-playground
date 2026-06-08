@@ -38,9 +38,7 @@ pub struct CheckResult {
 
 impl CheckResult {
     pub fn has_errors(&self) -> bool {
-        self.diagnostics
-            .iter()
-            .any(|d| d.severity == "error")
+        self.diagnostics.iter().any(|d| d.severity == "error")
     }
 }
 
@@ -95,8 +93,8 @@ pub fn eval_program(
         bail!("fix parse/lint errors before running");
     }
     let expanded = desugar_if_needed(path, source)?;
-    let result = eval_source_with_dialect(path, &expanded, &dice_dialect_public())
-        .context("evaluate")?;
+    let result =
+        eval_source_with_dialect(path, &expanded, &dice_dialect_public()).context("evaluate")?;
     if result.outputs.len() > MAX_OUTPUT_COUNT {
         bail!("too many output() calls (max {MAX_OUTPUT_COUNT})");
     }
@@ -177,9 +175,15 @@ mod tests {
             },
         )
         .expect("eval");
-        assert!(r.text.contains("MISS") && r.text.contains("X/36"), "ordinal: {}", r.text);
         assert!(
-            r.text.contains("p_full_success") && r.text.contains("X/36") && !r.text.contains("15/36"),
+            r.text.contains("MISS") && r.text.contains("X/36"),
+            "ordinal: {}",
+            r.text
+        );
+        assert!(
+            r.text.contains("p_full_success")
+                && r.text.contains("X/36")
+                && !r.text.contains("15/36"),
             "prob: {}",
             r.text
         );

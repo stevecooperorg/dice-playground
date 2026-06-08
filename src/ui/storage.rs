@@ -12,7 +12,9 @@ pub fn load_workspace() -> WorkspaceState {
         return WorkspaceState::new_default();
     };
     match storage.get_item(STORAGE_KEY) {
-        Ok(Some(data)) => serde_json::from_str(&data).unwrap_or_else(|_| WorkspaceState::new_default()),
+        Ok(Some(data)) => {
+            serde_json::from_str(&data).unwrap_or_else(|_| WorkspaceState::new_default())
+        }
         _ => WorkspaceState::new_default(),
     }
 }

@@ -103,7 +103,9 @@ fn append_members(
             continue;
         };
         let raw = match item {
-            DocItem::Member(member) => render_doc_item_no_link(name, &DocItem::Member(member.clone())),
+            DocItem::Member(member) => {
+                render_doc_item_no_link(name, &DocItem::Member(member.clone()))
+            }
             DocItem::Type(ty) => {
                 let full = render_doc_item_no_link(name, &DocItem::Type(ty.clone()));
                 truncate_type_doc_to_constructor(name, &full)
