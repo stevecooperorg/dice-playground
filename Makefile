@@ -1,4 +1,4 @@
-.PHONY: help test check-wasm serve static release-static references cli fmt clean \
+.PHONY: help test check check-wasm serve static release-static references cli fmt clean \
 	cf-install cf-deploy cf-preview FORCE
 
 TRUNK ?= trunk
@@ -11,6 +11,7 @@ help:
 	@echo "Dice Playground — Makefile"
 	@echo ""
 	@echo "  make test            cargo test (engine + UI + integration)"
+	@echo "  make check           test + clippy (-Dwarnings) + fmt --check"
 	@echo "  make check-wasm      wasm32 check (no CLI/LSP features)"
 	@echo "  make serve           Trunk dev server (:8081); pandoc required for /tutorial/"
 	@echo "  make static          Trunk debug build + tutorial HTML in dist/"
@@ -25,6 +26,11 @@ help:
 
 test: FORCE
 	cargo test
+
+check: FORCE
+	cargo test
+	cargo clippy --all-targets -- -Dwarnings
+	cargo fmt --check
 
 check-wasm: FORCE
 	cargo check --target wasm32-unknown-unknown --no-default-features
