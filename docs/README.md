@@ -49,6 +49,30 @@ Generated Markdown for builtins and core types: [references/stdlib.md](reference
 
 Face matching and pool methods: [API conventions](references/api-conventions.md).
 
+## Writing your system with LLM assistance
+
+You can use an LLM (for example [ChatGPT](https://chatgpt.com/), [Claude](https://claude.ai/), or [Cursor](https://cursor.com/)) to turn your tabletop rules into a `.dice` script. The playground **includes LLM assistance**: a compact language reference you can paste into a chat—[/llm-starter-prompt.txt](/llm-starter-prompt.txt) or [/llms.txt](/llms.txt) at the site root.
+
+**Start a new chat** so the model is not mixing in another language or project. Paste the **entire** starter prompt as your first message (or attach the file). That gives the model exact syntax, builtins, and the rule that scripts compute **exact** probabilities—not simulated rolls.
+
+**Describe your system in plain language** as a follow-up. Name die sizes, what gets summed vs counted, DCs, advantage, crit rules, and what you want under **Output** (one probability, a distribution, a modifier table, named outcome bands). Variables for modifiers or pool size are fine; ask for `output("label", value)` on each result you care about.
+
+Example second message (d6 pool, successes = number of sixes):
+
+```text
+Write a .dice script for this check:
+
+- Roll a pool of d6. Everyone starts with 1 die.
+- Add 1 die for each applicable skill and 1 die for each advantage (use variables skill_dice and advantage_dice so I can change them).
+- The roll result is not the sum: it is how many dice show a 6.
+- Output the full distribution of that success count for skill_dice=0, advantage_dice=0 (one die only) and for skill_dice=2, advantage_dice=1 (four dice).
+- Also output P(at least 2 sixes) for the four-dice case.
+
+Use exact probabilities, dice_pool, and count(6) (or equivalent)—no random simulation.
+```
+
+Copy the script the model returns into the playground editor, fix any **Diagnostics**, and **Run** to verify the numbers match your intent.
+
 ## Contributing
 
 See [AGENT.md](AGENT.md) for how agents and contributors work in this repo.
