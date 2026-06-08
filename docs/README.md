@@ -50,3 +50,15 @@ make references
 ```
 
 Details: [references/README.md](references/README.md).
+
+## Use an LLM to help build your system
+
+If you use ChatGPT, Claude, or similar tools, you can give them a **starter prompt** so they know how Dice Playground scripts work before you describe your homebrew rules.
+
+1. Open the [starter prompt](../llm-starter-prompt.txt). (In the repository source tree, the same text lives in [`llms.txt`](../llms.txt).)
+2. Copy the **entire** file into a **new** chat with your LLM and send it once.
+3. Describe your mechanic in plain language and ask for a `.dice` script. For example:
+
+   *Roll **3d6**. If **two or more** dice show **1**, that is a **critical failure**. If **two or more** show **6** (boxcars), **critical success**. Otherwise compare the **sum** to **target 10**—success if the total is 10 or higher, otherwise fail. Critical rules take precedence over the target.*
+
+   Paste the script the model gives you into the playground editor and run it.

@@ -51,6 +51,8 @@ rewrite_cookbook_links() {
 rewrite_guide_links() {
   sed -E \
     -e 's|\]\(\.\./README\.md\)|](https://github.com/stevecooperorg/dice-playground)|g' \
+    -e 's|\]\(README\.md\)|](index.html)|g' \
+    -e 's|\]\(README\.md#([^)]*)\)|](index.html#\1)|g' \
     -e 's|\]\(tutorial/([0-9]{2}-[^)]+)\.md\)|](../tutorial/\1.html)|g' \
     -e 's|\]\(cookbook/README\.md\)|](../cookbook/index.html)|g' \
     -e 's|\]\(references/stdlib\.md\)|](../references/stdlib.html)|g' \
@@ -224,18 +226,32 @@ if [[ -f "${REF_MD}" ]]; then
   rm -f "${tmp}"
 fi
 
-GUIDE_MD="${ROOT}/docs/README.md"
-if [[ -f "${GUIDE_MD}" ]]; then
+build_guide_page() {
+  local md="$1"
+  local html="$2"
   tmp="$(mktemp)"
-  rewrite_guide_links <"${GUIDE_MD}" >"${tmp}"
+  rewrite_guide_links <"${md}" >"${tmp}"
   pandoc "${tmp}" \
     --from markdown \
     --to html5 \
     --standalone \
     --template "${SITE}/guide-document.html" \
     --css ../tutorial/tutorial.css \
-    -o "${GUIDE_OUT}/index.html"
+    -o "${html}"
   rm -f "${tmp}"
+}
+
+GUIDE_MD="${ROOT}/docs/README.md"
+if [[ -f "${GUIDE_MD}" ]]; then
+  build_guide_page "${GUIDE_MD}" "${GUIDE_OUT}/index.html"
+fi
+
+LLMS_TXT="${ROOT}/llms.txt"
+if [[ -f "${LLMS_TXT}" ]]; then
+  cp "${LLMS_TXT}" "${DIST}/llms.txt"
+  cp "${LLMS_TXT}" "${DIST}/llm-starter-prompt.txt"
+  echo "Copied llms.txt: ${DIST}/llms.txt"
+  echo "Copied llm-starter-prompt.txt (from llms.txt): ${DIST}/llm-starter-prompt.txt"
 fi
 
 echo "Built tutorial site: ${OUT} (${LESSON_COUNT} lessons)"

@@ -8,7 +8,7 @@ command = "bash"
 command_arguments = ["bin/build-tutorial-site.sh", "static-site"]
 
 [watch]
-watch = ["src", "index.html", "docs/README.md", "docs/tutorial", "docs/cookbook", "docs/references", "tutorial-static", "staticwebapp.config.json"]
+watch = ["src", "index.html", "llms.txt", "docs/README.md", "docs/tutorial", "docs/cookbook", "docs/references", "tutorial-static", "staticwebapp.config.json"]
 
 [serve]
 address = "127.0.0.1"

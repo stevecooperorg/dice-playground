@@ -1,0 +1,275 @@
+# Dice Playground — `.dice` language reference
+
+> **`.dice` scripts** compute **exact** tabletop probabilities (probability mass functions), not simulated rolls. Syntax is **Starlark** (variables, `def`, `for`, lists, comprehensions) plus **dice notation** (`2d6`, `4d6dl1`, …). Run scripts in the [Dice Playground](https://dice-playground.stevecooperorg.workers.dev/) editor; use **`output("name", value)`** so results appear under **Output** (text / JSON / graph).
+
+## Execution model
+
+- Every roll expression denotes a **distribution** over integer outcomes (or labeled outcomes). Combining rolls assumes **independence** unless you build joint logic yourself (`joint_classify`, `pool_map`).
+- **Do not simulate randomness** (no fake RNG). Use loops to build tables of checks or sweep modifiers, not to approximate odds.
+- **Playground dialect:** `load` is **disabled**; type annotations and **top-level statements** are enabled. Only dice builtins below plus standard Starlark core (no external modules).
+- **`sum(...)` is the dice builtin** — it totals a `DicePool` or passes through a `DieRoll`. It is **not** Python’s sum over a list; add list elements with a `for` loop.
+
+## Value types
+
+| Type | When to use |
+|------|-------------|
+| **`DieRoll`** | A single numeric outcome distribution: one die, summed dice (`2d6`, `4d6dl1`), success counts, modifiers applied to every face. |
+| **`DicePool`** | Several dice rolled **together** but not summed—rules that care about **individual faces** (count 1s, highest die, Blades crit on two 6s). Use `.sum()` or `sum(pool)` when only the total matters. |
+| **`Outcomes`** | Named ordered bands (miss / partial / hit, crit fail / success). Built with `bucket` or `classify`. |
+| **`Scale`** | Ordered label list (low → high) from `scale([...])`; required by `bucket`, `classify`, `joint_classify`. |
+| **`float`** | Scalar probability from `.p_ge()`, `.pmf()`, `.p_at_least()`, etc.—pass to `output("label", prob)`. |
+| **`prob_table`** | Independent labeled rows (modifier grids); from `prob_table(rows)`. |
+
+## Dice notation (desugared before parse)
+
+Pattern: **`[count]d<sides>[suffix]`**. Omitted count means **1** (`d6` ≡ `1d6`).
+
+| Notation | Expands to | Meaning |
+|----------|------------|---------|
+| `1d6`, `d20` | `d(6)`, `d(20)` | One fair die, faces 1..sides |
+| `2d6`, `4d6` | `dice_pool(n,s)` or `sum(dice_pool(...))` when followed by `+ - * //` | Sum of n fair dice |
+| `4d6dl1` | `drop_lowest(4, 6, 1)` | Roll 4d6, drop lowest 1, sum rest |
+| `4d6dh1` | `drop_highest(4, 6, 1)` | Drop highest 1, sum rest |
+| `4d6kh2` | `keep_highest(4, 6, 2)` | Keep highest 2, sum those |
+| `3d12kl1` | `keep_lowest(3, 12, 1)` | Keep lowest 1, sum those |
+
+Suffix letters: **`dl`** drop lowest, **`dh`** drop highest, **`kh`** keep highest, **`kl`** keep lowest; **`N`** is how many dice.
+
+**Advantage / disadvantage (D&D):** `2d20kh1` (keep highest), `2d20kl1` (keep lowest)—same as `keep_highest(2, 20, 1)` / `keep_lowest(2, 20, 1)`.
+
+## Operators on distributions
+
+| Syntax | Effect |
+|--------|--------|
+| `a + b` | Independent rolls **added** (convolution). Both `DieRoll`, or pool coerced via sum when needed. |
+| `roll + n`, `roll - n` | Add/subtract integer **to every outcome** (flat modifier). Same idea as `shift(roll, n)`. |
+| `roll * n` | Multiply **each** outcome by n. |
+| `roll // n` | **Floor** divide each outcome by n (Starlark `//`; typical save-for-half). |
+| `a - b` | Independent rolls subtracted (niche). |
+
+## Built-in functions
+
+### Building dice
+
+```python
+d(sides: int) -> DieRoll
+```
+One fair die, faces `1..=sides`.
+
+```python
+die_faces(faces: list[int]) -> DieRoll
+```
+Custom die; duplicate entries increase weight.
+
+```python
+dice_pool(count: int, sides: int) -> DicePool
+```
+`count` fair dice, **not** summed.
+
+```python
+sum(value: DicePool | DieRoll) -> DieRoll
+```
+Sum a pool, or identity on `DieRoll`.
+
+```python
+drop_lowest(count, sides, drop) -> DieRoll
+drop_highest(count, sides, drop) -> DieRoll
+keep_highest(count, sides, keep) -> DieRoll
+keep_lowest(count, sides, keep) -> DieRoll
+```
+Pool keep/drop then sum—same as `dl` / `dh` / `kh` / `kl` notation.
+
+```python
+explode(dist: DieRoll, max_depth: int = 2) -> DieRoll
+```
+On max face, roll again and add, up to `max_depth` extra explosions.
+
+```python
+shift(dist: DieRoll, delta: int) -> DieRoll
+```
+Add `delta` to every outcome (`roll + delta` is usually clearer).
+
+### Pool analysis (need `DicePool`)
+
+```python
+count_ge(pool: DicePool, threshold: int) -> DieRoll
+```
+Distribution of **how many** dice rolled ≥ `threshold`.
+
+```python
+count_in(pool: DicePool, values: list[int]) -> DieRoll
+```
+How many dice show a face in `values` (e.g. `[1]` for counting ones).
+
+```python
+order_stat(pool: DicePool, k: int) -> DieRoll
+```
+`k=1` highest die, `k=2` second-highest, etc.
+
+```python
+middle_of(pool: DicePool, keep: int) -> DieRoll
+```
+Sum the middle `keep` dice after sorting (drop extremes both ends).
+
+```python
+pool_map(pool: DicePool, map_fn) -> DieRoll
+```
+For each joint pool outcome, call `map_fn(faces)` → **int**. `faces` is a list of face values. Use for custom pool rules (crit on two 6s, snake eyes, etc.), then often `classify(codes, Scale, fn)` on the integer codes.
+
+```python
+success_pool(count: int, sides: int, mode: str = "baseline") -> DieRoll
+```
+Storyteller-style pool: success on **even** faces or **max** face; `mode` is `"baseline"`, `"ones_cancel"`, `"ones_remove"`, or `"implode"` for 1s/10s house rules.
+
+### Named outcomes
+
+```python
+scale(labels: list[str]) -> Scale
+```
+Ordered labels, **first = lowest rank**, **last = highest**.
+
+```python
+bucket(dist: DieRoll, scale: Scale, cuts: list[int]) -> Outcomes
+```
+Split a **numeric total** into bands. With `L` labels, pass **`L - 1`** increasing cut values. Totals ≤ first cut → first label; between cuts → middle labels; above last cut → top label. Good for PbtA **2d6 + mod** ladders when only the total matters.
+
+```python
+classify(dist: DieRoll, scale: Scale, classify_fn) -> Outcomes
+```
+`classify_fn(value: int) -> str` must return a label on `scale`. Use for **per-outcome** rules: natural 1/20 on the kept d20, arbitrary crit logic on a single numeric dist. Function sees the **numeric** outcome in `dist`, not faces in a pool.
+
+```python
+joint_classify(d1: DieRoll, d2: DieRoll, scale: Scale, classify_fn) -> Outcomes
+```
+`classify_fn(a: int, b: int) -> str` on **independent** `d1` and `d2` (e.g. pair horns damage with a save die).
+
+### Output
+
+```python
+output("label", value)   # recommended
+output(value)            # auto-generated label
+```
+`value` may be `DieRoll`, `Outcomes`, `float`, or `prob_table(...)`.
+
+```python
+prob_table(rows: list) -> prob_table
+```
+`rows` is a list of `(description: str, probability: float)` pairs; rows are **independent** (need not sum to 1).
+
+### `DicePool` method
+
+```python
+pool.sum() -> DieRoll
+```
+Same as `sum(pool)`.
+
+### `DieRoll` methods
+
+```python
+roll.mean() -> float
+roll.pmf(value: int) -> float      # P(total == value)
+roll.p_ge(value: int) -> float     # P(total >= value) — DC checks
+roll.cdf(value: int) -> float      # P(total <= value)
+roll.support_size() -> int         # count of outcomes with P > 0
+```
+
+### `Outcomes` methods
+
+```python
+out.pmf(label: str) -> float           # P(exactly this label)
+out.p_at_least(label: str) -> float    # P(this label or any higher on scale)
+out.p_at_most(label: str) -> float     # P(this label or any lower on scale)
+```
+
+## Common patterns
+
+**Minimal die:**
+```text
+output("one_d6", 1d6)
+```
+
+**Success vs DC on a total:**
+```text
+roll = 1d20 + 5
+output("p_hit", roll.p_ge(15))
+output("distribution", roll)
+```
+
+**PbtA-style bands on total:**
+```text
+Scale = scale(["MISS", "PARTIAL", "HIT"])
+out = bucket(2d6 + 2, Scale, [6, 9])
+output("move", out)
+output("p_hit_plus", out.p_at_least("HIT"))
+```
+
+**D&D 5e: nat 1/20 on kept die, then modifier vs DC:**
+```text
+Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+DC = 15
+MOD = 5
+
+def label(n):
+    if n == 1:
+        return "CRITICAL_FAIL"
+    if n == 20:
+        return "CRITICAL_SUCCESS"
+    if n + MOD >= DC:
+        return "SUCCESS"
+    return "FAIL"
+
+natural = 2d20kh1   # or 1d20 / 2d20kl1
+output("check", classify(natural, Scale, label))
+```
+
+**Pool faces matter (3d6, two 1s crit fail, two 6s crit success, else sum vs target):**
+```text
+Scale = scale(["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"])
+TARGET = 10
+
+def pool_outcome(faces):
+    if len([f for f in faces if f == 1]) >= 2:
+        return 0
+    if len([f for f in faces if f == 6]) >= 2:
+        return 3
+    total = 0
+    for f in faces:
+        total += f
+    if total >= TARGET:
+        return 2
+    return 1
+
+def code_label(c):
+    return ["CRITICAL_FAIL", "FAIL", "SUCCESS", "CRITICAL_SUCCESS"][c]
+
+codes = pool_map(dice_pool(3, 6), pool_outcome)
+output("check", classify(codes, Scale, code_label))
+```
+
+**Modifier grid (loop + scalar outputs or prob_table):**
+```text
+rows = []
+for mod in range(-2, 6):
+    p = (2d10 + mod).p_ge(15)
+    rows.append(("mod {} DC 15".format(mod), p))
+output("grid", prob_table(rows))
+```
+
+## Choosing the right tool
+
+| Rule looks at… | Use |
+|----------------|-----|
+| Sum of dice, one number vs DC | `DieRoll`, `.p_ge()`, or `bucket` |
+| Special faces on one kept die (nat 1/20) | `classify` on that die **before** adding mod in the label function, or on `keep_highest` result |
+| Count of successes in a pool | `count_ge`, `count_in`, or `success_pool` |
+| Highest die, multiple 6s, arbitrary face logic | `dice_pool` + `pool_map` + optional `classify` on integer codes |
+| Two dice that interact (advantage as joint, paired save) | `joint_classify` or model kept die explicitly (`2d20kh1`) |
+| Half damage on save | `8d6 // 2` |
+
+## Pitfalls
+
+- **`classify` on `1d20 + MOD`** applies labels to **totals**, not natural d20—wrong for 5e crits; classify the **natural** die (see pattern above).
+- **`bucket` vs `classify`:** `bucket` only needs cut thresholds on a numeric line; `classify` needs a function when rules are irregular.
+- **`pool_map` callback must return `int`**, not strings—map to codes, then `classify` to labels if needed.
+- **Label strings** in `classify` / `joint_classify` must match `scale` exactly.
+- **Large scripts:** playground limits source size and number of `output()` calls; prefer one `prob_table` over hundreds of `output` lines when sweeping many cells.

@@ -10,3 +10,4 @@ app-dice-playground-server/infra/azure.env
 app-dice-playground-server/infra/parameters.bicepparam
 .env
 ignore/
+.wrangler/tmp
