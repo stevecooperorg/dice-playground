@@ -111,7 +111,7 @@ fn run_eval_watch(
     let mut watcher = FileWatcher::new(watch_root)?;
     watcher.watch_path(path, false)?;
 
-    run_eval(path, format, prob_format)?;
+    try_run_eval(path, format, prob_format);
 
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -126,9 +126,16 @@ fn run_eval_watch(
             // Coalesce rapid save/rename events from editors.
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             eprintln!("--- {} changed, re-evaluating ---", path.display());
-            run_eval(path, format, prob_format)?;
+            try_run_eval(path, format, prob_format);
         }
     })
+}
+
+/// Run evaluation; on failure print to stderr and keep going (watch mode).
+fn try_run_eval(path: &std::path::Path, format: Format, prob_format: ProbFormat) {
+    if let Err(e) = run_eval(path, format, prob_format) {
+        eprintln!("{e:#}");
+    }
 }
 
 fn paths_same_file(a: &std::path::Path, b: &std::path::Path) -> bool {

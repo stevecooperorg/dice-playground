@@ -1,78 +1,95 @@
-//! Bar-chart view of `output()` PMFs from eval results.
+//! Chart view of `output()` PMFs from eval results (full data; no display compression).
 
-use crate::engine::{compress_pmf_for_display, OutputEntry};
+use crate::engine::OutputEntry;
 use leptos::prelude::*;
+use leptos_chartistry::*;
+
+/// Full width of the parent output panel; height follows width / ratio.
+const CHART_ASPECT: AspectRatio = AspectRatio::from_env_width_apply_ratio(2.0);
+
+fn bottom_axis_ticks() -> TickLabels<f64> {
+    TickLabels::aligned_floats().with_min_chars(3)
+}
+
+/// Bottom axis for categorical bars: outcome names at bar centers only.
+///
+/// Chartistry's `aligned_floats` also places "nice" ticks between categories (e.g. `1.5`)
+/// because we extend the x range for bar padding. Those in-between ticks are left blank so
+/// only outcome labels show, not stray numbers.
+fn ordinal_bottom_ticks(rows: &[BarRow]) -> TickLabels<f64> {
+    let labels: Vec<String> = rows.iter().map(|r| r.label.clone()).collect();
+    let min_chars = labels
+        .iter()
+        .map(|s| s.len())
+        .max()
+        .unwrap_or(3)
+        .clamp(3, 32);
+    TickLabels::aligned_floats()
+        .with_min_chars(min_chars)
+        .with_format(move |v: &f64, _fmt| {
+            if labels.len() == 1 {
+                return labels[0].clone();
+            }
+            let mut best_idx = 0usize;
+            let mut best_dist = f64::INFINITY;
+            for (i, _) in labels.iter().enumerate() {
+                let centre = (i + 1) as f64;
+                let dist = (v - centre).abs();
+                if dist < best_dist {
+                    best_dist = dist;
+                    best_idx = i;
+                }
+            }
+            // Label ticks at category centers; hide midway ticks (e.g. 1.5) without showing numbers.
+            if best_dist < 0.4 {
+                labels[best_idx].clone()
+            } else {
+                String::new()
+            }
+        })
+}
+
+fn chart_axes_only() -> [InnerLayout<f64, f64>; 2] {
+    [
+        AxisMarker::left_edge().into_inner(),
+        AxisMarker::bottom_edge().into_inner(),
+    ]
+}
 
 #[derive(Clone, Debug, PartialEq)]
 struct BarRow {
     label: String,
     prob: f64,
-    /// Share of total probability mass in this section (0–100).
-    pct_of_total: f64,
-    /// P(outcome is at least this row's value / rank).
-    p_at_least: f64,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct ChartSection {
-    title: String,
-    rows: Vec<BarRow>,
+struct LineDatum {
+    x: f64,
+    prob: f64,
 }
 
-fn parse_label_low_bound(label: &str) -> Option<i64> {
-    if let Ok(v) = label.parse::<i64>() {
-        return Some(v);
-    }
-    if let Some(rest) = label.strip_prefix('<') {
-        return rest.parse().ok();
-    }
-    if let Some(rest) = label.strip_prefix('>') {
-        return rest.parse::<i64>().ok().map(|v: i64| v.saturating_add(1));
-    }
-    if let Some((lo, _)) = label.split_once("..") {
-        return lo.parse().ok();
-    }
-    None
-}
-
-fn rows_from_dist_entries(entries: &[(i64, f64)]) -> Vec<BarRow> {
-    let compressed = compress_pmf_for_display(entries);
-    let total: f64 = entries.iter().map(|(_, p)| *p).sum();
-    compressed
-        .into_iter()
-        .map(|(label, p)| {
-            let p_at_least = parse_label_low_bound(&label)
-                .map(|bound| {
-                    entries
-                        .iter()
-                        .filter(|(k, _)| *k >= bound)
-                        .map(|(_, prob)| *prob)
-                        .sum()
-                })
-                .unwrap_or(p);
-            BarRow {
-                label,
-                prob: p,
-                pct_of_total: share_percent(p, total),
-                p_at_least,
-            }
-        })
-        .collect()
+#[derive(Clone, Debug, PartialEq)]
+enum OutputChart {
+    DieRollLine {
+        title: String,
+        entries: Vec<(i64, f64)>,
+    },
+    OrdinalBar {
+        title: String,
+        rows: Vec<BarRow>,
+    },
+    ProbBar {
+        title: String,
+        rows: Vec<BarRow>,
+    },
 }
 
 fn rows_from_ordinal_entries(entries: &[(String, f64)]) -> Vec<BarRow> {
-    let total: f64 = entries.iter().map(|(_, p)| *p).sum();
     entries
         .iter()
-        .enumerate()
-        .map(|(i, (label, p))| {
-            let p_at_least: f64 = entries[i..].iter().map(|(_, prob)| *prob).sum();
-            BarRow {
-                label: label.clone(),
-                prob: *p,
-                pct_of_total: share_percent(*p, total),
-                p_at_least,
-            }
+        .map(|(label, p)| BarRow {
+            label: label.clone(),
+            prob: *p,
         })
         .collect()
 }
@@ -81,34 +98,7 @@ fn rows_from_prob(value: f64) -> Vec<BarRow> {
     vec![BarRow {
         label: format_prob_label(value),
         prob: value,
-        pct_of_total: 100.0,
-        p_at_least: value,
     }]
-}
-
-fn share_percent(prob: f64, total: f64) -> f64 {
-    if total.is_finite() && total > 0.0 && prob.is_finite() {
-        (prob / total) * 100.0
-    } else {
-        0.0
-    }
-}
-
-fn format_tooltip(row: &BarRow) -> String {
-    format!(
-        "{} of total · P(≥ {}) = {}",
-        format_share(row.pct_of_total),
-        row.label,
-        format_prob_pct(row.p_at_least)
-    )
-}
-
-fn format_share(pct: f64) -> String {
-    if pct.is_finite() {
-        format!("{pct:.2}%")
-    } else {
-        "—".to_string()
-    }
 }
 
 fn format_prob_pct(p: f64) -> String {
@@ -119,24 +109,36 @@ fn format_prob_pct(p: f64) -> String {
     }
 }
 
-fn sections_from_outputs(outputs: &[OutputEntry]) -> Vec<ChartSection> {
+fn charts_from_outputs(outputs: &[OutputEntry]) -> Vec<OutputChart> {
     outputs
         .iter()
         .filter_map(|entry| {
-            let (title, rows) = match entry {
+            Some(match entry {
                 OutputEntry::DieRoll { name, entries, .. } => {
-                    (name.clone(), rows_from_dist_entries(entries))
+                    if entries.is_empty() {
+                        return None;
+                    }
+                    OutputChart::DieRollLine {
+                        title: name.clone(),
+                        entries: entries.clone(),
+                    }
                 }
                 OutputEntry::Outcomes { name, entries, .. }
                 | OutputEntry::Table { name, entries } => {
-                    (name.clone(), rows_from_ordinal_entries(entries))
+                    let rows = rows_from_ordinal_entries(entries);
+                    if rows.is_empty() {
+                        return None;
+                    }
+                    OutputChart::OrdinalBar {
+                        title: name.clone(),
+                        rows,
+                    }
                 }
-                OutputEntry::Prob { name, value } => (name.clone(), rows_from_prob(*value)),
-            };
-            if rows.is_empty() {
-                return None;
-            }
-            Some(ChartSection { title, rows })
+                OutputEntry::Prob { name, value } => OutputChart::ProbBar {
+                    title: name.clone(),
+                    rows: rows_from_prob(*value),
+                },
+            })
         })
         .collect()
 }
@@ -149,27 +151,139 @@ fn format_prob_label(p: f64) -> String {
     }
 }
 
-fn max_prob(rows: &[BarRow]) -> f64 {
-    rows.iter()
-        .map(|r| r.prob)
+fn line_data_from_entries(entries: &[(i64, f64)]) -> Vec<LineDatum> {
+    let mut data: Vec<LineDatum> = entries
+        .iter()
+        .map(|(k, p)| LineDatum {
+            x: *k as f64,
+            prob: *p,
+        })
+        .collect();
+    data.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal));
+    data
+}
+
+fn max_prob_f64(values: impl Iterator<Item = f64>) -> f64 {
+    values
         .filter(|p| p.is_finite() && *p > 0.0)
         .fold(0.0_f64, f64::max)
 }
 
-fn bar_width_percent(prob: f64, max: f64) -> f64 {
-    if !prob.is_finite() || prob <= 0.0 {
-        return 0.0;
+fn y_axis_max_prob(max: f64) -> f64 {
+    if max.is_finite() && max > 0.0 {
+        max
+    } else {
+        1.0
     }
-    if max <= 0.0 || !max.is_finite() {
-        return 0.0;
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct BarChartDatum {
+    x: f64,
+    label: String,
+    prob: f64,
+}
+
+fn bar_chart_data_from_rows(rows: &[BarRow]) -> Vec<BarChartDatum> {
+    rows.iter()
+        .enumerate()
+        .map(|(i, row)| BarChartDatum {
+            x: (i + 1) as f64,
+            label: row.label.clone(),
+            prob: row.prob,
+        })
+        .collect()
+}
+
+#[component]
+fn DieRollLineChart(title: String, entries: Vec<(i64, f64)>) -> impl IntoView {
+    let data_vec = line_data_from_entries(&entries);
+    let y_max = y_axis_max_prob(max_prob_f64(data_vec.iter().map(|d| d.prob)));
+    let (data, _) = signal(data_vec);
+    let debug = Signal::from(false);
+
+    let left = TickLabels::aligned_floats()
+        .with_min_chars(5)
+        .with_format(|v: &f64, _| format_prob_pct(*v));
+    let tooltip = Tooltip::left_cursor().show_x_ticks(false);
+
+    let line_colour = Colour::from_rgb(0x05, 0x96, 0x69);
+    let series = Series::new(|d: &LineDatum| d.x)
+        .line(
+            Line::new(|d: &LineDatum| d.prob)
+                .with_name("P")
+                .with_colour(line_colour),
+        )
+        .with_y_range(0.0, y_max);
+
+    view! {
+        <div class="w-full min-w-0 dice-chartistry">
+            <h3 class="text-slate-300 font-semibold text-sm mb-2 m-0">{title}</h3>
+            <div class="w-full min-w-0">
+            <Chart
+                aspect_ratio=CHART_ASPECT
+                debug=debug
+                series=series
+                data=data
+                left=left
+                bottom=bottom_axis_ticks()
+                tooltip=tooltip
+                inner=chart_axes_only()
+            />
+            </div>
+        </div>
     }
-    (prob / max).clamp(0.0, 1.0) * 100.0
+}
+
+#[component]
+fn OrdinalBarChart(title: String, rows: Vec<BarRow>) -> impl IntoView {
+    let data_vec = bar_chart_data_from_rows(&rows);
+    let y_max = y_axis_max_prob(max_prob_f64(rows.iter().map(|r| r.prob)));
+    let (data, _) = signal(data_vec);
+    let debug = Signal::from(false);
+
+    let left = TickLabels::aligned_floats()
+        .with_min_chars(5)
+        .with_format(|v: &f64, _| format_prob_pct(*v));
+    let tooltip = Tooltip::left_cursor()
+        .with_sort_by(TooltipSortBy::Descending)
+        .skip_missing(true);
+
+    let bar_colour = Colour::from_rgb(0x05, 0x96, 0x69);
+    let n = rows.len() as f64;
+    let series = Series::new(|d: &BarChartDatum| d.x)
+        .bar(
+            Bar::new(|d: &BarChartDatum| d.prob)
+                .with_name("P")
+                .with_colour(bar_colour)
+                .with_gap(0.28),
+        )
+        .with_x_range(0.5, n + 0.5)
+        .with_y_range(0.0, y_max);
+
+    view! {
+        <div class="w-full min-w-0 dice-chartistry">
+            <h3 class="text-slate-300 font-semibold text-sm mb-2 m-0">{title}</h3>
+            <div class="w-full min-w-0">
+            <Chart
+                aspect_ratio=CHART_ASPECT
+                debug=debug
+                series=series
+                data=data
+                left=left
+                bottom=ordinal_bottom_ticks(&rows)
+                tooltip=tooltip
+                inner=chart_axes_only()
+            />
+            </div>
+        </div>
+    }
 }
 
 #[component]
 pub fn OutputGraphView(outputs: Vec<OutputEntry>) -> AnyView {
-    let sections = sections_from_outputs(&outputs);
-    if sections.is_empty() {
+    let charts = charts_from_outputs(&outputs);
+    if charts.is_empty() {
         return view! {
             <p class="text-slate-400 font-sans text-sm m-0">
                 "No distribution outputs to chart. Call "
@@ -181,45 +295,16 @@ pub fn OutputGraphView(outputs: Vec<OutputEntry>) -> AnyView {
     }
 
     view! {
-        <div class="space-y-6 font-sans">
-            {sections
+        <div class="w-full min-w-0 space-y-6 font-sans">
+            {charts
                 .into_iter()
-                .map(|section| {
-                    let max = max_prob(&section.rows);
-                    view! {
-                        <div>
-                            <h3 class="text-slate-300 font-semibold text-sm mb-2 m-0">
-                                {section.title.clone()}
-                            </h3>
-                            <div class="grid grid-cols-[minmax(3rem,auto)_1fr] gap-x-3 gap-y-1.5 items-center">
-                                {section
-                                    .rows
-                                    .into_iter()
-                                    .map(|row| {
-                                        let pct = bar_width_percent(row.prob, max);
-                                        let width_style = format!("width: {pct:.2}%");
-                                        let tooltip = format_tooltip(&row);
-                                        view! {
-                                            <span
-                                                class="text-slate-200 text-right tabular-nums shrink-0"
-                                                title=tooltip.clone()
-                                            >
-                                                {row.label.clone()}
-                                            </span>
-                                            <div
-                                                class="h-6 min-w-0 rounded bg-slate-800/80 overflow-hidden"
-                                                title=tooltip
-                                            >
-                                                <div
-                                                    class="h-full rounded bg-emerald-600/90 min-w-[2px]"
-                                                    style=width_style
-                                                ></div>
-                                            </div>
-                                        }
-                                    })
-                                    .collect_view()}
-                            </div>
-                        </div>
+                .map(|chart| match chart {
+                    OutputChart::DieRollLine { title, entries } => {
+                        view! { <DieRollLineChart title=title entries=entries /> }.into_any()
+                    }
+                    OutputChart::OrdinalBar { title, rows }
+                    | OutputChart::ProbBar { title, rows } => {
+                        view! { <OrdinalBarChart title=title rows=rows /> }.into_any()
                     }
                 })
                 .collect_view()}
@@ -233,42 +318,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bar_width_scales_to_max() {
-        assert!((bar_width_percent(0.5, 1.0) - 50.0).abs() < 1e-9);
-        assert!((bar_width_percent(1.0, 1.0) - 100.0).abs() < 1e-9);
-        assert_eq!(bar_width_percent(0.0, 1.0), 0.0);
-    }
-
-    #[test]
-    fn dist_row_stats_share_and_at_least() {
-        let rows = rows_from_dist_entries(&[(1, 0.1), (2, 0.2), (3, 0.7)]);
-        assert!((rows[0].pct_of_total - 10.0).abs() < 1e-9);
-        assert!((rows[2].pct_of_total - 70.0).abs() < 1e-9);
-        assert!((rows[0].p_at_least - 1.0).abs() < 1e-9);
-        assert!((rows[1].p_at_least - 0.9).abs() < 1e-9);
-        assert!((rows[2].p_at_least - 0.7).abs() < 1e-9);
-    }
-
-    #[test]
-    fn ordinal_p_at_least_follows_row_order() {
-        let entries = [
-            ("fail".into(), 0.25),
-            ("ok".into(), 0.35),
-            ("crit".into(), 0.40),
-        ];
-        let rows = rows_from_ordinal_entries(&entries);
-        assert!((rows[1].p_at_least - 0.75).abs() < 1e-9);
-    }
-
-    #[test]
-    fn dist_sections_have_six_rows() {
+    fn die_roll_chart_uses_full_entry_count() {
         let outputs = vec![OutputEntry::DieRoll {
             name: "d6".into(),
             entries: (1..=6).map(|i| (i, 1.0 / 6.0)).collect(),
             mean: 3.5,
         }];
-        let sections = sections_from_outputs(&outputs);
-        assert_eq!(sections.len(), 1);
-        assert_eq!(sections[0].rows.len(), 6);
+        let charts = charts_from_outputs(&outputs);
+        assert_eq!(charts.len(), 1);
+        match &charts[0] {
+            OutputChart::DieRollLine { entries, .. } => assert_eq!(entries.len(), 6),
+            _ => panic!("expected line chart for dieroll"),
+        }
+    }
+
+    #[test]
+    fn outcomes_use_bar_chart() {
+        let outputs = vec![OutputEntry::Outcomes {
+            name: "check".into(),
+            scale: vec!["fail".into(), "ok".into()],
+            entries: vec![("fail".into(), 0.4), ("ok".into(), 0.6)],
+        }];
+        let charts = charts_from_outputs(&outputs);
+        match &charts[0] {
+            OutputChart::OrdinalBar { rows, .. } => assert_eq!(rows.len(), 2),
+            _ => panic!("expected bar chart for outcomes"),
+        }
+    }
+
+    #[test]
+    fn line_data_sorted_by_face() {
+        let data = line_data_from_entries(&[(3, 0.2), (1, 0.5), (2, 0.3)]);
+        assert!((data[0].x - 1.0).abs() < 1e-9);
+        assert!((data[2].x - 3.0).abs() < 1e-9);
     }
 }

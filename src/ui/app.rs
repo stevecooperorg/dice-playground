@@ -472,7 +472,9 @@ pub fn App() -> impl IntoView {
                                 let tab = output_tab.get();
                                 if tab == "graph" {
                                     view! {
-                                        <OutputGraphView outputs=result_outputs.get() />
+                                        <div class="w-full min-w-0 not-font-mono">
+                                            <OutputGraphView outputs=result_outputs.get() />
+                                        </div>
                                     }
                                     .into_any()
                                 } else {

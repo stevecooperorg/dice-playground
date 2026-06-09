@@ -13,7 +13,13 @@
     <link data-trunk rel="copy-file" href="staticwebapp.config.json" />
     <link data-trunk rel="rust" data-bin="dice-playground" data-wasm-opt="0" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>body { margin: 0; }</style>
+    <style>
+        body { margin: 0; }
+        /* Chartistry defaults to dark SVG text; match slate output panel. */
+        .dice-chartistry ._chartistry text {
+            fill: rgb(203 213 225);
+        }
+    </style>
 </head>
 <body></body>
 </html>
