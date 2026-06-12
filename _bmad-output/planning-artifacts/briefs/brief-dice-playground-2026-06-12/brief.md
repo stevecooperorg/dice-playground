@@ -7,6 +7,9 @@ source: inferred-from-repository
 spike_refs:
   - ../implementation-artifacts/spec-wasm-markdown-html-spike.md
   - ../planning-artifacts/research/technical-prose-encoding-in-dice-files-research-2026-06-12.md
+  - ../literate-dice-migration-plan-2026-06-12.md
+  - ../architecture.md
+  - ../specs/spec-literate-dice/SPEC.md
 ---
 
 # Product Brief: Dice Playground

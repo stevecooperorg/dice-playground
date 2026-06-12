@@ -37,7 +37,7 @@ Implication for architecture: literate parser/weave is **required for the docs p
 
 **Open (architecture):** HTML sanitization (`ammonia` or equivalent), placeholder syntax, exact fence labels, release wasm size budget after full literate land.
 
-**References:** `_bmad-output/planning-artifacts/research/technical-prose-encoding-in-dice-files-research-2026-06-12.md`, `_bmad-output/implementation-artifacts/spec-wasm-markdown-html-spike.md`
+**References:** `_bmad-output/planning-artifacts/research/technical-prose-encoding-in-dice-files-research-2026-06-12.md`, `_bmad-output/implementation-artifacts/spec-wasm-markdown-html-spike.md`, `_bmad-output/planning-artifacts/literate-dice-migration-plan-2026-06-12.md`, `_bmad-output/planning-artifacts/architecture.md`
 
 ## Current UI (as of repo)
 
