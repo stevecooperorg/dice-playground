@@ -50,7 +50,8 @@ pub use playground::{
 pub use poly_explode::{successes_dist, Counterbalance};
 pub use starlark_guest::{
     compress_pmf_for_display, dice_dialect, dice_globals, dice_stdlib_docs, die_roll_type_docs,
-    eval_source, eval_source_with_dialect, format_eval_result_text, format_probability,
+    eval_source, eval_source_with_dialect, format_eval_result_markdown, format_eval_result_text,
+    format_probability,
     format_probability_with_denom, full_environment_docs, infer_sample_space_denominator,
     outcomes_type_docs, render_stdlib_reference_markdown, EvalResult, OutputEntry, OutputStore,
     ProbFormat, StarlarkDicePool, StarlarkDieRoll, StarlarkIntBand, StarlarkOutcomes,

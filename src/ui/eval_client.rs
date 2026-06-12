@@ -11,8 +11,10 @@ pub struct EvalResponse {
     pub return_value: String,
     pub text: String,
     pub outputs: Vec<crate::engine::OutputEntry>,
-    /// Non-empty when the active file is literate and Run succeeded.
+    /// Full literate weave when applicable.
     pub report_html: String,
+    /// Legacy outputs-only HTML when `report_html` is empty.
+    pub outputs_html: String,
 }
 
 pub async fn check_source(path: &str, source: &str) -> Result<Vec<UiDiagnostic>, String> {
@@ -41,6 +43,7 @@ fn run_eval(path: &str, source: &str, prob_format: &str) -> Result<EvalResponse,
         text: body.text,
         outputs: body.outputs,
         report_html: body.report_html,
+        outputs_html: body.outputs_html,
     })
 }
 

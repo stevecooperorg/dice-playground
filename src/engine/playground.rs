@@ -14,9 +14,10 @@ use super::desugar_if_needed;
 use super::literate::MAX_LITERATE_BYTES;
 use super::literate::{
     is_literate, parse_literate, source_line_for_tangled, tangle_literate, weave_literate,
-    LiterateDocument, TangleResult, WeaveOptions,
+    sanitize_woven_html, LiterateDocument, TangleResult, WeaveOptions,
 };
-use super::{eval_source_with_dialect, format_eval_result_text, OutputEntry, ProbFormat};
+use super::markdown_to_html;
+use super::{eval_source_with_dialect, format_eval_result_markdown, format_eval_result_text, OutputEntry, ProbFormat};
 
 /// Maximum script size accepted from the public playground API.
 pub const MAX_SOURCE_BYTES: usize = 64 * 1024;
@@ -88,6 +89,9 @@ pub struct EvalProgramResponse {
     /// Sanitized HTML report fragment when the source is literate; empty for legacy scripts.
     #[serde(default)]
     pub report_html: String,
+    /// Sanitized HTML for output blocks only (legacy scripts); empty when literate weave supplies `report_html`.
+    #[serde(default)]
+    pub outputs_html: String,
 }
 
 /// Parse and lint after desugar; does not evaluate.
@@ -168,11 +172,18 @@ pub fn eval_program(
     } else {
         String::new()
     };
+    let outputs_html = if report_html.is_empty() {
+        let md = format_eval_result_markdown(&result, options.prob_format);
+        sanitize_woven_html(&markdown_to_html(&md))
+    } else {
+        String::new()
+    };
     Ok(EvalProgramResponse {
         return_value: result.return_value,
         outputs: result.outputs,
         text,
         report_html,
+        outputs_html,
     })
 }
 
@@ -262,6 +273,16 @@ mod tests {
         let r = eval_program("lit.dice", src, EvalProgramOptions::default()).expect("eval");
         assert!(!r.report_html.is_empty());
         assert!(r.report_html.contains("<h1>"));
+        assert!(r.outputs_html.is_empty());
+    }
+
+    #[test]
+    fn eval_legacy_includes_outputs_html() {
+        let r = eval_program("legacy.dice", "output(\"d6\", 1d6)", EvalProgramOptions::default())
+            .expect("eval");
+        assert!(r.report_html.is_empty());
+        assert!(!r.outputs_html.is_empty());
+        assert!(r.outputs_html.contains("<table>"));
     }
 
     #[test]

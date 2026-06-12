@@ -134,6 +134,16 @@ Authors SHOULD NOT rely on raw HTML in markdown until sanitization policy explic
 
 All woven HTML MUST be sanitized in **`src/engine/`** before returning to UI or writing CLI files. Strip scripts, event handlers, and disallowed URLs per sanitizer policy.
 
+### 6.6 Tabular eval output
+
+Woven **output blocks** (§6.2) render tabular PMF and `prob_table` data as **GFM pipe tables** converted to HTML (not monospace ASCII in `<pre>`). Plain-text CLI output keeps the legacy padded pipe formatter.
+
+See [`tabular-output-gfm.md`](tabular-output-gfm.md).
+
+### 6.7 Playground output panel
+
+The WASM UI exposes woven HTML in an **Output** tab bar (**Report** · text · json · graph). See [`output-panel-html-tab.md`](output-panel-html-tab.md).
+
 ## 7. Size and limits
 
 | Limit | Value |

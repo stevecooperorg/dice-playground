@@ -22,9 +22,9 @@ use super::die_roll_value::StarlarkDieRoll;
 use super::int_band_value::StarlarkIntBand;
 use super::outcomes_value::StarlarkOutcomes;
 use super::output_format::{
-    format_dist_pmf_text, format_ordinal_pmf_text, format_prob_multi_column,
-    format_prob_table_text, infer_sample_space_denominator, infer_sample_space_denominator_probs,
-    ProbFormat,
+    format_dist_pmf_gfm, format_dist_pmf_text, format_ordinal_pmf_gfm, format_ordinal_pmf_text,
+    format_prob_gfm, format_prob_multi_column, format_prob_table_gfm, format_prob_table_text,
+    infer_sample_space_denominator, infer_sample_space_denominator_probs, ProbFormat,
 };
 use super::prob_table_value::StarlarkProbTable;
 use super::scale_value::StarlarkScale;
@@ -141,6 +141,41 @@ pub fn format_eval_result_text(result: &EvalResult, _prob: ProbFormat) -> String
                     format_prob_table_text(name, entries, _prob, shared_sample_denom)
                 );
             }
+        }
+    }
+    out
+}
+
+/// GFM markdown for eval outputs (woven report HTML).
+pub fn format_eval_result_markdown(result: &EvalResult, prob_format: ProbFormat) -> String {
+    let shared_sample_denom = sample_space_denom_for_eval(result);
+    let mut out = String::new();
+    if result.return_value != "None" {
+        let _ = writeln!(out, "return: {}\n", result.return_value);
+    }
+    for entry in &result.outputs {
+        let block = match entry {
+            OutputEntry::DieRoll {
+                name,
+                entries,
+                mean,
+            } => format_dist_pmf_gfm(name, entries, *mean, prob_format, shared_sample_denom),
+            OutputEntry::Prob { name, value } => {
+                format_prob_gfm(name, *value, prob_format, shared_sample_denom)
+            }
+            OutputEntry::Outcomes { name, entries, .. } => {
+                format_ordinal_pmf_gfm(name, entries, prob_format, shared_sample_denom)
+            }
+            OutputEntry::Table { name, entries } => {
+                format_prob_table_gfm(name, entries, prob_format, shared_sample_denom)
+            }
+        };
+        if !block.is_empty() {
+            out.push_str(&block);
+            if !block.ends_with('\n') {
+                out.push('\n');
+            }
+            out.push('\n');
         }
     }
     out

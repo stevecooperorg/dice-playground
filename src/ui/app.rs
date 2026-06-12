@@ -8,8 +8,7 @@ use crate::engine::OutputEntry;
 use crate::ui::eval_client;
 use crate::ui::highlighted_editor::HighlightedEditor;
 use crate::ui::models::{DiceFile, UiDiagnostic, WorkspaceState};
-use crate::ui::output_graph::OutputGraphView;
-use crate::ui::report_view::LiterateReportView;
+use crate::ui::output_panel::{default_output_tab, OutputPanelView};
 use crate::ui::storage::{load_workspace, save_workspace};
 
 const DOC_URL: &str = "/docs/";
@@ -36,6 +35,7 @@ pub fn App() -> impl IntoView {
     let (result_json, set_result_json) = signal(String::new());
     let (result_outputs, set_result_outputs) = signal(Vec::<OutputEntry>::new());
     let (result_report_html, set_result_report_html) = signal(String::new());
+    let (result_outputs_html, set_result_outputs_html) = signal(String::new());
     let (output_tab, set_output_tab) = signal("text".to_string());
     let (error_banner, set_error_banner) = signal(String::new());
     let (check_token, set_check_token) = signal(0u64);
@@ -71,11 +71,21 @@ pub fn App() -> impl IntoView {
 
     let has_diagnostics = move || !error_banner.get().is_empty() || !diagnostics.get().is_empty();
 
-    let has_literate_report = move || !result_report_html.get().is_empty();
+    let report_tab_html = Memo::new(move |_| {
+        let full = result_report_html.get();
+        if !full.is_empty() {
+            full
+        } else {
+            result_outputs_html.get()
+        }
+    });
 
-    let has_legacy_output = move || !result_text.get().is_empty() || !result_json.get().is_empty();
-
-    let has_output = move || has_literate_report() || has_legacy_output();
+    let has_output = move || {
+        !report_tab_html.get().is_empty()
+            || !result_text.get().is_empty()
+            || !result_json.get().is_empty()
+            || !result_outputs.get().is_empty()
+    };
 
     Effect::new(move |_| {
         let target = scroll_after_run.get();
@@ -141,15 +151,20 @@ pub fn App() -> impl IntoView {
             match eval_client::eval_program(&path, &source, "decimal").await {
                 Ok(r) => {
                     set_error_banner.set(String::new());
-                    set_result_report_html.set(r.report_html.clone());
-                    if r.report_html.is_empty() {
-                        set_result_text.set(r.text);
-                        set_result_json
-                            .set(serde_json::to_string_pretty(&r.outputs).unwrap_or_default());
+                    let report_html = r.report_html.clone();
+                    let outputs_html = r.outputs_html.clone();
+                    let text = r.text.clone();
+                    let display_report = if !report_html.is_empty() {
+                        report_html.as_str()
                     } else {
-                        set_result_text.set(String::new());
-                        set_result_json.set(String::new());
-                    }
+                        outputs_html.as_str()
+                    };
+                    set_output_tab.set(default_output_tab(display_report, &text).to_owned());
+                    set_result_report_html.set(report_html);
+                    set_result_outputs_html.set(outputs_html);
+                    set_result_text.set(r.text);
+                    set_result_json
+                        .set(serde_json::to_string_pretty(&r.outputs).unwrap_or_default());
                     set_result_outputs.set(r.outputs);
                     set_scroll_after_run.set(Some(ScrollAfterRun::Output));
                 }
@@ -436,88 +451,15 @@ pub fn App() -> impl IntoView {
 
                 <div node_ref=output_ref class="scroll-mt-36">
                 {move || {
-                    has_literate_report().then(|| view! {
-                        <LiterateReportView html=result_report_html.get() />
-                    })
-                }}
-                {move || {
-                    (has_literate_report() && !result_outputs.get().is_empty()).then(|| view! {
-                        <section class="mt-4 rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm">
-                            <h2 class="font-semibold text-slate-200 mb-2 font-sans">"Graph"</h2>
-                            <div class="w-full min-w-0">
-                                <OutputGraphView outputs=result_outputs.get() />
-                            </div>
-                        </section>
-                    })
-                }}
-                {move || {
-                    (has_output() && !has_literate_report()).then(|| view! {
-                        <section class="mt-4 rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm font-mono">
-                            <div class="flex items-center gap-2 mb-2 not-font-mono font-sans">
-                                <h2 class="font-semibold text-slate-200">"Output"</h2>
-                                <button
-                                    type="button"
-                                    class=move || {
-                                        if output_tab.get() == "text" {
-                                            "text-xs px-2 py-1 rounded bg-slate-700"
-                                        } else {
-                                            "text-xs px-2 py-1 rounded hover:bg-slate-800"
-                                        }
-                                    }
-                                    on:click=move |_| set_output_tab.set("text".to_owned())
-                                >
-                                    "text"
-                                </button>
-                                <button
-                                    type="button"
-                                    class=move || {
-                                        if output_tab.get() == "json" {
-                                            "text-xs px-2 py-1 rounded bg-slate-700"
-                                        } else {
-                                            "text-xs px-2 py-1 rounded hover:bg-slate-800"
-                                        }
-                                    }
-                                    on:click=move |_| set_output_tab.set("json".to_owned())
-                                >
-                                    "json"
-                                </button>
-                                <button
-                                    type="button"
-                                    class=move || {
-                                        if output_tab.get() == "graph" {
-                                            "text-xs px-2 py-1 rounded bg-slate-700"
-                                        } else {
-                                            "text-xs px-2 py-1 rounded hover:bg-slate-800"
-                                        }
-                                    }
-                                    on:click=move |_| set_output_tab.set("graph".to_owned())
-                                >
-                                    "graph"
-                                </button>
-                            </div>
-                            {move || {
-                                let tab = output_tab.get();
-                                if tab == "graph" {
-                                    view! {
-                                        <div class="w-full min-w-0 not-font-mono">
-                                            <OutputGraphView outputs=result_outputs.get() />
-                                        </div>
-                                    }
-                                    .into_any()
-                                } else {
-                                    view! {
-                                        <pre class="whitespace-pre-wrap break-words m-0">
-                                            {if tab == "json" {
-                                                result_json.get()
-                                            } else {
-                                                result_text.get()
-                                            }}
-                                        </pre>
-                                    }
-                                    .into_any()
-                                }
-                            }}
-                        </section>
+                    has_output().then(|| view! {
+                        <OutputPanelView
+                            tab=output_tab
+                            set_tab=set_output_tab
+                            report_html=report_tab_html
+                            text=result_text
+                            json=result_json
+                            outputs=result_outputs
+                        />
                     })
                 }}
                 </div>

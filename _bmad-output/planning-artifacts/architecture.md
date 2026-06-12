@@ -125,8 +125,7 @@ Stack locked by repo: **Rust 2021**, **Leptos 0.8 CSR**, **Starlark 0.14**, **Tr
 
 ### Frontend architecture
 
-- **Literate mode UI:** source editor + **report pane** (sanitized `inner_html` or isolated container); hide legacy bottom tabs when `mode == literate`.
-- **Legacy mode UI:** unchanged (text/json/graph).
+- **Output panel:** single tabbed region — **Report (html)** · text · json · graph — for literate and legacy; default Report when weave HTML exists. See [`output-panel-html-tab.md`](output-panel-html-tab.md).
 - **State:** one-shot Run; no reactive cells.
 
 ### Security

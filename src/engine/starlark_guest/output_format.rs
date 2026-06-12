@@ -567,6 +567,183 @@ pub fn format_prob_multi_column(name: &str, value: f64, sample_denom: Option<u64
     out
 }
 
+// --- GFM tables (HTML weave / static render) ---
+
+/// Escape `|` and `\` for GFM pipe table cells.
+pub fn escape_gfm_table_cell(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '|' | '\\' => {
+                out.push('\\');
+                out.push(c);
+            }
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Build a GFM pipe table (header + separator + rows).
+pub fn gfm_table(headers: &[&str], rows: &[Vec<String>]) -> String {
+    if headers.is_empty() {
+        return String::new();
+    }
+    let mut out = String::new();
+    out.push('|');
+    for h in headers {
+        out.push(' ');
+        out.push_str(&escape_gfm_table_cell(h));
+        out.push_str(" |");
+    }
+    out.push('\n');
+    out.push('|');
+    for _ in headers {
+        out.push_str(" --- |");
+    }
+    out.push('\n');
+    for row in rows {
+        out.push('|');
+        for cell in row {
+            out.push(' ');
+            out.push_str(&escape_gfm_table_cell(cell));
+            out.push_str(" |");
+        }
+        out.push('\n');
+    }
+    out
+}
+
+fn markdown_output_caption(name: &str, kind: &str) -> String {
+    let safe = escape_gfm_table_cell(name);
+    format!("**{safe}** · {kind}\n\n")
+}
+
+fn distribution_gfm_table(
+    rows: &[(String, f64)],
+    sample_denom: Option<u64>,
+    prob_format: ProbFormat,
+    multi_column: bool,
+) -> String {
+    if rows.is_empty() {
+        return String::new();
+    }
+    if multi_column {
+        let rel = rel_column_header(sample_denom);
+        let headers = ["outcome", "%", "frac", rel.as_str()];
+        let data: Vec<Vec<String>> = rows
+            .iter()
+            .map(|(label, p)| {
+                vec![
+                    label.clone(),
+                    format_probability_percent_plain(*p),
+                    format_probability_fraction(*p),
+                    format_sample_space_numerator(*p, sample_denom),
+                ]
+            })
+            .collect();
+        gfm_table(&headers, &data)
+    } else {
+        let headers = ["outcome", "p"];
+        let data: Vec<Vec<String>> = rows
+            .iter()
+            .map(|(label, p)| {
+                vec![
+                    label.clone(),
+                    format_probability_with_denom(*p, prob_format, sample_denom),
+                ]
+            })
+            .collect();
+        gfm_table(&headers, &data)
+    }
+}
+
+/// True when woven reports show `%`, `frac`, and sample-space columns together.
+pub fn woven_table_multi_column(prob_format: ProbFormat) -> bool {
+    prob_format == ProbFormat::Decimal
+}
+
+/// GFM markdown for a DieRoll PMF block (caption + table).
+pub fn format_dist_pmf_gfm(
+    name: &str,
+    entries: &[(i64, f64)],
+    mean: f64,
+    prob_format: ProbFormat,
+    shared_sample_denom: Option<u64>,
+) -> String {
+    let mut out = markdown_output_caption(name, &format!("DieRoll · mean {mean:.3}"));
+    if entries.is_empty() {
+        return out;
+    }
+    let sample_denom = shared_sample_denom.or_else(|| infer_sample_space_denominator(entries));
+    let rows = compress_pmf_for_display(entries);
+    let multi = woven_table_multi_column(prob_format);
+    out.push_str(&distribution_gfm_table(&rows, sample_denom, prob_format, multi));
+    out
+}
+
+/// GFM markdown for ordered outcomes.
+pub fn format_ordinal_pmf_gfm(
+    name: &str,
+    entries: &[(String, f64)],
+    prob_format: ProbFormat,
+    shared_sample_denom: Option<u64>,
+) -> String {
+    let mut out = markdown_output_caption(name, "Outcomes");
+    if entries.is_empty() {
+        return out;
+    }
+    let probs: Vec<f64> = entries.iter().map(|(_, p)| *p).collect();
+    let sample_denom = shared_sample_denom.or_else(|| infer_sample_space_denominator_probs(&probs));
+    let rows: Vec<(String, f64)> = entries
+        .iter()
+        .map(|(label, p)| (label.clone(), *p))
+        .collect();
+    let multi = woven_table_multi_column(prob_format);
+    out.push_str(&distribution_gfm_table(&rows, sample_denom, prob_format, multi));
+    out
+}
+
+/// GFM markdown for `prob_table` rows.
+pub fn format_prob_table_gfm(
+    name: &str,
+    entries: &[(String, f64)],
+    prob_format: ProbFormat,
+    shared_sample_denom: Option<u64>,
+) -> String {
+    let mut out = markdown_output_caption(name, "Table");
+    if entries.is_empty() {
+        return out;
+    }
+    let probs: Vec<f64> = entries.iter().map(|(_, p)| *p).collect();
+    let sample_denom = shared_sample_denom.or_else(|| infer_sample_space_denominator_probs(&probs));
+    let rows: Vec<(String, f64)> = entries
+        .iter()
+        .map(|(label, p)| (label.clone(), *p))
+        .collect();
+    let multi = woven_table_multi_column(prob_format);
+    out.push_str(&distribution_gfm_table(&rows, sample_denom, prob_format, multi));
+    out
+}
+
+/// GFM markdown for a single scalar probability (one-row table).
+pub fn format_prob_gfm(
+    name: &str,
+    value: f64,
+    prob_format: ProbFormat,
+    sample_denom: Option<u64>,
+) -> String {
+    let mut out = markdown_output_caption(name, "Prob");
+    let multi = woven_table_multi_column(prob_format);
+    out.push_str(&distribution_gfm_table(
+        &[(name.to_owned(), value)],
+        sample_denom,
+        prob_format,
+        multi,
+    ));
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -590,6 +767,26 @@ mod tests {
         assert_eq!(format_probability(p, ProbFormat::Decimal), "0.167");
         assert_eq!(format_probability(p, ProbFormat::Percent), "16.7%");
         assert_eq!(format_probability(p, ProbFormat::Fraction), "1/6");
+    }
+
+    #[test]
+    fn gfm_table_renders_pipe_rows() {
+        let md = gfm_table(
+            &["a", "b"],
+            &[vec!["1".into(), "2".into()], vec!["x|y".into(), "z".into()]],
+        );
+        assert!(md.contains("| a | b |"));
+        assert!(md.contains("x\\|y"));
+        assert!(md.contains("| --- |"));
+    }
+
+    #[test]
+    fn dist_pmf_gfm_includes_table_syntax() {
+        let entries: Vec<(i64, f64)> = (1..=6).map(|k| (k, 1.0 / 6.0)).collect();
+        let md = format_dist_pmf_gfm("d6", &entries, 3.5, ProbFormat::Decimal, None);
+        assert!(md.contains("**d6**"));
+        assert!(md.contains("| outcome |"));
+        assert!(md.contains("1/6"));
     }
 
     #[test]

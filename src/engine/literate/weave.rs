@@ -9,7 +9,7 @@ use anyhow::{bail, Context};
 use super::fence::{is_closing_fence, parse_fence_opener};
 use super::parse::LiterateDocument;
 use crate::engine::markdown_to_html;
-use crate::engine::starlark_guest::{format_eval_result_text, EvalResult, OutputEntry, ProbFormat};
+use crate::engine::starlark_guest::{format_eval_result_markdown, EvalResult, OutputEntry, ProbFormat};
 
 /// Static site chrome when rendering full HTML pages.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -284,15 +284,14 @@ fn append_fence_outputs(
         return_value: "None".into(),
         outputs,
     };
-    let text = format_eval_result_text(&faux, prob_format);
+    let text = format_eval_result_markdown(&faux, prob_format);
     if text.trim().is_empty() {
         return;
     }
-    let escaped = escape_html_text(&text);
+    let fragment = sanitize_woven_html(&markdown_to_html(&text));
     html.push_str(r#"<section class="dice-output">"#);
-    html.push_str("<pre>");
-    html.push_str(&escaped);
-    html.push_str("</pre></section>\n");
+    html.push_str(&fragment);
+    html.push_str("</section>\n");
 }
 
 fn escape_html_text(s: &str) -> String {
@@ -335,6 +334,7 @@ mod tests {
         let html = weave_literate(src, &doc, &tangled, &eval, WeaveOptions::default()).unwrap();
         assert!(html.contains("<h1>"));
         assert!(html.contains("one_d6"));
+        assert!(html.contains("<table>"));
     }
 
     #[test]

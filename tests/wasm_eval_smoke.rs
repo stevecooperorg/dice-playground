@@ -43,6 +43,14 @@ fn wasm_eval_smoke_literate_report_html() {
 }
 
 #[test]
+fn wasm_eval_smoke_legacy_outputs_html() {
+    let r = eval_program("legacy.dice", "output(\"d6\", 1d6)", EvalProgramOptions::default())
+        .expect("eval");
+    assert!(r.report_html.is_empty());
+    assert!(r.outputs_html.contains("<table>"));
+}
+
+#[test]
 fn wasm_markdown_to_html_smoke() {
     use dice_playground::engine::markdown_to_html;
     let html = markdown_to_html("## odds\n\nSee [guide](/docs/).\n");

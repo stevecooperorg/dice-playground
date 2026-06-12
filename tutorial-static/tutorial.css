@@ -149,6 +149,28 @@ body.dice-literate-report main {
   padding: 1.25rem;
 }
 
+body.dice-literate-report .dice-output {
+  margin: 1rem 0;
+}
+
+body.dice-literate-report .dice-output table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+body.dice-literate-report .dice-output th,
+body.dice-literate-report .dice-output td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+body.dice-literate-report .dice-output th {
+  background: var(--panel);
+}
+
 body.dice-literate-report .dice-output pre {
   background: var(--panel);
   border: 1px solid var(--border);
