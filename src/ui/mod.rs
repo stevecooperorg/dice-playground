@@ -5,5 +5,6 @@ pub mod highlighted_editor;
 pub mod models;
 pub mod output_graph;
 pub mod playground_handoff;
+pub mod report_view;
 pub mod static_site;
 pub mod storage;

@@ -1,5 +1,0 @@
-# Same total: explicit pool vs notation sugar.
-output("pool_sum", dice_pool(3, 6).sum())
-output("notation_sum", 3d6)
-# Highest of four d6 (Blades-style teaser).
-output("highest_die", dice_pool(4, 6).order_stat(1))

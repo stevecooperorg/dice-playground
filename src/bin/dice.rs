@@ -4,8 +4,9 @@ use std::path::PathBuf;
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
 use dice_playground::engine::{
-    desugar_if_needed, eval_source, format_eval_result_text, render_stdlib_reference_markdown,
-    DieRoll, OutputEntry, ProbFormat,
+    is_literate, render_literate_document, render_markdown_static_file,
+    render_stdlib_reference_markdown, DieRoll, LiterateStaticLayout, MarkdownStaticLayout,
+    OutputEntry, ProbFormat, WeaveOptions,
 };
 
 #[derive(Parser)]
@@ -49,6 +50,62 @@ enum Command {
         #[arg(default_value = "dist")]
         root: PathBuf,
     },
+    /// Render a literate `.dice` file to HTML (prose + woven outputs).
+    Render {
+        /// Literate script path.
+        path: PathBuf,
+        /// Write HTML document here (stdout if omitted).
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// How to print probabilities in woven output blocks.
+        #[arg(long, value_enum, default_value_t = ProbFormat::Decimal)]
+        prob_format: ProbFormat,
+        /// Static site chrome (`tutorial` or `cookbook` CSS/nav paths).
+        #[arg(long, value_enum, default_value_t = RenderLayout::Tutorial)]
+        layout: RenderLayout,
+    },
+    /// Render a Markdown file to a static HTML page (user guide or reference).
+    RenderMd {
+        /// Markdown source path.
+        path: PathBuf,
+        /// Write HTML document here (stdout if omitted).
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// Page chrome and link rules (`guide` or `reference`).
+        #[arg(long, value_enum)]
+        layout: MarkdownRenderLayout,
+    },
+}
+
+#[derive(Clone, Copy, ValueEnum, Default)]
+enum RenderLayout {
+    #[default]
+    Tutorial,
+    Cookbook,
+}
+
+impl From<RenderLayout> for LiterateStaticLayout {
+    fn from(value: RenderLayout) -> Self {
+        match value {
+            RenderLayout::Tutorial => LiterateStaticLayout::Tutorial,
+            RenderLayout::Cookbook => LiterateStaticLayout::Cookbook,
+        }
+    }
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum MarkdownRenderLayout {
+    Guide,
+    Reference,
+}
+
+impl From<MarkdownRenderLayout> for MarkdownStaticLayout {
+    fn from(value: MarkdownRenderLayout) -> Self {
+        match value {
+            MarkdownRenderLayout::Guide => MarkdownStaticLayout::Guide,
+            MarkdownRenderLayout::Reference => MarkdownStaticLayout::Reference,
+        }
+    }
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -77,7 +134,65 @@ fn main() -> anyhow::Result<()> {
         Command::Docs { out } => run_docs(out.as_deref()),
         Command::Lsp => dice_playground::engine::lsp::run_stdio(),
         Command::EnhanceStaticSite { root } => run_enhance_static_site(&root),
+        Command::Render {
+            path,
+            output,
+            prob_format,
+            layout,
+        } => run_render(&path, output.as_deref(), prob_format, layout),
+        Command::RenderMd {
+            path,
+            output,
+            layout,
+        } => run_render_md(&path, output.as_deref(), layout),
     }
+}
+
+fn run_render(
+    path: &std::path::Path,
+    output: Option<&std::path::Path>,
+    prob_format: ProbFormat,
+    layout: RenderLayout,
+) -> anyhow::Result<()> {
+    let content = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    if !is_literate(&content) {
+        anyhow::bail!(
+            "{} is not literate (need at least one ``` or ```dice executable fence)",
+            path.display()
+        );
+    }
+    let path_str = path.to_string_lossy();
+    let html = render_literate_document(
+        &path_str,
+        &content,
+        WeaveOptions {
+            prob_format,
+            static_layout: layout.into(),
+        },
+    )?;
+    match output {
+        Some(out_path) => {
+            fs::write(out_path, &html).with_context(|| format!("write {}", out_path.display()))?;
+        }
+        None => print!("{html}"),
+    }
+    Ok(())
+}
+
+fn run_render_md(
+    path: &std::path::Path,
+    output: Option<&std::path::Path>,
+    layout: MarkdownRenderLayout,
+) -> anyhow::Result<()> {
+    let content = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    let (_title, html) = render_markdown_static_file(&content, layout.into());
+    match output {
+        Some(out_path) => {
+            fs::write(out_path, &html).with_context(|| format!("write {}", out_path.display()))?;
+        }
+        None => print!("{html}"),
+    }
+    Ok(())
 }
 
 fn run_enhance_static_site(root: &std::path::Path) -> anyhow::Result<()> {
@@ -148,10 +263,13 @@ fn paths_same_file(a: &std::path::Path, b: &std::path::Path) -> bool {
 fn run_eval(path: &std::path::Path, format: Format, prob_format: ProbFormat) -> anyhow::Result<()> {
     let content = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
     let path_str = path.to_string_lossy();
-    let expanded = desugar_if_needed(&path_str, &content)?;
-    let result = eval_source(&path_str, &expanded)?;
+    let result = dice_playground::engine::eval_program(
+        &path_str,
+        &content,
+        dice_playground::engine::EvalProgramOptions { prob_format },
+    )?;
     match format {
-        Format::Text => print!("{}", format_eval_result_text(&result, prob_format)),
+        Format::Text => print!("{}", result.text),
         Format::Json => println!("{}", serde_json::to_string_pretty(&result.outputs)?),
         Format::Csv => print_outputs_csv(&result.outputs)?,
     }

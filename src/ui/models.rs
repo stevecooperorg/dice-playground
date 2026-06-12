@@ -33,7 +33,8 @@ impl WorkspaceState {
             files: vec![DiceFile {
                 id: id.clone(),
                 name: "welcome.dice".to_owned(),
-                content: "output(\"two_d6\", 2d6)\n".to_owned(),
+                content: "# Welcome\n\nTry **Run** to see the woven report.\n\n```dice\noutput(\"two_d6\", 2d6)\n```\n"
+                    .to_owned(),
             }],
             active_id: id,
         }

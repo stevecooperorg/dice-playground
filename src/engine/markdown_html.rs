@@ -5,11 +5,16 @@
 
 use pulldown_cmark::{html, Options, Parser};
 
+/// Markdown extensions enabled for docs weave and static pages (CommonMark + GFM tables).
+pub fn markdown_options() -> Options {
+    Options::ENABLE_TABLES
+}
+
 /// Convert a markdown fragment to an HTML fragment (no `<html>` document wrapper).
 ///
 /// Suitable for embedding in the playground report view after sanitization in the UI layer
-/// (or a future engine sanitize pass). Supports standard CommonMark constructs used in tutorials:
-/// headings, paragraphs, lists, links, emphasis, and fenced code blocks.
+/// (or a future engine sanitize pass). Supports headings, paragraphs, lists, links,
+/// emphasis, fenced code blocks, and GFM pipe tables.
 ///
 /// # Example
 ///
@@ -22,7 +27,7 @@ use pulldown_cmark::{html, Options, Parser};
 /// ```
 pub fn markdown_to_html(markdown: &str) -> String {
     let mut out = String::new();
-    let parser = Parser::new_ext(markdown, Options::empty());
+    let parser = Parser::new_ext(markdown, markdown_options());
     html::push_html(&mut out, parser);
     out
 }
@@ -58,5 +63,14 @@ mod tests {
         let html = markdown_to_html(md);
         assert!(html.contains("<pre>") || html.contains("<code>"));
         assert!(html.contains("2d6"));
+    }
+
+    #[test]
+    fn gfm_table() {
+        let md = "| A | B |\n|---|---|\n| [1](x.html) | `2d6` |\n";
+        let html = markdown_to_html(md);
+        assert!(html.contains("<table>"));
+        assert!(html.contains("<td>"));
+        assert!(!html.contains("| A | B |"));
     }
 }

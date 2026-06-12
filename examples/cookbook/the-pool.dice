@@ -1,4 +1,0 @@
-# The Pool (James V. West): succeed if any d6 shows a 1.
-for dice in range(1, 11):
-    p = dice_pool(dice, 6).p_any(1)
-    output("{}d".format(dice), p)

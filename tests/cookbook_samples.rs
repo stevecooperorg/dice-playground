@@ -1,20 +1,20 @@
 //! Smoke tests: every cookbook script evaluates without error.
 
-use dice_playground::engine::{desugar_if_needed, eval_source, OutputEntry};
+use dice_playground::engine::{eval_program, EvalProgramOptions, OutputEntry};
 
-const COOKBOOK_DIR: &str = "examples/cookbook";
+const COOKBOOK_DIR: &str = "docs/cookbook";
 
 const SAMPLE_PATHS: &[&str] = &[
-    "examples/cookbook/the-pool.dice",
-    "examples/cookbook/count-high-faces.dice",
-    "examples/cookbook/exploding-dice.dice",
-    "examples/cookbook/ability-scores-4d6dl1.dice",
-    "examples/cookbook/fireball-half-damage.dice",
-    "examples/cookbook/blades-in-the-dark.dice",
-    "examples/cookbook/brindlewood-bay-theorize.dice",
-    "examples/cookbook/cairn-blood-elk.dice",
-    "examples/cookbook/rolemaster-open-ended.dice",
-    "examples/cookbook/fudge-4df.dice",
+    "docs/cookbook/the-pool.dice",
+    "docs/cookbook/count-high-faces.dice",
+    "docs/cookbook/exploding-dice.dice",
+    "docs/cookbook/ability-scores-4d6dl1.dice",
+    "docs/cookbook/fireball-half-damage.dice",
+    "docs/cookbook/blades-in-the-dark.dice",
+    "docs/cookbook/brindlewood-bay-theorize.dice",
+    "docs/cookbook/cairn-blood-elk.dice",
+    "docs/cookbook/rolemaster-open-ended.dice",
+    "docs/cookbook/fudge-4df.dice",
 ];
 
 fn read_sample(path: &str) -> String {
@@ -40,25 +40,22 @@ fn cookbook_manifest_covers_all_files() {
     on_disk.sort();
     let mut listed: Vec<String> = SAMPLE_PATHS
         .iter()
-        .map(|p| p.strip_prefix("examples/cookbook/").unwrap().to_string())
+        .map(|p| p.strip_prefix("docs/cookbook/").unwrap().to_string())
         .collect();
     listed.sort();
     assert_eq!(
         on_disk, listed,
-        "every examples/cookbook/* script must be listed in SAMPLE_PATHS"
+        "every docs/cookbook/* script must be listed in SAMPLE_PATHS"
     );
 }
 
-fn eval_sample(rel: &str) -> anyhow::Result<dice_playground::engine::EvalResult> {
-    let content = read_sample(rel);
-    let expanded = desugar_if_needed(rel, &content)?;
-    eval_source(rel, &expanded)
-}
-
 fn eval_sample_or_panic(rel: &str) -> dice_playground::engine::EvalResult {
-    match eval_sample(rel) {
-        Ok(res) => res,
-        Err(e) => panic!("eval_sample {rel}: {e:#}"),
+    let content = read_sample(rel);
+    let r = eval_program(rel, &content, EvalProgramOptions::default())
+        .unwrap_or_else(|e| panic!("eval_sample {rel}: {e:#}"));
+    dice_playground::engine::EvalResult {
+        return_value: r.return_value,
+        outputs: r.outputs,
     }
 }
 
@@ -72,7 +69,7 @@ fn cookbook_the_pool() {
 fn cookbook_ability_4d6dl1_mean() {
     let res = eval_sample_or_panic(SAMPLE_PATHS[3]);
     match &res.outputs[0] {
-        dice_playground::engine::OutputEntry::DieRoll { mean, .. } => {
+        OutputEntry::DieRoll { mean, .. } => {
             assert!((*mean - 12.244598765432098).abs() < 1e-9);
         }
         other => panic!("expected dist, got {other:?}"),

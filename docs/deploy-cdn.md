@@ -12,8 +12,8 @@ Contents:
 
 - Playground WASM app (`index.html`, JS, `.wasm`)
 - `/docs/` — user guide hub (links to tutorial, cookbook, reference)
-- `/tutorial/` — step-by-step lessons (Pandoc HTML)
-- `/cookbook/` — mechanic recipes (Pandoc HTML)
+- `/tutorial/` — step-by-step lessons (`dice render` HTML)
+- `/cookbook/` — mechanic recipes (`dice render` HTML)
 - `/references/` — function reference (generated stdlib)
 
 ## Upload

@@ -1,2 +1,0 @@
-# Exploding d4: reroll and add while the die shows its maximum (depth 2).
-output("exploded", explode(d(4), 2))

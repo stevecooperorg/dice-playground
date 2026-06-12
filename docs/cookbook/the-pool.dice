@@ -1,0 +1,29 @@
+# The Pool — any natural 1 succeeds
+
+## At the table
+
+In James V. West’s [*The Pool*](https://www.drivethrurpg.com/en/product/210088/the-pool), you roll a pool of d6. If **any** die shows a **1**, the action succeeds; otherwise it fails. Pool size depends on how much you stake on the attempt.
+
+## Try it
+
+In the playground, open this recipe in the playground and click **Run**. **Output** shows success probabilities for pool sizes 1d through 10d.
+
+## The script
+
+```text
+for dice in range(1, 11):
+    p = dice_pool(dice, 6).p_any(1)
+    output("{}d".format(dice), p)
+```
+
+- `dice_pool(n, 6)` is **n** fair d6 not yet summed (or use `nd6` when `n` is literal in a script).
+- `.p_any(1)` is the chance that **at least one** die shows a 1. You can pass a face list (`p_any([1])`), a desugared range (`p_any(5..6)`), or omit the argument for a deterministic pool-length check.
+
+Similar “any success die” rules: `.p_any(8..)` on a d10 pool for “any 8+”, `.p_at_least(2, 5..)` for “at least two fives or better”, or `.p_none(1)` for “no natural ones”. See [API conventions](../references/api-conventions.md).
+
+```dice
+# The Pool (James V. West): succeed if any d6 shows a 1.
+for dice in range(1, 11):
+    p = dice_pool(dice, 6).p_any(1)
+    output("{}d".format(dice), p)
+```

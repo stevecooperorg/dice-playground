@@ -1,2 +1,0 @@
-# Classic D&D ability score: 4d6 drop lowest.
-output("ability", 4d6dl1)

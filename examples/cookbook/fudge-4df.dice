@@ -1,6 +1,0 @@
-# Fudge / Fate-style 4dF: four fudge dice summed (−4 through +4).
-FudgeDie = die_faces([-1, -1, 0, 0, 1, 1])
-four_df = FudgeDie + FudgeDie + FudgeDie + FudgeDie
-output("4dF", four_df)
-output("p_plus4_or_better", four_df.p_ge(4))
-output("p_minus4_or_worse", four_df.cdf(-4))

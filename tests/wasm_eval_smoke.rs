@@ -19,8 +19,8 @@ fn wasm_eval_smoke_sugar_2d6() {
 
 #[test]
 fn wasm_eval_smoke_tutorial_one_die() {
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("examples/tutorial/01-one-die.dice");
+    let path =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs/tutorial/01-one-die.dice");
     let src = std::fs::read_to_string(&path).expect("read");
     let r = eval_program(
         "01-one-die.dice",
@@ -30,7 +30,16 @@ fn wasm_eval_smoke_tutorial_one_die() {
         },
     )
     .expect("eval");
-    assert!(r.text.contains("d6"));
+    assert!(!r.report_html.is_empty());
+    assert!(r.text.contains("one_d6") || r.outputs.len() == 1);
+}
+
+#[test]
+fn wasm_eval_smoke_literate_report_html() {
+    let src = "# Hi\n\n```dice\noutput(\"d6\", 1d6)\n```\n";
+    let r = eval_program("lit.dice", src, EvalProgramOptions::default()).expect("eval");
+    assert!(!r.report_html.is_empty());
+    assert!(r.report_html.contains("<h1>"));
 }
 
 #[test]

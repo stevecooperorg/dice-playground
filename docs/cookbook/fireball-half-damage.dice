@@ -1,0 +1,28 @@
+# Fireball half damage on save
+
+## At the table
+
+In **D&D 5e**, *Fireball* deals **8d6** fire damage on a failed Dexterity saving throw. On a **success**, the target takes **half** that damage, **rounded down** (same as halving each possible total with floor division).
+
+## Try it
+
+In the playground, open this recipe in the playground and click **Run**. **Output** shows the full-damage distribution and the succeeded-save distribution side by side.
+
+## The script
+
+```text
+output("failed_save", 8d6)
+output("succeeded_save", 8d6 // 2)
+```
+
+- **`8d6`** expands to a summed pool—the usual fireball roll.
+- **`// 2`** applies **integer (floor) division** to every outcome of that total, matching “half damage, round down” for each roll result.
+- **`1d4 * 10`** and similar expressions scale each outcome by a constant (`d(4) * 10` after desugaring).
+
+Use `*` when a die result is multiplied (e.g. bonus dice that count as tens). Use `//` whenever rules say to halve or divide damage and round down.
+
+```dice
+# D&D 5e Fireball: 8d6 on a failed Dex save, half damage (rounded down) on success.
+output("failed_save", 8d6)
+output("succeeded_save", 8d6 // 2)
+```

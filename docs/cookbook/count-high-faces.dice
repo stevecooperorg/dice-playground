@@ -1,0 +1,23 @@
+# Count high faces in a pool
+
+## At the table
+
+Some rules care **how many** dice in a pool met a target (not just whether any did). Example: count how many of **3d6** show **5 or 6**.
+
+## Try it
+
+Copy the script into the playground editor and run it. **Output** is a distribution over 0, 1, 2, or 3 successes.
+
+## The script
+
+```text
+output("success_count", 3d6.count(5..))
+```
+
+- `3d6` is a `DicePool` of three separate d6 (notation sugar).
+- `.count(5..)` returns a `DieRoll` over how many dice matched the face spec (here, 5+).
+
+```dice
+# How many of 3d6 show 5+? (distribution over 0..3)
+output("success_count", 3d6.count(5..))
+```

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compile docs/tutorial and docs/cookbook to static HTML; references to dist/references/.
+# Compile docs to static HTML via `dice render` / `dice render-md` (no Pandoc).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,80 +16,24 @@ COOKBOOK_OUT="${DIST}/cookbook"
 GUIDE_OUT="${DIST}/docs"
 REF_OUT="${DIST}/references"
 
-if ! command -v pandoc >/dev/null 2>&1; then
-  echo "pandoc is required to build the tutorial site (brew install pandoc / apt install pandoc)" >&2
-  exit 1
-fi
-
 rm -rf "${OUT}" "${COOKBOOK_OUT}" "${GUIDE_OUT}" "${REF_OUT}"
 mkdir -p "${OUT}" "${COOKBOOK_OUT}" "${GUIDE_OUT}" "${REF_OUT}"
 
 cp "${SITE}/tutorial.css" "${OUT}/"
 
-rewrite_lesson_links() {
-  sed -E \
-    -e 's|\]\(\.\./README\.md\)|](../docs/index.html)|g' \
-    -e 's|\]\(\.\./references/stdlib\.md\)|](../references/stdlib.html)|g' \
-    -e 's|\]\(\.\./references/stdlib\.md#([^)]*)\)|](../references/stdlib.html#\1)|g' \
-    -e 's|\]\(\.\./README\.md#([^)]*)\)|](../docs/index.html#\1)|g' \
-    -e 's|\]\(\.\./\.\./README\.md#([^)]*)\)|](../docs/index.html#\1)|g' \
-    -e 's|\]\(\.\./\.\./README\.md\)|](../docs/index.html)|g' \
-    -e 's|\]\(\./([0-9]{2}-[^)]+)\.md\)|](\1.html)|g' \
-    -e 's|\]\(([0-9]{2}-[^)]+)\.md\)|](\1.html)|g'
-}
-
-rewrite_cookbook_links() {
-  sed -E \
-    -e 's|\]\(README\.md\)|](index.html)|g' \
-    -e 's|\]\(\.\./README\.md#tutorial\)|](../docs/index.html#tutorial)|g' \
-    -e 's|\]\(\.\./README\.md\)|](../docs/index.html)|g' \
-    -e 's|\]\(\.\./references/stdlib\.md\)|](../references/stdlib.html)|g' \
-    -e 's|\]\(\.\./tutorial/([0-9]{2}-[^)]+)\.md\)|](../tutorial/\1.html)|g' \
-    -e 's|\]\(([a-z0-9-]+)\.md\)|](\1.html)|g'
-}
-
-rewrite_guide_links() {
-  sed -E \
-    -e 's|\]\(\.\./README\.md\)|](https://github.com/stevecooperorg/dice-playground)|g' \
-    -e 's|\]\(README\.md\)|](index.html)|g' \
-    -e 's|\]\(README\.md#([^)]*)\)|](index.html#\1)|g' \
-    -e 's|\]\(tutorial/([0-9]{2}-[^)]+)\.md\)|](../tutorial/\1.html)|g' \
-    -e 's|\]\(cookbook/README\.md\)|](../cookbook/index.html)|g' \
-    -e 's|\]\(references/stdlib\.md\)|](../references/stdlib.html)|g' \
-    -e 's|\]\(references/stdlib\.md#([^)]*)\)|](../references/stdlib.html#\1)|g' \
-    -e 's|\]\(references/README\.md\)|](../references/index.html)|g'
-}
-
-frontmatter_title() {
-  local md="$1"
-  sed -n '/^---$/,/^---$/{
-    /^title:/{
-      s/^title:[[:space:]]*"\(.*\)"$/\1/
-      s/^title:[[:space:]]*\(.*\)$/\1/
-      p
-      q
-    }
-  }' "${md}" | head -1
+literate_title_from_dice() {
+  local dice="$1"
+  sed -n 's/^#[[:space:]]*//p' "${dice}" | head -1
 }
 
 INDEX_ITEMS=""
 LESSON_COUNT=0
 
 shopt -s nullglob
-for md in "${DOCS}"/*.md; do
-  slug="$(basename "${md}" .md)"
-  tmp="$(mktemp)"
-  rewrite_lesson_links <"${md}" >"${tmp}"
-  pandoc "${tmp}" \
-    --from markdown \
-    --to html5 \
-    --standalone \
-    --template "${SITE}/document.html" \
-    --css tutorial.css \
-    -o "${OUT}/${slug}.html"
-  rm -f "${tmp}"
-
-  title="$(frontmatter_title "${md}")"
+for dice in $(printf '%s\n' "${DOCS}"/*.dice | sort); do
+  slug="$(basename "${dice}" .dice)"
+  cargo run --quiet --bin dice -- render "${dice}" -o "${OUT}/${slug}.html"
+  title="$(literate_title_from_dice "${dice}")"
   if [[ -z "${title}" ]]; then
     title="${slug}"
   fi
@@ -125,7 +69,7 @@ cat >"${OUT}/index.html" <<EOF
       <p class="muted">
         Step-by-step lessons for tabletop players who want exact odds. Each lesson includes a
         script to copy into the <a href="/">playground</a> editor—click <strong>Run</strong> (or
-        <strong>Shift+Enter</strong>) and read results under <strong>Output</strong>.
+        <strong>Shift+Enter</strong>) and read the woven <strong>report</strong>.
       </p>
       <ol class="lesson-list">${INDEX_ITEMS}
       </ol>
@@ -143,23 +87,10 @@ COOKBOOK_INDEX_ITEMS=""
 COOKBOOK_COUNT=0
 
 shopt -s nullglob
-for md in "${COOKBOOK_DOCS}"/*.md; do
-  slug="$(basename "${md}" .md)"
-  if [[ "${slug}" == "README" ]]; then
-    continue
-  fi
-  tmp="$(mktemp)"
-  rewrite_cookbook_links <"${md}" >"${tmp}"
-  pandoc "${tmp}" \
-    --from markdown \
-    --to html5 \
-    --standalone \
-    --template "${SITE}/cookbook-document.html" \
-    --css ../tutorial/tutorial.css \
-    -o "${COOKBOOK_OUT}/${slug}.html"
-  rm -f "${tmp}"
-
-  title="$(frontmatter_title "${md}")"
+for dice in $(printf '%s\n' "${COOKBOOK_DOCS}"/*.dice | sort); do
+  slug="$(basename "${dice}" .dice)"
+  cargo run --quiet --bin dice -- render "${dice}" -o "${COOKBOOK_OUT}/${slug}.html" --layout cookbook
+  title="$(literate_title_from_dice "${dice}")"
   if [[ -z "${title}" ]]; then
     title="${slug}"
   fi
@@ -171,19 +102,9 @@ for md in "${COOKBOOK_DOCS}"/*.md; do
           </a>
         </li>"
 done
+shopt -u nullglob
 
-if [[ -f "${COOKBOOK_DOCS}/README.md" ]]; then
-  tmp="$(mktemp)"
-  rewrite_cookbook_links <"${COOKBOOK_DOCS}/README.md" >"${tmp}"
-  pandoc "${tmp}" \
-    --from markdown \
-    --to html5 \
-    --standalone \
-    --template "${SITE}/cookbook-document.html" \
-    --css ../tutorial/tutorial.css \
-    -o "${COOKBOOK_OUT}/index.html"
-  rm -f "${tmp}"
-else
+if [[ ${COOKBOOK_COUNT} -gt 0 ]]; then
   cat >"${COOKBOOK_OUT}/index.html" <<EOF
 <!DOCTYPE html>
 <html lang="en">
@@ -202,6 +123,10 @@ else
     </header>
     <main>
       <h1>Cookbook</h1>
+      <p class="muted">
+        Short recipes for common tabletop mechanics. Open a recipe in the
+        <a href="/">playground</a> and click <strong>Run</strong> for a woven report.
+      </p>
       <ol class="lesson-list">${COOKBOOK_INDEX_ITEMS}
       </ol>
     </main>
@@ -209,41 +134,16 @@ else
 </html>
 EOF
 fi
-shopt -u nullglob
 
 REF_MD="${ROOT}/docs/references/stdlib.md"
 if [[ -f "${REF_MD}" ]]; then
-  tmp="$(mktemp)"
-  sed -E 's|\]\(\.\./tutorial/([0-9]{2}-[^)]+)\.md\)|](../tutorial/\1.html)|g' <"${REF_MD}" >"${tmp}"
-  pandoc "${tmp}" \
-    --from markdown \
-    --to html5 \
-    --standalone \
-    --template "${SITE}/reference-document.html" \
-    --css ../tutorial/tutorial.css \
-    -o "${REF_OUT}/stdlib.html"
+  cargo run --quiet --bin dice -- render-md "${REF_MD}" -o "${REF_OUT}/stdlib.html" --layout reference
   cp "${REF_OUT}/stdlib.html" "${REF_OUT}/index.html"
-  rm -f "${tmp}"
 fi
-
-build_guide_page() {
-  local md="$1"
-  local html="$2"
-  tmp="$(mktemp)"
-  rewrite_guide_links <"${md}" >"${tmp}"
-  pandoc "${tmp}" \
-    --from markdown \
-    --to html5 \
-    --standalone \
-    --template "${SITE}/guide-document.html" \
-    --css ../tutorial/tutorial.css \
-    -o "${html}"
-  rm -f "${tmp}"
-}
 
 GUIDE_MD="${ROOT}/docs/README.md"
 if [[ -f "${GUIDE_MD}" ]]; then
-  build_guide_page "${GUIDE_MD}" "${GUIDE_OUT}/index.html"
+  cargo run --quiet --bin dice -- render-md "${GUIDE_MD}" -o "${GUIDE_OUT}/index.html" --layout guide
 fi
 
 LLMS_TXT="${ROOT}/llms.txt"

@@ -4,7 +4,7 @@ use anyhow::Context;
 
 use super::playground_handoff::{looks_like_dice_script, playground_open_href, LOAD_QUERY_PARAM};
 
-/// Inject \"load in playground\" links into Pandoc `<pre><code>` blocks inside static HTML.
+/// Inject \"load in playground\" links into fenced `<pre><code>` blocks inside static HTML.
 pub fn inject_playground_load_links(html: &str) -> anyhow::Result<String> {
     let mut out = String::with_capacity(html.len() + 256);
     let mut rest = html;
@@ -24,7 +24,9 @@ pub fn inject_playground_load_links(html: &str) -> anyhow::Result<String> {
 }
 
 fn enhance_pre_block(block: &str) -> anyhow::Result<String> {
-    let code_open = block.find("<code").context("pre block without code")?;
+    let Some(code_open) = block.find("<code") else {
+        return Ok(block.to_owned());
+    };
     let code_close = block
         .find("</code>")
         .context("pre block without closing code")?;
@@ -194,7 +196,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn injects_link_into_pandoc_pre() {
+    fn injects_link_into_fenced_pre() {
         let html =
             r#"<main><pre class="text"><code>output(&quot;one_d6&quot;, 1d6)</code></pre></main>"#;
         let out = inject_playground_load_links(html).expect("inject");
@@ -208,5 +210,12 @@ mod tests {
         let html = r#"<pre class="text"><code>Write a .dice script for fun</code></pre>"#;
         let out = inject_playground_load_links(html).expect("inject");
         assert!(!out.contains("load-in-playground"));
+    }
+
+    #[test]
+    fn pre_without_code_is_unchanged() {
+        let html = r#"<section class="dice-output"><pre>output one_d6</pre></section>"#;
+        let out = inject_playground_load_links(html).expect("inject");
+        assert_eq!(out, html);
     }
 }

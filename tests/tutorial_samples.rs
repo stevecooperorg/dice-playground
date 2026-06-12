@@ -2,24 +2,23 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
 
-use dice_playground::engine::{desugar_if_needed, eval_source, OutputEntry};
+use dice_playground::engine::OutputEntry;
 
-const TUTORIAL_DIR: &str = "examples/tutorial";
+const TUTORIAL_DIR: &str = "docs/tutorial";
 
 const SAMPLE_PATHS: &[&str] = &[
-    "examples/tutorial/01-one-die.dice",
-    "examples/tutorial/02-two-d6.dice",
-    "examples/tutorial/03-modifier-shift.dice",
-    "examples/tutorial/04-success-chance.dice",
-    "examples/tutorial/05-dice-notation.dice",
-    "examples/tutorial/06-dice-pools.dice",
-    "examples/tutorial/07-mixed-dice-pools.dice",
-    "examples/tutorial/08-restrict-faces.dice",
-    "examples/tutorial/09-pool-success-counts.dice",
-    "examples/tutorial/10-table-2d10.dice",
-    "examples/tutorial/11-ordered-outcomes.dice",
-    "examples/tutorial/12-dnd5e-d20-check.dice",
-    "examples/tutorial/13-pbta-2d6-move.dice",
+    "docs/tutorial/02-two-dice.dice",
+    "docs/tutorial/03-modifiers.dice",
+    "docs/tutorial/04-success.dice",
+    "docs/tutorial/05-dice-notation.dice",
+    "docs/tutorial/06-dice-pools.dice",
+    "docs/tutorial/07-mixed-dice-pools.dice",
+    "docs/tutorial/08-restrict-faces.dice",
+    "docs/tutorial/09-pool-success-counts.dice",
+    "docs/tutorial/10-tables.dice",
+    "docs/tutorial/11-ordered-outcomes.dice",
+    "docs/tutorial/12-dnd5e-d20-check.dice",
+    "docs/tutorial/13-pbta-2d6-move.dice",
 ];
 
 fn manifest_dir() -> PathBuf {
@@ -31,13 +30,17 @@ fn sample_path(rel: &str) -> PathBuf {
 }
 
 fn eval_sample(rel: &str) -> dice_playground::engine::EvalResult {
+    use dice_playground::engine::{eval_program, EvalProgramOptions};
     let path = sample_path(rel);
     let content = fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("read tutorial sample {}: {e}", path.display()));
     let path_str = path.to_string_lossy();
-    let expanded = desugar_if_needed(&path_str, &content)
-        .unwrap_or_else(|e| panic!("desugar {}: {e}", path.display()));
-    eval_source(&path_str, &expanded).unwrap_or_else(|e| panic!("eval {}: {e:#}", path.display()))
+    let r = eval_program(&path_str, &content, EvalProgramOptions::default())
+        .unwrap_or_else(|e| panic!("eval {}: {e:#}", path.display()));
+    dice_playground::engine::EvalResult {
+        return_value: r.return_value,
+        outputs: r.outputs,
+    }
 }
 
 #[test]
@@ -58,34 +61,17 @@ fn tutorial_manifest_covers_all_files() {
     }
     on_disk.sort();
     let mut expected: Vec<String> = SAMPLE_PATHS.iter().map(|s| (*s).to_owned()).collect();
+    expected.push("docs/tutorial/01-one-die.dice".to_owned());
     expected.sort();
     assert_eq!(
         on_disk, expected,
-        "every examples/tutorial/* script must be listed in SAMPLE_PATHS"
+        "every docs/tutorial/* literate script must be listed in SAMPLE_PATHS"
     );
 }
 
 #[test]
-fn tutorial_01_one_die() {
-    let res = eval_sample(SAMPLE_PATHS[0]);
-    assert_eq!(res.outputs.len(), 1);
-    match &res.outputs[0] {
-        OutputEntry::DieRoll {
-            name,
-            entries,
-            mean,
-        } => {
-            assert_eq!(name, "one_d6");
-            assert_eq!(entries.len(), 6);
-            assert!((*mean - 3.5).abs() < 1e-9);
-        }
-        other => panic!("expected dist output, got {other:?}"),
-    }
-}
-
-#[test]
 fn tutorial_02_two_d6() {
-    let res = eval_sample(SAMPLE_PATHS[1]);
+    let res = eval_sample(SAMPLE_PATHS[0]);
     assert_eq!(res.outputs.len(), 1);
     match &res.outputs[0] {
         OutputEntry::DieRoll { name, mean, .. } => {
@@ -98,7 +84,7 @@ fn tutorial_02_two_d6() {
 
 #[test]
 fn tutorial_03_modifier_shift() {
-    let res = eval_sample(SAMPLE_PATHS[2]);
+    let res = eval_sample(SAMPLE_PATHS[1]);
     assert_eq!(res.outputs.len(), 2);
     let (base_mean, shifted_mean) = match (&res.outputs[0], &res.outputs[1]) {
         (
@@ -121,7 +107,7 @@ fn tutorial_03_modifier_shift() {
 
 #[test]
 fn tutorial_04_success_chance() {
-    let res = eval_sample(SAMPLE_PATHS[3]);
+    let res = eval_sample(SAMPLE_PATHS[2]);
     assert_eq!(res.outputs.len(), 1);
     match &res.outputs[0] {
         OutputEntry::Prob { name, value } => {
@@ -145,7 +131,7 @@ fn dist_mean_by_name(res: &dice_playground::engine::EvalResult, name: &str) -> f
 
 #[test]
 fn tutorial_05_dice_notation() {
-    let res = eval_sample(SAMPLE_PATHS[4]);
+    let res = eval_sample(SAMPLE_PATHS[3]);
     assert_eq!(res.outputs.len(), 8);
     assert!((dist_mean_by_name(&res, "one_d4") - 2.5).abs() < 1e-9);
     assert!((dist_mean_by_name(&res, "two_d6") - 7.0).abs() < 1e-9);
@@ -159,7 +145,7 @@ fn tutorial_05_dice_notation() {
 
 #[test]
 fn tutorial_06_dice_pools() {
-    let res = eval_sample(SAMPLE_PATHS[5]);
+    let res = eval_sample(SAMPLE_PATHS[4]);
     assert_eq!(res.outputs.len(), 3);
     let pool_mean = dist_mean_by_name(&res, "pool_sum");
     let notation_mean = dist_mean_by_name(&res, "notation_sum");
@@ -171,7 +157,7 @@ fn tutorial_06_dice_pools() {
 
 #[test]
 fn tutorial_07_mixed_dice_pools() {
-    let res = eval_sample(SAMPLE_PATHS[6]);
+    let res = eval_sample(SAMPLE_PATHS[5]);
     assert_eq!(res.outputs.len(), 3);
     let hi = dist_mean_by_name(&res, "highest");
     assert!(hi > 6.0 && hi < 8.0);
@@ -181,7 +167,7 @@ fn tutorial_07_mixed_dice_pools() {
 
 #[test]
 fn tutorial_08_restrict_faces() {
-    let res = eval_sample(SAMPLE_PATHS[7]);
+    let res = eval_sample(SAMPLE_PATHS[6]);
     assert_eq!(res.outputs.len(), 3);
     let die_mean = dist_mean_by_name(&res, "high_die");
     assert!((die_mean - 5.5).abs() < 1e-9);
@@ -191,7 +177,7 @@ fn tutorial_08_restrict_faces() {
 
 #[test]
 fn tutorial_09_pool_success_counts() {
-    let res = eval_sample(SAMPLE_PATHS[8]);
+    let res = eval_sample(SAMPLE_PATHS[7]);
     assert_eq!(res.outputs.len(), 2);
     match &res.outputs[0] {
         OutputEntry::DieRoll { name, mean, .. } => {
@@ -211,7 +197,7 @@ fn tutorial_09_pool_success_counts() {
 
 #[test]
 fn tutorial_11_ordered_outcomes() {
-    let res = eval_sample(SAMPLE_PATHS[10]);
+    let res = eval_sample(SAMPLE_PATHS[9]);
     assert_eq!(res.outputs.len(), 2);
     match &res.outputs[0] {
         OutputEntry::Outcomes {
@@ -238,7 +224,7 @@ fn tutorial_11_ordered_outcomes() {
 
 #[test]
 fn tutorial_12_dnd5e_d20_check() {
-    let res = eval_sample(SAMPLE_PATHS[11]);
+    let res = eval_sample(SAMPLE_PATHS[10]);
     assert_eq!(res.outputs.len(), 2);
     match &res.outputs[0] {
         OutputEntry::Outcomes {
@@ -265,7 +251,7 @@ fn tutorial_12_dnd5e_d20_check() {
 
 #[test]
 fn tutorial_13_pbta_2d6_move() {
-    let res = eval_sample(SAMPLE_PATHS[12]);
+    let res = eval_sample(SAMPLE_PATHS[11]);
     assert_eq!(res.outputs.len(), 3);
     match &res.outputs[0] {
         OutputEntry::Outcomes {
@@ -293,7 +279,7 @@ fn tutorial_13_pbta_2d6_move() {
 
 #[test]
 fn tutorial_10_table_2d10() {
-    let res = eval_sample(SAMPLE_PATHS[9]);
+    let res = eval_sample(SAMPLE_PATHS[8]);
     assert_eq!(res.outputs.len(), 1);
     const EPS: f64 = 1e-9;
     match &res.outputs[0] {

@@ -1,4 +1,0 @@
-pool = dice_pool(1, 12) + dice_pool(2, 6)
-output("highest", pool.order_stat(1))
-output("pool_sum", pool.sum())
-output("same_as_three_d6_highest", dice_pool(3, 6).order_stat(1))

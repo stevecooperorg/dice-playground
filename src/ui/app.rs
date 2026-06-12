@@ -9,6 +9,7 @@ use crate::ui::eval_client;
 use crate::ui::highlighted_editor::HighlightedEditor;
 use crate::ui::models::{DiceFile, UiDiagnostic, WorkspaceState};
 use crate::ui::output_graph::OutputGraphView;
+use crate::ui::report_view::LiterateReportView;
 use crate::ui::storage::{load_workspace, save_workspace};
 
 const DOC_URL: &str = "/docs/";
@@ -34,6 +35,7 @@ pub fn App() -> impl IntoView {
     let (result_text, set_result_text) = signal(String::new());
     let (result_json, set_result_json) = signal(String::new());
     let (result_outputs, set_result_outputs) = signal(Vec::<OutputEntry>::new());
+    let (result_report_html, set_result_report_html) = signal(String::new());
     let (output_tab, set_output_tab) = signal("text".to_string());
     let (error_banner, set_error_banner) = signal(String::new());
     let (check_token, set_check_token) = signal(0u64);
@@ -69,7 +71,11 @@ pub fn App() -> impl IntoView {
 
     let has_diagnostics = move || !error_banner.get().is_empty() || !diagnostics.get().is_empty();
 
-    let has_output = move || !result_text.get().is_empty() || !result_json.get().is_empty();
+    let has_literate_report = move || !result_report_html.get().is_empty();
+
+    let has_legacy_output = move || !result_text.get().is_empty() || !result_json.get().is_empty();
+
+    let has_output = move || has_literate_report() || has_legacy_output();
 
     Effect::new(move |_| {
         let target = scroll_after_run.get();
@@ -135,9 +141,15 @@ pub fn App() -> impl IntoView {
             match eval_client::eval_program(&path, &source, "decimal").await {
                 Ok(r) => {
                     set_error_banner.set(String::new());
-                    set_result_text.set(r.text);
-                    set_result_json
-                        .set(serde_json::to_string_pretty(&r.outputs).unwrap_or_default());
+                    set_result_report_html.set(r.report_html.clone());
+                    if r.report_html.is_empty() {
+                        set_result_text.set(r.text);
+                        set_result_json
+                            .set(serde_json::to_string_pretty(&r.outputs).unwrap_or_default());
+                    } else {
+                        set_result_text.set(String::new());
+                        set_result_json.set(String::new());
+                    }
                     set_result_outputs.set(r.outputs);
                     set_scroll_after_run.set(Some(ScrollAfterRun::Output));
                 }
@@ -424,7 +436,22 @@ pub fn App() -> impl IntoView {
 
                 <div node_ref=output_ref class="scroll-mt-36">
                 {move || {
-                    has_output().then(|| view! {
+                    has_literate_report().then(|| view! {
+                        <LiterateReportView html=result_report_html.get() />
+                    })
+                }}
+                {move || {
+                    (has_literate_report() && !result_outputs.get().is_empty()).then(|| view! {
+                        <section class="mt-4 rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm">
+                            <h2 class="font-semibold text-slate-200 mb-2 font-sans">"Graph"</h2>
+                            <div class="w-full min-w-0">
+                                <OutputGraphView outputs=result_outputs.get() />
+                            </div>
+                        </section>
+                    })
+                }}
+                {move || {
+                    (has_output() && !has_literate_report()).then(|| view! {
                         <section class="mt-4 rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm font-mono">
                             <div class="flex items-center gap-2 mb-2 not-font-mono font-sans">
                                 <h2 class="font-semibold text-slate-200">"Output"</h2>

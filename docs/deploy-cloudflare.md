@@ -6,7 +6,7 @@ Ship the static site from `dist/` with [Wrangler](https://developers.cloudflare.
 
 - [Cloudflare account](https://dash.cloudflare.com/sign-up)
 - Node.js 18+ (for Wrangler)
-- Build tools: Rust, Trunk, Pandoc (see [README](../README.md))
+- Build tools: Rust, Trunk (see [README](../README.md))
 - Log in once: `npx wrangler login`
 
 ## One-time setup
@@ -41,7 +41,7 @@ Opens the deployed asset bundle at http://127.0.0.1:8787 (same files as producti
 ## Routing
 
 - **`not_found_handling = "single-page-application"`** — unknown paths fall back to `/index.html` (playground shell).
-- **`html_handling = "auto-trailing-slash"`** — `/tutorial/` serves `tutorial/index.html`; lesson links use `.html` paths from the Pandoc build.
+- **`html_handling = "auto-trailing-slash"`** — `/tutorial/` serves `tutorial/index.html`; lesson links use `.html` paths from `dice render`.
 
 Tutorial, cookbook, reference, and user guide (`/docs/`) trees are real static files under `/tutorial/`, `/cookbook/`, `/references/`, and `/docs/`, so they are not swallowed by the SPA fallback when the file exists.
 

@@ -20,7 +20,9 @@ mod poly_explode;
 mod range_sugar;
 mod sugar;
 
+mod literate;
 mod markdown_html;
+mod markdown_page;
 mod playground;
 mod starlark_guest;
 
@@ -30,7 +32,16 @@ pub mod lsp;
 pub use core::{total_variation_distance, DicePool, DieRoll, PoolOp, MAX_JOINT_CELLS};
 pub use face_spec::{FaceSpec, OptionalFaceSpec};
 pub use int_band::IntBand;
+pub use literate::{
+    is_literate, parse_literate, render_literate_document, sanitize_woven_html,
+    source_line_for_tangled, tangle_literate, weave_literate, LineMap, LiterateDocument,
+    LiterateStaticLayout, WeaveOptions, MAX_LITERATE_BYTES,
+};
 pub use markdown_html::markdown_to_html;
+pub use markdown_page::{
+    render_markdown_static_file, render_markdown_static_page, strip_yaml_frontmatter,
+    MarkdownStaticLayout,
+};
 pub use ordinal::{Outcomes, Scale};
 pub use playground::{
     check_source, dice_dialect_public, eval_program, CheckResult, EvalProgramOptions,

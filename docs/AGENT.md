@@ -26,9 +26,9 @@ No runtime server. Ship **`dist/`** to any CDN ([docs/deploy-cdn.md](deploy-cdn.
 │       ├── dice.rs
 │       └── dice-playground.rs
 ├── docs/                   # user guide: tutorial, cookbook, references
-├── examples/tutorial/
-├── examples/cookbook/
-├── tutorial-static/        # Pandoc HTML templates
+├── docs/tutorial/            # literate `.dice` lessons (CI + `dice render`)
+├── docs/cookbook/            # literate `.dice` recipes
+├── tutorial-static/        # shared CSS for static docs (`tutorial.css`)
 └── bin/build-tutorial-site.sh  # ends with `dice enhance-static-site` (playground ↗ links)
 ```
 
@@ -58,8 +58,8 @@ flowchart LR
 | Playground eval API | `src/engine/playground.rs` |
 | Leptos UI | `src/ui/app.rs` |
 | User guide | `docs/README.md` — tutorial, cookbook, function reference |
-| Tutorial | `docs/tutorial/`, `examples/tutorial/` |
-| Cookbook | `docs/cookbook/`, `examples/cookbook/` |
+| Tutorial | `docs/tutorial/` (literate `.dice`) |
+| Cookbook | `docs/cookbook/` (literate `.dice`) |
 | Function reference | `docs/references/` (generated `stdlib.md`) |
 
 ## Verification
@@ -67,7 +67,7 @@ flowchart LR
 ```bash
 make test
 make check-wasm
-make release-static   # optional: needs trunk + pandoc
+make release-static   # optional: needs trunk (docs HTML via dice render / render-md)
 make cf-deploy        # release-static + wrangler (needs npm + wrangler login)
 ```
 

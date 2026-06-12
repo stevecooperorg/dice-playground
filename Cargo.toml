@@ -56,6 +56,7 @@ web-sys = { version = "0.3", features = [
   "ScrollBehavior",
   "ScrollLogicalPosition",
 ] }
+ammonia = "4"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

@@ -21,27 +21,27 @@ A **step-by-step** introduction to the language. Work through the lessons in ord
 
 | Lesson | Topic |
 |--------|--------|
-| [1. Your first die](tutorial/01-one-die.md) | One fair die |
-| [2. Adding two dice](tutorial/02-two-dice.md) | 2d6 |
-| [3. Flat bonuses (2d10 + 5)](tutorial/03-modifiers.md) | +5 to every total |
-| [4. Meet or beat a target](tutorial/04-success.md) | Success chance on a total |
-| [5. Dice notation](tutorial/05-dice-notation.md) | `1d4` … `4d6dl1` |
-| [6. Dice pools](tutorial/06-dice-pools.md) | Faces still separate; `order_stat` |
-| [7. Mixed dice pools](tutorial/07-mixed-dice-pools.md) | Join pools with `+`; 1d12 + 2d6 |
-| [8. Filtering faces](tutorial/08-restrict-faces.md) | `keep` / `remove` / `convert` / `ignore` |
-| [9. Pool success counts](tutorial/09-pool-success-counts.md) | `count`, `p_any`, `p_at_least` |
-| [10. Many checks at once](tutorial/10-tables.md) | Modifier grid |
-| [11. Ordered outcome labels](tutorial/11-ordered-outcomes.md) | Named bands on a roll |
-| [12. D&amp;D 5e d20 checks](tutorial/12-dnd5e-d20-check.md) | Nat 1/20, adv/dis, `scale().step` + `bucket` |
-| [13. PbtA 2d6 move](tutorial/13-pbta-2d6-move.md) | Miss / partial / full on total |
+| [1. Your first die](tutorial/01-one-die.html) | One fair die |
+| [2. Adding two dice](tutorial/02-two-dice.html) | 2d6 |
+| [3. Flat bonuses (2d10 + 5)](tutorial/03-modifiers.html) | +5 to every total |
+| [4. Meet or beat a target](tutorial/04-success.html) | Success chance on a total |
+| [5. Dice notation](tutorial/05-dice-notation.html) | `1d4` … `4d6dl1` |
+| [6. Dice pools](tutorial/06-dice-pools.html) | Faces still separate; `order_stat` |
+| [7. Mixed dice pools](tutorial/07-mixed-dice-pools.html) | Join pools with `+`; 1d12 + 2d6 |
+| [8. Filtering faces](tutorial/08-restrict-faces.html) | `keep` / `remove` / `convert` / `ignore` |
+| [9. Pool success counts](tutorial/09-pool-success-counts.html) | `count`, `p_any`, `p_at_least` |
+| [10. Many checks at once](tutorial/10-tables.html) | Modifier grid |
+| [11. Ordered outcome labels](tutorial/11-ordered-outcomes.html) | Named bands on a roll |
+| [12. D&amp;D 5e d20 checks](tutorial/12-dnd5e-d20-check.html) | Nat 1/20, adv/dis, `scale().step` + `bucket` |
+| [13. PbtA 2d6 move](tutorial/13-pbta-2d6-move.html) | Miss / partial / full on total |
 
-Start with [lesson 1](tutorial/01-one-die.md): copy the script into the playground and read the distribution under **Output**.
+Start with [lesson 1](tutorial/01-one-die.html): open the literate `.dice` in the playground and click **Run** to read the woven report.
 
 ## Cookbook
 
 **Short recipes** for mechanics you see at the table—named after a technique or a well-known game, with pointers to where similar rules appear elsewhere.
 
-See the [cookbook index](cookbook/README.md).
+See the [cookbook index](../cookbook/index.html).
 
 ## Function reference
 

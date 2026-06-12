@@ -1,6 +1,6 @@
 # Dice Playground — `.dice` language reference
 
-> **`.dice` scripts** compute **exact** tabletop probabilities (probability mass functions), not simulated rolls. Syntax is **Starlark** (variables, `def`, `for`, lists, comprehensions) plus **dice notation** (`2d6`, `4d6dl1`, …). Run scripts in the [Dice Playground](https://dice-playground.stevecooperorg.workers.dev/) editor; use **`output("name", value)`** so results appear under **Output** (text / JSON / graph).
+> **`.dice` scripts** compute **exact** tabletop probabilities (probability mass functions), not simulated rolls. Syntax is **Starlark** (variables, `def`, `for`, lists, comprehensions) plus **dice notation** (`2d6`, `4d6dl1`, …). Tutorial and cookbook sources under `docs/` are **literate `.dice` files**: markdown prose plus executable ` ```dice ` fences; the playground **Run** command tangles fences, evaluates once, and shows a **woven HTML report** (legacy scripts without fences still work).
 
 ## Execution model
 
@@ -308,3 +308,11 @@ output("grid", prob_table(rows))
 - **`pool_map` callback must return `int`**, not strings—map to codes, then `classify` to labels if needed.
 - **Label strings** in `classify` / `joint_classify` must match `scale` exactly.
 - **Large scripts:** playground limits source size and number of `output()` calls; prefer one `prob_table` over hundreds of `output` lines when sweeping many cells.
+
+## Literate `.dice` (docs corpus)
+
+- **Detection:** at least one executable fence — opening line is ` ``` ` or ` ```dice ` (info string empty or exactly `dice`).
+- **Tangle:** fence bodies concatenated in file order → one Starlark module per Run.
+- **Weave:** prose → HTML (sanitized); each fence’s `output()` blocks appear below that fence in the report.
+- **Static site:** `dice render path.dice -o out.html` (add `--layout cookbook` under `dist/cookbook/`).
+- **Legacy mode:** a file with no executable fences is plain Starlark (entire file evaluated as today).

@@ -120,13 +120,13 @@ Authors MUST NOT rely on placeholders until v1.1 is specified.
 
 ### 6.4 Markdown subset (authoring)
 
-Authors SHOULD limit prose to constructs supported by `pulldown-cmark` with `Options::empty()`:
+Authors SHOULD limit prose to constructs supported by `pulldown-cmark` with `markdown_options()` in the engine (CommonMark + **GFM tables**):
 
 - ATX headings `#` … `######`
 - Paragraphs, emphasis, strong, links, images
 - Bullet and ordered lists
 - Fenced code blocks (non-executable info strings only)
-- Tables (GFM tables if enabled in options—**v1 engine uses empty options**; tables may not render until options extended)
+- GFM pipe tables
 
 Authors SHOULD NOT rely on raw HTML in markdown until sanitization policy explicitly allows tags.
 

@@ -23,7 +23,7 @@ output("ability", 4d6dl1)
 
 Same steps in the playground. The **text** tab lists every total and its exact probability—not a simulation. For this roll the average is about **12.24**; you can read off how often you roll an 18, a 3, or anything between.
 
-Longer scripts cover the rest of the table: advantage on the d20 (`2d20kh1`), natural 1 and 20 before modifiers, keep-highest pools (`3d6kh2`), exploding dice, save-for-half on `8d6`, or a grid of success rates across modifiers. Familiar faces use dice notation (`2d6`, `4d6dl1`, …); conditions, loops, and several named outputs use **Starlark**. Results appear as **text**, **JSON**, or a **graph**. Step-by-step notation is [lesson 5](docs/tutorial/05-dice-notation.md); worked recipes are in the cookbook (linked from the **[user guide](docs/README.md)**).
+Longer scripts cover the rest of the table: advantage on the d20 (`2d20kh1`), natural 1 and 20 before modifiers, keep-highest pools (`3d6kh2`), exploding dice, save-for-half on `8d6`, or a grid of success rates across modifiers. Familiar faces use dice notation (`2d6`, `4d6dl1`, …); conditions, loops, and several named outputs use **Starlark**. Results appear as **text**, **JSON**, or a **graph**. Step-by-step notation is [lesson 5](docs/tutorial/05-dice-notation.html); worked recipes are in the cookbook (linked from the **[user guide](docs/README.md)**).
 
 Implementation: exact probability (no sampling), Starlark with `.dice` sugar, Leptos WASM front end in one crate; optional **`dice` CLI** and LSP (see below).
 
@@ -36,7 +36,7 @@ Work through the tutorial from the playground **Menu → Tutorial**, or start at
 ```bash
 make serve                    # http://127.0.0.1:8081 — playground + /docs/
 make test
-cargo run --bin dice -- eval examples/tutorial/01-one-die.dice
+cargo run --bin dice -- eval docs/tutorial/01-one-die.dice
 cargo run --bin dice -- lsp   # stdio language server (editor integration)
 ```
 
@@ -66,7 +66,7 @@ To build `dist/` without uploading (S3, GitHub Pages, Azure, etc.): `make releas
 | `src/ui/`            | Leptos CSR playground                                |
 | `src/bin/dice.rs`    | CLI (`eval`, `docs`, `table-2d10`, `lsp`)            |
 | `docs/`              | User guide + references                              |
-| `examples/tutorial/` | Sample `.dice` scripts (CI smoke tests)              |
+| `docs/tutorial/`   | Literate tutorial lessons (`.dice`; CI + static site) |
 
 
 ## Docs
@@ -86,7 +86,7 @@ make cli
 Evaluate a script and print results (default: text on stdout):
 
 ```bash
-cargo run --bin dice -- eval examples/tutorial/01-one-die.dice
+cargo run --bin dice -- eval docs/tutorial/01-one-die.dice
 ```
 
 Re-run whenever the file changes (evaluates once immediately, then on each save):

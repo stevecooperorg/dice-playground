@@ -11,6 +11,11 @@ use starlark::analysis::{AstModuleLint, EvalMessage, EvalSeverity};
 use starlark::syntax::AstModule;
 
 use super::desugar_if_needed;
+use super::literate::MAX_LITERATE_BYTES;
+use super::literate::{
+    is_literate, parse_literate, source_line_for_tangled, tangle_literate, weave_literate,
+    LiterateDocument, TangleResult, WeaveOptions,
+};
 use super::{eval_source_with_dialect, format_eval_result_text, OutputEntry, ProbFormat};
 
 /// Maximum script size accepted from the public playground API.
@@ -80,6 +85,9 @@ pub struct EvalProgramResponse {
     pub return_value: String,
     pub outputs: Vec<OutputEntry>,
     pub text: String,
+    /// Sanitized HTML report fragment when the source is literate; empty for legacy scripts.
+    #[serde(default)]
+    pub report_html: String,
 }
 
 /// Parse and lint after desugar; does not evaluate.
@@ -93,23 +101,26 @@ pub struct EvalProgramResponse {
 /// # Ok::<(), anyhow::Error>(())
 /// ```
 pub fn check_source(path: &str, source: &str) -> anyhow::Result<CheckResult> {
-    if source.len() > MAX_SOURCE_BYTES {
-        bail!("source exceeds maximum size of {MAX_SOURCE_BYTES} bytes");
-    }
-    let expanded = desugar_if_needed(path, source)?;
+    let prepared = starlark_input(path, source)?;
+    let expanded = desugar_if_needed(path, &prepared.starlark)?;
     let dialect = dice_dialect_public();
     let diagnostics = match AstModule::parse(path, expanded, &dialect) {
         Ok(ast) => ast
             .lint(None)
             .into_iter()
             .map(EvalMessage::from)
-            .map(diagnostic_from_eval_message)
+            .map(|msg| {
+                remap_diagnostic(
+                    diagnostic_from_eval_message(msg),
+                    prepared.line_map.as_ref(),
+                )
+            })
             .collect(),
         Err(e) => {
-            vec![diagnostic_from_eval_message(EvalMessage::from_error(
-                Path::new(path),
-                &e,
-            ))]
+            vec![remap_diagnostic(
+                diagnostic_from_eval_message(EvalMessage::from_error(Path::new(path), &e)),
+                prepared.line_map.as_ref(),
+            )]
         }
     };
     Ok(CheckResult { diagnostics })
@@ -130,25 +141,82 @@ pub fn eval_program(
     source: &str,
     options: EvalProgramOptions,
 ) -> anyhow::Result<EvalProgramResponse> {
-    if source.len() > MAX_SOURCE_BYTES {
-        bail!("source exceeds maximum size of {MAX_SOURCE_BYTES} bytes");
-    }
+    let prepared = starlark_input(path, source)?;
     let check = check_source(path, source)?;
     if check.has_errors() {
         bail!("fix parse/lint errors before running");
     }
-    let expanded = desugar_if_needed(path, source)?;
+    let expanded = desugar_if_needed(path, &prepared.starlark)?;
     let result =
         eval_source_with_dialect(path, &expanded, &dice_dialect_public()).context("evaluate")?;
     if result.outputs.len() > MAX_OUTPUT_COUNT {
         bail!("too many output() calls (max {MAX_OUTPUT_COUNT})");
     }
     let text = format_eval_result_text(&result, options.prob_format);
+    let report_html = if let Some((doc, tangled)) = prepared.literate.as_ref() {
+        weave_literate(
+            source,
+            doc,
+            tangled,
+            &result,
+            WeaveOptions {
+                prob_format: options.prob_format,
+                ..Default::default()
+            },
+        )
+        .context("weave literate report")?
+    } else {
+        String::new()
+    };
     Ok(EvalProgramResponse {
         return_value: result.return_value,
         outputs: result.outputs,
         text,
+        report_html,
     })
+}
+
+struct PreparedSource {
+    starlark: String,
+    line_map: Option<super::literate::LineMap>,
+    literate: Option<(LiterateDocument, TangleResult)>,
+}
+
+fn starlark_input(_path: &str, source: &str) -> anyhow::Result<PreparedSource> {
+    if is_literate(source) {
+        if source.len() > MAX_LITERATE_BYTES {
+            bail!("source exceeds maximum size of {MAX_LITERATE_BYTES} bytes");
+        }
+        let doc = parse_literate(source).context("parse literate document")?;
+        let tangled = tangle_literate(&doc);
+        Ok(PreparedSource {
+            starlark: tangled.tangled.clone(),
+            line_map: Some(tangled.line_map.clone()),
+            literate: Some((doc, tangled)),
+        })
+    } else {
+        if source.len() > MAX_SOURCE_BYTES {
+            bail!("source exceeds maximum size of {MAX_SOURCE_BYTES} bytes");
+        }
+        Ok(PreparedSource {
+            starlark: source.to_owned(),
+            line_map: None,
+            literate: None,
+        })
+    }
+}
+
+fn remap_diagnostic(
+    d: SourceDiagnostic,
+    line_map: Option<&super::literate::LineMap>,
+) -> SourceDiagnostic {
+    let Some(map) = line_map else {
+        return d;
+    };
+    SourceDiagnostic {
+        line: source_line_for_tangled(map, d.line),
+        ..d
+    }
 }
 
 fn diagnostic_from_eval_message(msg: EvalMessage) -> SourceDiagnostic {
@@ -189,9 +257,34 @@ mod tests {
     }
 
     #[test]
-    fn check_tutorial_one_die_ok() {
-        let src = tutorial("examples/tutorial/01-one-die.dice");
-        let r = check_source("01-one-die.dice", &src).expect("check");
+    fn eval_literate_includes_report_html() {
+        let src = "# Title\n\n```dice\noutput(\"d6\", 1d6)\n```\n";
+        let r = eval_program("lit.dice", src, EvalProgramOptions::default()).expect("eval");
+        assert!(!r.report_html.is_empty());
+        assert!(r.report_html.contains("<h1>"));
+    }
+
+    #[test]
+    fn eval_literate_two_fences_shared_scope() {
+        let src =
+            "Intro.\n\n```dice\nbonus = 3\n```\n\n```dice\noutput(\"check\", 1d20 + bonus)\n```\n";
+        let r = eval_program("lit.dice", src, EvalProgramOptions::default()).expect("eval");
+        assert_eq!(r.outputs.len(), 1);
+        assert!(r.text.contains("check"));
+    }
+
+    #[test]
+    fn literate_syntax_error_maps_to_source_line() {
+        let src = "# Title\n\n```dice\noutput(\n```\n";
+        let r = check_source("lit.dice", src).expect("check");
+        assert!(r.has_errors());
+        assert_eq!(r.diagnostics[0].line, 4);
+    }
+
+    #[test]
+    fn check_tutorial_two_d6_ok() {
+        let src = tutorial("docs/tutorial/02-two-dice.dice");
+        let r = check_source("02-two-d6.dice", &src).expect("check");
         assert!(!r.has_errors());
     }
 
@@ -203,15 +296,16 @@ mod tests {
 
     #[test]
     fn eval_program_tutorial_two_d6() {
-        let src = tutorial("examples/tutorial/02-two-d6.dice");
-        let r = eval_program("02-two-d6.dice", &src, EvalProgramOptions::default()).expect("eval");
+        let src = tutorial("docs/tutorial/02-two-dice.dice");
+        let r =
+            eval_program("02-two-dice.dice", &src, EvalProgramOptions::default()).expect("eval");
         assert_eq!(r.outputs.len(), 1);
         assert!(r.text.contains("two_d6"));
     }
 
     #[test]
     fn eval_program_sample_space_ordinal_and_prob() {
-        let src = tutorial("examples/tutorial/13-pbta-2d6-move.dice");
+        let src = tutorial("docs/tutorial/13-pbta-2d6-move.dice");
         let r = eval_program(
             "13-pbta-2d6-move.dice",
             &src,

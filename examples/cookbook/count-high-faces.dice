@@ -1,2 +1,0 @@
-# How many of 3d6 show 5+? (distribution over 0..3)
-output("success_count", 3d6.count(5..))

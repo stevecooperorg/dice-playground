@@ -13,7 +13,7 @@ help:
 	@echo "  make test            cargo test (engine + UI + integration)"
 	@echo "  make check           test + clippy (-Dwarnings) + fmt --check"
 	@echo "  make check-wasm      wasm32 check (no CLI/LSP features)"
-	@echo "  make serve           Trunk dev server (:8081); pandoc required for /tutorial/"
+	@echo "  make serve           Trunk dev server (:8081); run make static for /tutorial/ HTML"
 	@echo "  make static          Trunk debug build + tutorial HTML in dist/"
 	@echo "  make release-static  Trunk release build + tutorial (CDN artifact)"
 	@echo "  make cf-install      npm install (Wrangler for Cloudflare deploy)"

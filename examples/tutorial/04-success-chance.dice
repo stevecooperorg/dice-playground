@@ -1,2 +1,0 @@
-roll = 2d10 + 3
-output("p_at_least_15", roll.p_ge(15))

@@ -1,3 +1,0 @@
-# D&D 5e Fireball: 8d6 on a failed Dex save, half damage (rounded down) on success.
-output("failed_save", 8d6)
-output("succeeded_save", 8d6 // 2)

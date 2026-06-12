@@ -142,3 +142,19 @@ th {
 #error {
   color: #fca5a5;
 }
+
+body.dice-literate-report main {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+body.dice-literate-report .dice-output pre {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+}

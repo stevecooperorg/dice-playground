@@ -1,8 +1,0 @@
-# Success probability: 2d10 + modifier >= target (one table).
-roll = 2d10
-rows = [
-    ("modifier {}, target {}".format(mod, target), (roll + mod).p_ge(target))
-    for mod in range(-2, 11)
-    for target in range(0, 11)
-]
-output("success_grid", prob_table(rows))

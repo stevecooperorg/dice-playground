@@ -29,10 +29,6 @@ use super::output_format::{
 use super::prob_table_value::StarlarkProbTable;
 use super::scale_value::StarlarkScale;
 
-/// Collector populated by `output()` during evaluation.
-#[derive(Debug, Default, ProvidesStaticType)]
-pub struct OutputStore(pub RefCell<Vec<OutputEntry>>);
-
 /// One recorded `output()` call.
 #[derive(Clone, Debug, Serialize, serde::Deserialize)]
 #[serde(tag = "kind")]
@@ -57,6 +53,10 @@ pub enum OutputEntry {
         entries: Vec<(String, f64)>,
     },
 }
+
+/// Collector populated by `output()` during evaluation.
+#[derive(Debug, Default, ProvidesStaticType)]
+pub struct OutputStore(pub RefCell<Vec<OutputEntry>>);
 
 impl OutputStore {
     fn push_die_roll(&self, name: String, dist: &DieRoll) {
