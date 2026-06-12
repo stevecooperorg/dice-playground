@@ -4,6 +4,9 @@ status: draft
 created: 2026-06-12
 updated: 2026-06-12
 source: inferred-from-repository
+spike_refs:
+  - ../implementation-artifacts/spec-wasm-markdown-html-spike.md
+  - ../planning-artifacts/research/technical-prose-encoding-in-dice-files-research-2026-06-12.md
 ---
 
 # Product Brief: Dice Playground
@@ -50,13 +53,27 @@ The gap between today and north star is intentional product direction: the IDE l
 
 Outcome: not a dice roller and not a generic IDE—a **reliable odds notebook** you can hand to someone else and they understand both the math and the modeling choices.
 
+### Literate encoding and markdown (WASM)
+
+Prose and code share one **markdown-first `.dice` file**: narrative is CommonMark-style markdown; executable regions use fenced **`dice` code blocks**. Processing is **Rust in `src/engine/`**, shared by **WASM playground**, **CLI**, and **static docs build**—not Pandoc inside the browser.
+
+| Phase | Role |
+|-------|------|
+| **Tangle** | Extract fenced Starlark, concatenate, source-map for diagnostics |
+| **Eval** | Existing pipeline: desugar → Starlark → `output(...)` (one shot, milliseconds) |
+| **Weave** | Markdown prose → HTML; inject formatted outputs at placeholders / fences |
+
+**Proven (spike):** **`pulldown-cmark`** (minimal features + `html`) on **`wasm32-unknown-unknown`** via `engine::markdown_to_html`. Native `dice eval` / future `dice render` and in-browser **Run** use the same weave primitive. **Still to build:** sanitization before DOM display, tangle orchestration, playground report UI.
+
+**Docs:** Tutorial/cookbook **`.dice` files** eval as-is; lesson HTML is **woven at build time** (CLI). Reading `/docs/` is static HTML; **Run** in the playground re-weaves the same source in WASM.
+
 ## What Makes This Different
 
 - **Exact enumeration, not sampling** — trustworthy for edge-heavy mechanics.
 - **`.dice` as a tabletop-shaped language** — notation plus Starlark for pools, labeled outcomes, and tables of checks.
 - **Literate analysis as the destination** — [ASSUMPTION] few tabletop odds tools treat the artifact as a **readable report**; most stop at calculator or REPL output.
 - **Player-first learning** — tutorials that read like walkthroughs, eventually native to the notebook surface.
-- **Single crate, static deploy** — WASM eval in-browser; no server for the public app.
+- **One engine, WASM + CLI + docs** — literate weave/eval logic lives in `src/engine/`, not duplicated in JS or host-only Pandoc for lessons.
 - **Honest positioning** — differentiation is exact engine + narrative document experience + docs/recipes, not proprietary data or lock-in.
 
 ## Who This Serves
@@ -78,7 +95,8 @@ Success for a primary user (north star): open one `.dice` file, Run once, read t
 - **Single `.dice` file** literate format (prose + code regions) with **one-shot Run** and **inline rendered output**.
 - Full-document eval completes in **milliseconds** under normal scripts (no cell-level execution UI).
 - Reports include **formatted text and visualizations**; **images** supported where they aid explanation.
-- Tutorial/cookbook content **is** literate `.dice`—**executable as-is** via Run / `dice eval` (weave for HTML on the docs site is a render of the same source, not a separate prose format).
+- Tutorial/cookbook content **is** literate `.dice`—**executable as-is** via Run / `dice eval` (woven HTML on the docs site is a **render** of the same source, not a separate prose format).
+- **Markdown → HTML weave** runs in the shared engine on **wasm32** (spike validated); release wasm size tracked per `docs/wasm-bundle-size.md` as literate features land.
 - Share/export: [ASSUMPTION] static HTML or PDF-like share of a rendered report is a key success signal for designers/GMs.
 
 **Still [ASSUMPTION] until measured:** time-to-first-insight, return visits, community-shared notebook recipes.
@@ -88,11 +106,14 @@ Success for a primary user (north star): open one `.dice` file, Run once, read t
 **In — now:**
 
 - WASM playground, workspace files, editor, separate output panel (text/json/graph), diagnostics, docs site, CLI/LSP.
+- **Spike landed:** `engine::markdown_to_html` via **pulldown-cmark**; `make check-wasm` passes with dependency linked.
 
 **In — direction (explicit product goal):**
 
-- Literate **single-file** `.dice` UX and syntax; **whole-document** eval on Run.
+- Literate **markdown-first** `.dice` (fenced `dice` blocks + prose); **tangle + weave + eval** orchestration in engine.
+- **Whole-document** eval on Run (unchanged).
 - Rich **report rendering** (not terminal-only); charts as first-class inline artifacts; path to **images**.
+- **HTML sanitization** policy for user prose before browser display (follow-on to markdown weave spike).
 - Engine/output schema that maps named outputs to **regions in the literate document** for rendering.
 - **Tutorial and cookbook** authored as literate `.dice` under `docs/` (or a single tree); **no duplicate** markdown lesson + `examples/*.dice` script that can drift. Static site generation **weaves** those files; CI **evals** them unchanged.
 
@@ -100,6 +121,7 @@ Success for a primary user (north star): open one `.dice` file, Run once, read t
 
 - **Per-cell or partial execution** (run one chunk, run to cursor, reactive re-run on edit)—whole file only.
 - Sidecar formats (`.dice` + `.md`), JSON notebook files, or split prose/code artifacts.
+- **Pandoc/JS markdown in the UI** for literate weave (host Pandoc may remain temporarily for legacy `.md` until migration).
 
 **Out (unchanged unless revisited):**
 

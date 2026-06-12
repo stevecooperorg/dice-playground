@@ -20,6 +20,7 @@ mod poly_explode;
 mod range_sugar;
 mod sugar;
 
+mod markdown_html;
 mod playground;
 mod starlark_guest;
 
@@ -29,6 +30,7 @@ pub mod lsp;
 pub use core::{total_variation_distance, DicePool, DieRoll, PoolOp, MAX_JOINT_CELLS};
 pub use face_spec::{FaceSpec, OptionalFaceSpec};
 pub use int_band::IntBand;
+pub use markdown_html::markdown_to_html;
 pub use ordinal::{Outcomes, Scale};
 pub use playground::{
     check_source, dice_dialect_public, eval_program, CheckResult, EvalProgramOptions,

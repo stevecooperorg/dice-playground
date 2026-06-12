@@ -56,6 +56,7 @@ web-sys = { version = "0.3", features = [
   "ScrollBehavior",
   "ScrollLogicalPosition",
 ] }
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4", features = ["wasm_js"] }

@@ -32,3 +32,11 @@ fn wasm_eval_smoke_tutorial_one_die() {
     .expect("eval");
     assert!(r.text.contains("d6"));
 }
+
+#[test]
+fn wasm_markdown_to_html_smoke() {
+    use dice_playground::engine::markdown_to_html;
+    let html = markdown_to_html("## odds\n\nSee [guide](/docs/).\n");
+    assert!(html.contains("<h2>"));
+    assert!(html.contains("href=\"/docs/\""));
+}

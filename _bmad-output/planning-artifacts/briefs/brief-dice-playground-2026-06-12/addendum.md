@@ -24,6 +24,21 @@ Implication: the playground optimizes for **edit → Run → read report**, not 
 
 Implication for architecture: literate parser/weave is **required for the docs pipeline**, not only the playground UI (`bin/build-tutorial-site.sh` eventually renders from `.dice`, not Pandoc-on-markdown-only).
 
+## Decided: prose encoding and markdown (WASM)
+
+| Decision | Choice |
+|----------|--------|
+| **Surface** | **Markdown-first** literate `.dice` (prose + ` ```dice ` fences)—see technical research |
+| **Weave library** | **`pulldown-cmark`** in `src/engine/` (`markdown_to_html`); **not** Pandoc/JS in UI |
+| **WASM** | Same engine code on **wasm32** and native; spike: `make check-wasm` + `spec-wasm-markdown-html-spike.md` |
+| **Pipeline** | **Tangle** (extract code) → **eval** (existing) → **weave** (md→HTML + output slots) |
+| **Static docs** | Woven HTML at **build time** from `.dice`; browsing docs does not require client-side markdown |
+| **Playground Run** | Re-weave + eval in WASM from the same `.dice` source |
+
+**Open (architecture):** HTML sanitization (`ammonia` or equivalent), placeholder syntax, exact fence labels, release wasm size budget after full literate land.
+
+**References:** `_bmad-output/planning-artifacts/research/technical-prose-encoding-in-dice-files-research-2026-06-12.md`, `_bmad-output/implementation-artifacts/spec-wasm-markdown-html-spike.md`
+
 ## Current UI (as of repo)
 
 | Element | Behavior |
@@ -57,13 +72,14 @@ No runtime application server today.
 ## Architecture constraints
 
 - Engine/UI separation preserved.
-- Likely needs: literate **parse** (prose vs code regions), **unchanged whole-file eval** (existing playground eval), **output-to-region binding** for inline renderers (tables, charts, images).
+- **Weave:** `pulldown-cmark` via `engine/markdown_html.rs` (spike merged); extend with literate document model.
+- **Tangle + output binding** still to implement; whole-file eval unchanged.
 - Per-cell eval API **not** required by product.
 
 ## Open product / design questions
 
-- **Literate syntax inside `.dice`:** markdown fences, `@` directives, string literals, or new lexer rules—PRD/language design.
-- **Export:** static HTML from WASM vs. CLI `dice render` for CI/GitHub Pages.
+- **Placeholder syntax** for inline `output("name", …)` in prose.
+- **Export:** `dice render` CLI details vs WASM-only preview.
 - **Images:** uploads vs. generated-only; asset storage on static deploy.
 - **Multi-file workspace:** keep for snippets/libraries or collapse to single-file-only UX over time.
 - Growth loop, monetization, AnyDice positioning — still open.
