@@ -5,6 +5,7 @@ use leptos::prelude::*;
 use crate::engine::OutputEntry;
 
 use super::output_graph::OutputGraphView;
+use super::report_html_host::ReportHtmlHost;
 
 const TAB_HTML: &str = "html";
 const TAB_TEXT: &str = "text";
@@ -83,10 +84,7 @@ pub fn OutputPanelView(
                     let current = tab.get();
                     if current == TAB_HTML && show_report() {
                         view! {
-                            <div
-                                class="literate-report-body text-slate-200 font-sans leading-relaxed text-sm"
-                                inner_html=report_html.get()
-                            />
+                            <ReportHtmlHost html=report_html outputs=outputs />
                         }
                         .into_any()
                     } else if current == TAB_GRAPH {

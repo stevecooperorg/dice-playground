@@ -18,7 +18,8 @@ pub use docs::{
 };
 pub use eval::{
     dice_dialect, dice_globals, eval_source, eval_source_with_dialect, format_eval_result_markdown,
-    format_eval_result_text, EvalResult, OutputEntry, OutputStore,
+    format_eval_result_text, format_output_entry_markdown, shared_sample_space_for_outputs,
+    EvalResult, OutputEntry, OutputStore,
 };
 pub use int_band_value::StarlarkIntBand;
 pub use outcomes_value::StarlarkOutcomes;

@@ -11,9 +11,10 @@ mod weave;
 pub use parse::{parse as parse_literate, LiterateDocument};
 pub use tangle::{tangle as tangle_literate, LineMap, TangleResult};
 pub use weave::{
-    render_literate_document, sanitize_woven_html, weave_literate, LiterateStaticLayout,
-    WeaveOptions,
+    render_literate_document, weave_literate, LiterateStaticLayout, WeaveOptions,
 };
+
+pub use crate::engine::html_sanitize::sanitize_woven_html;
 
 /// Maximum literate document size (prose + code), UTF-8 bytes.
 pub const MAX_LITERATE_BYTES: usize = 256 * 1024;

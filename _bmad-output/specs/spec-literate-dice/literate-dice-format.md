@@ -144,6 +144,10 @@ See [`tabular-output-gfm.md`](tabular-output-gfm.md).
 
 The WASM UI exposes woven HTML in an **Output** tab bar (**Report** · text · json · graph). See [`output-panel-html-tab.md`](output-panel-html-tab.md).
 
+### 6.8 Charts in Report HTML (planned)
+
+Optional chart placeholders **above** each output’s GFM table in woven HTML; Chartistry mounts in the playground only. See [`graphs-in-report-html.md`](graphs-in-report-html.md).
+
 ## 7. Size and limits
 
 | Limit | Value |

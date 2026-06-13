@@ -14,10 +14,10 @@ use super::desugar_if_needed;
 use super::literate::MAX_LITERATE_BYTES;
 use super::literate::{
     is_literate, parse_literate, source_line_for_tangled, tangle_literate, weave_literate,
-    sanitize_woven_html, LiterateDocument, TangleResult, WeaveOptions,
+    LiterateDocument, TangleResult, WeaveOptions,
 };
-use super::markdown_to_html;
-use super::{eval_source_with_dialect, format_eval_result_markdown, format_eval_result_text, OutputEntry, ProbFormat};
+use super::output_html::format_eval_outputs_html_sections;
+use super::{eval_source_with_dialect, format_eval_result_text, OutputEntry, ProbFormat};
 
 /// Maximum script size accepted from the public playground API.
 pub const MAX_SOURCE_BYTES: usize = 64 * 1024;
@@ -173,8 +173,7 @@ pub fn eval_program(
         String::new()
     };
     let outputs_html = if report_html.is_empty() {
-        let md = format_eval_result_markdown(&result, options.prob_format);
-        sanitize_woven_html(&markdown_to_html(&md))
+        format_eval_outputs_html_sections(&result, options.prob_format)
     } else {
         String::new()
     };

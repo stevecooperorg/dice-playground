@@ -8,8 +8,11 @@ use anyhow::{bail, Context};
 
 use super::fence::{is_closing_fence, parse_fence_opener};
 use super::parse::LiterateDocument;
+use crate::engine::html_sanitize::sanitize_woven_html;
 use crate::engine::markdown_to_html;
-use crate::engine::starlark_guest::{format_eval_result_markdown, EvalResult, OutputEntry, ProbFormat};
+use crate::engine::output_html::format_output_section_html;
+use crate::engine::starlark_guest::{EvalResult, OutputEntry, ProbFormat};
+use crate::engine::starlark_guest::shared_sample_space_for_outputs;
 
 /// Static site chrome when rendering full HTML pages.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -64,11 +67,6 @@ pub fn weave_literate(
     let bound = bind_outputs_to_fences(_doc, eval);
     let raw = weave_document(source, &bound, eval, options)?;
     Ok(sanitize_woven_html(&raw))
-}
-
-/// Sanitize woven HTML before it crosses to UI or CLI files (format v1 §6.5).
-pub fn sanitize_woven_html(fragment: &str) -> String {
-    ammonia::Builder::default().clean(fragment).to_string()
 }
 
 /// Evaluate a literate file and return a full HTML document (fragment wrapped with minimal shell).
@@ -280,18 +278,14 @@ fn append_fence_outputs(
         .iter()
         .filter_map(|&i| eval.outputs.get(i).cloned())
         .collect();
-    let faux = EvalResult {
-        return_value: "None".into(),
-        outputs,
-    };
-    let text = format_eval_result_markdown(&faux, prob_format);
-    if text.trim().is_empty() {
+    if outputs.is_empty() {
         return;
     }
-    let fragment = sanitize_woven_html(&markdown_to_html(&text));
-    html.push_str(r#"<section class="dice-output">"#);
-    html.push_str(&fragment);
-    html.push_str("</section>\n");
+    let shared = shared_sample_space_for_outputs(&eval.outputs);
+    for entry in &outputs {
+        let section = format_output_section_html(entry, prob_format, shared);
+        html.push_str(&sanitize_woven_html(&section));
+    }
 }
 
 fn escape_html_text(s: &str) -> String {
@@ -335,10 +329,13 @@ mod tests {
         assert!(html.contains("<h1>"));
         assert!(html.contains("one_d6"));
         assert!(html.contains("<table>"));
+        assert!(html.contains("data-dice-output=\"one_d6\""));
+        assert!(html.contains("dice-output-chart"));
     }
 
     #[test]
     fn sanitize_strips_script_from_prose() {
+        use crate::engine::html_sanitize::sanitize_woven_html;
         let dirty = "<p>ok</p><script>alert(1)</script>";
         let clean = sanitize_woven_html(dirty);
         assert!(!clean.contains("<script>"));

@@ -148,28 +148,13 @@ pub fn format_eval_result_text(result: &EvalResult, _prob: ProbFormat) -> String
 
 /// GFM markdown for eval outputs (woven report HTML).
 pub fn format_eval_result_markdown(result: &EvalResult, prob_format: ProbFormat) -> String {
-    let shared_sample_denom = sample_space_denom_for_eval(result);
+    let shared_sample_denom = shared_sample_space_for_outputs(&result.outputs);
     let mut out = String::new();
     if result.return_value != "None" {
         let _ = writeln!(out, "return: {}\n", result.return_value);
     }
     for entry in &result.outputs {
-        let block = match entry {
-            OutputEntry::DieRoll {
-                name,
-                entries,
-                mean,
-            } => format_dist_pmf_gfm(name, entries, *mean, prob_format, shared_sample_denom),
-            OutputEntry::Prob { name, value } => {
-                format_prob_gfm(name, *value, prob_format, shared_sample_denom)
-            }
-            OutputEntry::Outcomes { name, entries, .. } => {
-                format_ordinal_pmf_gfm(name, entries, prob_format, shared_sample_denom)
-            }
-            OutputEntry::Table { name, entries } => {
-                format_prob_table_gfm(name, entries, prob_format, shared_sample_denom)
-            }
-        };
+        let block = format_output_entry_markdown(entry, prob_format, shared_sample_denom);
         if !block.is_empty() {
             out.push_str(&block);
             if !block.ends_with('\n') {
@@ -179,6 +164,38 @@ pub fn format_eval_result_markdown(result: &EvalResult, prob_format: ProbFormat)
         }
     }
     out
+}
+
+/// GFM markdown for a single `output()` block.
+pub fn format_output_entry_markdown(
+    entry: &OutputEntry,
+    prob_format: ProbFormat,
+    shared_sample_denom: Option<u64>,
+) -> String {
+    match entry {
+        OutputEntry::DieRoll {
+            name,
+            entries,
+            mean,
+        } => format_dist_pmf_gfm(name, entries, *mean, prob_format, shared_sample_denom),
+        OutputEntry::Prob { name, value } => {
+            format_prob_gfm(name, *value, prob_format, shared_sample_denom)
+        }
+        OutputEntry::Outcomes { name, entries, .. } => {
+            format_ordinal_pmf_gfm(name, entries, prob_format, shared_sample_denom)
+        }
+        OutputEntry::Table { name, entries } => {
+            format_prob_table_gfm(name, entries, prob_format, shared_sample_denom)
+        }
+    }
+}
+
+/// Shared sample-space denominator for a batch of outputs (PMF / ordinal / table).
+pub fn shared_sample_space_for_outputs(outputs: &[OutputEntry]) -> Option<u64> {
+    sample_space_denom_for_eval(&EvalResult {
+        return_value: "None".into(),
+        outputs: outputs.to_vec(),
+    })
 }
 
 fn sample_space_denom_for_eval(result: &EvalResult) -> Option<u64> {

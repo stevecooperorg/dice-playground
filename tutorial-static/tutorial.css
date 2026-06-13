@@ -149,6 +149,14 @@ body.dice-literate-report main {
   padding: 1.25rem;
 }
 
+body.dice-literate-report .dice-output-chart:not(:empty) {
+  margin-bottom: 0.75rem;
+}
+
+body.dice-literate-report .dice-output-chart:empty {
+  display: none;
+}
+
 body.dice-literate-report .dice-output {
   margin: 1rem 0;
 }

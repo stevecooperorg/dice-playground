@@ -1,6 +1,6 @@
 //! Chart view of `output()` PMFs from eval results (full data; no display compression).
 
-use crate::engine::OutputEntry;
+use crate::engine::{output_entry_supports_chart, OutputEntry};
 use leptos::prelude::*;
 use leptos_chartistry::*;
 
@@ -112,12 +112,9 @@ fn format_prob_pct(p: f64) -> String {
 fn charts_from_outputs(outputs: &[OutputEntry]) -> Vec<OutputChart> {
     outputs
         .iter()
-        .filter_map(|entry| {
-            Some(match entry {
+        .filter(|entry| output_entry_supports_chart(entry))
+        .map(|entry| match entry {
                 OutputEntry::DieRoll { name, entries, .. } => {
-                    if entries.is_empty() {
-                        return None;
-                    }
                     OutputChart::DieRollLine {
                         title: name.clone(),
                         entries: entries.clone(),
@@ -126,9 +123,6 @@ fn charts_from_outputs(outputs: &[OutputEntry]) -> Vec<OutputChart> {
                 OutputEntry::Outcomes { name, entries, .. }
                 | OutputEntry::Table { name, entries } => {
                     let rows = rows_from_ordinal_entries(entries);
-                    if rows.is_empty() {
-                        return None;
-                    }
                     OutputChart::OrdinalBar {
                         title: name.clone(),
                         rows,
@@ -139,8 +133,21 @@ fn charts_from_outputs(outputs: &[OutputEntry]) -> Vec<OutputChart> {
                     rows: rows_from_prob(*value),
                 },
             })
-        })
         .collect()
+}
+
+/// Chart for one output (inline report hydration).
+#[component]
+pub fn OutputEntryChart(entry: OutputEntry) -> AnyView {
+    match charts_from_outputs(&[entry]).into_iter().next() {
+        Some(OutputChart::DieRollLine { title, entries }) => {
+            view! { <DieRollLineChart title=title entries=entries /> }.into_any()
+        }
+        Some(OutputChart::OrdinalBar { title, rows } | OutputChart::ProbBar { title, rows }) => {
+            view! { <OrdinalBarChart title=title rows=rows /> }.into_any()
+        }
+        None => ().into_any(),
+    }
 }
 
 fn format_prob_label(p: f64) -> String {

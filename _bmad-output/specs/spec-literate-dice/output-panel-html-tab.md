@@ -24,12 +24,13 @@ Authors and players expect **one Output area** with the same tab names everywher
 4. **Default tab:** `html` when `report_html` is non-empty; otherwise `text` (legacy).
 5. No second-class graph: **graph stays a tab**, not a separate section under Report.
 
-## Non-goals
+## Non-goals (v1 of output panel)
 
-- Embedding Chartistry inside weave HTML (still parallel `outputs` + graph tab).
 - iframe sandbox for report (engine ammonia pass remains the trust boundary).
 - Persisting last-selected tab across sessions (optional later).
 - Raw unsanitized HTML or author-supplied HTML in markdown.
+
+**Charts in Report HTML** (inline above tables) are specified separately: [`graphs-in-report-html.md`](graphs-in-report-html.md). Until that lands, the **graph** tab holds Chartistry views of the same `outputs`.
 
 ## UX specification
 

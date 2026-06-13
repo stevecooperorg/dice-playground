@@ -5,6 +5,7 @@ pub mod highlighted_editor;
 pub mod models;
 pub mod output_graph;
 pub mod output_panel;
+pub mod report_html_host;
 pub mod playground_handoff;
 pub mod report_view;
 pub mod static_site;
