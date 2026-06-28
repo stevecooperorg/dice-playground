@@ -237,8 +237,22 @@ fn weave_document(
                     bail!("unclosed executable fence while weaving");
                 }
             } else {
+                // Keep the whole fence in prose for markdown (e.g. ```text examples).
+                // Only push the opener line would leave the closing ``` to be mistaken
+                // for an executable ``` / ```dice opener (empty info string).
                 prose.push(lines[i]);
-                i += 1;
+                let mut j = i + 1;
+                while j < lines.len() {
+                    prose.push(lines[j]);
+                    if is_closing_fence(lines[j], open.tick_count) {
+                        i = j + 1;
+                        break;
+                    }
+                    j += 1;
+                }
+                if j >= lines.len() {
+                    bail!("unclosed non-executable fence while weaving");
+                }
             }
         } else {
             prose.push(lines[i]);
@@ -340,6 +354,42 @@ mod tests {
         let clean = sanitize_woven_html(dirty);
         assert!(!clean.contains("<script>"));
         assert!(clean.contains("ok"));
+    }
+
+    #[test]
+    fn prose_text_fences_render_as_code_blocks() {
+        let src = r#"# Demo
+
+Formula:
+
+```text
+natural + MOD >= DC
+```
+
+Script:
+
+```text
+output("x", 1d6)
+```
+
+```dice
+output("x", 1d6)
+```
+"#;
+        let doc = parse(src).unwrap();
+        let tangled = tangle(&doc);
+        let expanded = desugar_if_needed("t.dice", &tangled.tangled).unwrap();
+        let eval = eval_source_with_dialect("t.dice", &expanded, &dice_dialect_public()).unwrap();
+        let html = weave_literate(src, &doc, &tangled, &eval, WeaveOptions::default()).unwrap();
+        assert!(
+            html.contains("natural + MOD"),
+            "first ```text` block should appear in woven HTML"
+        );
+        assert!(
+            html.contains("output(&quot;x&quot;, 1d6)") || html.contains("output(\"x\", 1d6)"),
+            "second ```text` block should appear in woven HTML"
+        );
+        assert!(html.contains("data-dice-output=\"x\""));
     }
 
     #[test]

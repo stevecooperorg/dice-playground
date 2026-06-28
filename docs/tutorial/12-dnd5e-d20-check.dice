@@ -1,41 +1,44 @@
 # D&D 5e d20 checks with bucket
 
-## At the table
+## The roll
 
-A D&D attack or save is not just “did the total beat the DC?” **Natural 1** and **natural 20** are special on the d20 you keep. **Advantage** and **disadvantage** change which natural faces are likely before you add your modifier.
-
-[Lesson 11](11-ordered-outcomes.html) buckets a **raw d20 face** into four fixed ranges. That teaches ordered labels, but it is **not** the same as a DC check with a modifier. Here we stay on the **natural** die (`1d20`, `2d20kh1`, …) and put the modifier into the target number instead of into the roll.
-
-## Adjusted target (stay on 1..20)
-
-Table rule: success when `natural + MOD >= DC`. For integer faces that is the same as:
+At the table you roll a **d20**, add your **modifier**, and compare that **total** to the **DC** (difficulty class or armor class). You succeed when:
 
 ```text
-T = DC - MOD
+natural + MOD ≥ DC
 ```
 
-…and **hit** when `natural >= T`, still with nat **1** → critical fail and nat **20** → critical success.
+where **natural** is the number showing on the d20 you keep—not the total after adding the modifier.
 
-So you build a **four-band scale** on faces `1..20`, then `natural.bucket(Scale)`—the same pattern as PbtA in [lesson 13](13-pbta-2d6-move.html), but the bands move when `DC` or `MOD` change.
+Two details are about the **die face**, not the math:
 
-## Overlapping bands (`early=True`)
+| Face on the kept d20 | Usual 5e meaning (attacks; similar idea for many checks) |
+|----------------------|----------------------------------------------------------|
+| **Natural 1** | Automatic failure (critical miss) |
+| **Natural 20** | Automatic success (critical hit on attacks) |
 
-Miss and hit use **open** ranges (same idea as PbtA `..6` and `10..`):
+**Advantage** means roll **2d20** and keep the **higher** face (`2d20kh1`). **Disadvantage** keeps the lower (`2d20kl1`). A normal roll is `1d20`. Advantage and disadvantage apply to which **natural** you keep; the modifier is still added afterward at the table.
 
-- **Fail:** `at_most(T - 1)` — every face strictly below the target.
-- **Success:** `at_least(T)` — target or higher.
+[Lesson 11](11-ordered-outcomes.html) labels fixed ranges on `1d20` (e.g. 1–5 crit fail). That teaches ordered outcomes, but a real check also depends on **DC** and **MOD**. This lesson keeps the roll on the **natural die** and encodes pass/fail from those two numbers—so nat 1 and nat 20 stay on the die you model.
 
-Nat **1** and nat **20** sit in those ranges too. Use **`early=True`** on the narrow crit steps so they win when bucketing, without moving them ahead of fail/success in the ladder (so `p_at_least("SUCCESS")` still counts ordinary and critical successes).
+## Pieces of a `.dice` file
 
-Declaration order (ladder rank): crit fail → fail → success → crit success. Match order: both **`early`** crit steps first (in that order), then fail and success.
+Think of the script in four parts:
 
-Wrap the scale in a Starlark **`def`** so you can reuse the same bands for any DC and modifier—`check_scale(DC, MOD)` returns a `Scale` you pass to `bucket` inline. Names that start with `d20` right after `def` break parsing (`d20test` becomes `d(20)` + `test`); use something like `check_scale` or `make_d20test` instead.
+1. **Parameters** — `DC` and `MOD` for the situation you care about (AC 15, +5 to hit, and so on).
+2. **Outcome labels** — the four results players care about: critical fail, fail, success, critical success. Build them with `scale().step(...)` (same ladder idea as lesson 11).
+3. **The roll** — `1d20`, `2d20kh1`, or `2d20kl1`; do **not** write `1d20 + MOD` if you want true nat-1 / nat-20 behavior on the kept die.
+4. **Classification** — `natural.bucket(scale)` turns the roll into exact probabilities for each label; `p_at_least("SUCCESS")` is “success or critical success.”
 
-## Try it
+**What number do I need on the d20?** Players often do that mental step: with DC 15 and +5, you need **10 or higher** on the die because 10 + 5 = 15. In the script that need is `T = DC - MOD`: faces below `T` fail (except nat 1 is still its own crit-fail band), faces `T` and above succeed (except nat 20 is still its own crit-success band).
 
-In the playground, open this lesson in the playground and click **Run** (or press **Shift+Enter**).
+Put the scale in a Starlark **`def`** (e.g. `check_scale(DC, MOD)`) so one definition works for any DC and modifier. Names that start with `d20` right after `def` break parsing (`d20test` becomes `d(20)` + `test`); use `check_scale` or similar.
+
+Crit steps use **`early=True`** so nat **1** and nat **20** match their crit labels even though they also fall in the fail and success ranges—without reordering the ladder so `p_at_least("SUCCESS")` still counts ordinary and critical successes. Declaration order: crit fail → fail → success → crit success; both crit steps use `early=True` and are listed before fail and success.
 
 ## The script
+
+In the playground, open this lesson and click **Run** (or press **Shift+Enter**).
 
 ```text
 def check_scale(DC, MOD):
@@ -56,20 +59,22 @@ output("advantage_check", out)
 output("p_hit_or_better", out.p_at_least("SUCCESS"))
 ```
 
-- **`check_scale`** builds the four-band scale from `T = DC - MOD`; call it wherever you need a check (`1d20.bucket(check_scale(12, 4))`, loops over DCs, and so on).
-- **`at_most` / `at_least`** accept expressions; use them when `T` comes from `DC` and `MOD` (range sugar `..(T - 1)` only works with numeric literals in source).
-- **`2d20kh1`** is **advantage**. Use **`1d20`** for a normal roll or **`2d20kl1`** for disadvantage.
-- Without **`early=True`** on crit bands, overlapping open ranges would mis-label nat 1 or nat 20—see [lesson 11](11-ordered-outcomes.html).
+- **`T = DC - MOD`** — lowest natural that still meets or beats the DC after adding `MOD`.
+- **`at_most(T - 1)`** / **`at_least(T)`** — fail and success on the natural die; use these when `T` comes from variables (literal range sugar like `..(T - 1)` only works with numeric literals in source).
+- **`2d20kh1`** — advantage on the example; use **`1d20`** or **`2d20kl1`** for a normal roll or disadvantage.
+- **`check_scale(DC, MOD)`** — reuse anywhere (`1d20.bucket(check_scale(12, 4))`, loops over DCs, etc.).
 
 ## Reading the result
 
-You get a four-row probability breakdown (one row per outcome label) plus `p_at_least("SUCCESS")`, which includes both ordinary successes and critical successes.
+The **text** tab shows a four-row table—one row per outcome label—in ladder order. The **json** tab uses `"kind": "ordinal"` with the same labels.
+
+`p_hit_or_better` is `p_at_least("SUCCESS")`: ordinary successes **plus** critical successes (nat 20 on the kept die). That matches “did I succeed?” at the table, including crits.
 
 ## Try this
 
-- Change `DC` and `MOD` (or add a `for` loop) and call `check_scale(DC, MOD)` for each combination.
-- Swap `2d20kh1` for `1d20` and compare probabilities.
-- Compare with lesson 11’s fixed bands on `1d20`—notice how crit + DC logic differs.
+- Change `DC` and `MOD` (or loop over pairs) and call `check_scale(DC, MOD)` for each combination—watch how the fail and success rows move while crit fail and crit success stay on 1 and 20.
+- Swap `2d20kh1` for `1d20` or `2d20kl1` and compare the table; only the roll changes, not the scale.
+- Compare with [lesson 11](11-ordered-outcomes.html)’s fixed bands on `1d20`—same `bucket` machinery, but a real check needs `DC` and `MOD`, not one static partition of the die.
 
 Builtin details: [standard library reference](../references/stdlib.md) (`scale`, `Scale.step`, `bucket`, `at_most`, `at_least`, `keep_highest`, `keep_lowest`). Use `classify` when house rules do not fit four face bands.
 
@@ -80,7 +85,7 @@ Builtin details: [standard library reference](../references/stdlib.md) (`scale`,
 See the [user guide index](../README.md).
 
 ```dice
-# D&D 5e-style d20 check on the natural die: T = DC - MOD, then bucket (nat 1 / nat 20 crit bands).
+# D&D 5e-style d20 check on the natural die: need T = DC - MOD on the face, then bucket (nat 1 / nat 20 crit bands).
 # Advantage: 2d20kh1; try 1d20 or 2d20kl1 for a normal roll / disadvantage.
 
 def check_scale(DC, MOD):
