@@ -2,7 +2,7 @@
 //!
 //! A literate file mixes markdown prose with executable ` ``` ` / ` ```dice ` fences.
 //! Tangle concatenates fence bodies into one Starlark module for a single eval per Run.
-//! See `_bmad-output/specs/spec-literate-dice/literate-dice-format.md`.
+//! See `docs/design/literate-documents.md` for the document contract and rationale.
 
 mod fence;
 mod parse;

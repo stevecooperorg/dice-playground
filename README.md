@@ -72,6 +72,8 @@ To build `dist/` without uploading (S3, GitHub Pages, Azure, etc.): `make releas
 ## Docs
 
 - [Tutorial / user guide](docs/README.md) (source for the hosted `/docs/`)
+- [Product purpose and requirements](docs/requirements/README.md) — plain-English product requirements
+- [Technical design](docs/design/README.md) — mathematics, architecture, documentation, and LLM-assisted authoring
 - [Agent / architecture notes](docs/AGENT.md)
 
 ## CLI
