@@ -1,0 +1,43 @@
+# Conditioning changes the question
+
+**Part G · L27 · Prerequisite: L26 · One modelling idea**
+
+## Situation, question, and prediction
+
+Compare “reroll a 1 once,” “keep rolling until not 1,” and “a 1 scores zero.” They sound similar. Predict which can still end at 1, which removes it, and which adds a zero outcome.
+
+## Build
+
+`.remove(1)` removes the face and renormalises the rest: the conditional distribution given not 1. `.keep([2,3,4,5,6])` is equivalent. `.ignore(1)` keeps the probability mass but changes its score to zero. Neither is the once-only policy from L26.
+
+```dice
+def once(faces):
+    if faces[0] == 1:
+        return faces[1]
+    return faces[0]
+output("Reroll once", pool_map(dice_pool(2, 6), once))
+output("Conditioned on not one", d(6).remove(1))
+output("One scores zero", d(6).ignore(1))
+```
+
+## Run, read, and check
+
+The respective means are 47/12, 4, and 10/3. Conditioning leaves 2–6 each at 1/5. Scoring zero keeps outcomes 0,2,3,4,5,6 each at 1/6. An unlimited independent reroll-until-not-1 procedure has the same final-face distribution as conditioning, but its number of rolls and resource costs are not represented.
+
+## Change one thing
+
+Ignore 1 and 2 instead: zero has probability 1/3. Removing them instead leaves 3–6 each at 1/4. Keeping no possible faces is an error, not an empty successful model.
+
+## Try it yourself
+
+Choose the operation for “given that the die was at least 5.” Answer: `.keep([5,6])`, making both outcomes 1/2. The chance of that evidence on the original d6 remains 1/3, queried with `.p_ge(5)`; conditioning is not that chance.
+
+## Rules and model notes
+
+Generic probability transformations, not a certified game rule. No random process length, stopping cost, or dependent replacement dice are implied.
+
+## What you now know / where next
+
+Conditioning changes the question is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [filter-or-zero](../cookbook/filter-or-zero.html).

@@ -1,0 +1,40 @@
+# Keep the faces until the rule is finished
+
+**Part C · L11 · Prerequisite: L10 · One modelling idea**
+
+## Situation, question, and prediction
+
+A Blades-style highest-die component reads the highest of three d6, not their sum. Can a total of 13 tell you whether two sixes were rolled? Predict how a sum and a maximum differ.
+
+## Build
+
+`dice_pool(3, 6)` is a pool: three separate dice. `.sum()` reduces their faces to a total. `.order_stat(1)` selects the largest face: this API counts ranks from 1, unlike list indexing introduced later. Neither call mutates the original pool. `.p_any(6)` asks whether at least one die shows 6; L14 explores that query and its complement.
+
+```dice
+pool = dice_pool(3, 6)
+output("Sum of three d6", pool.sum())
+output("Highest of three d6", pool.order_stat(1))
+output("Any six", pool.p_any(6))
+```
+
+## Run, read, and check
+
+The sum ranges 3–18 with mean 10.5. The highest ranges 1–6. Any six has probability 1 − (5/6)^3 = 91/216. A total alone loses information: (6, 6, 1) and (5, 4, 4) both total 13 but have different numbers of sixes.
+
+## Change one thing
+
+Use two dice. Any six becomes 11/36, the sum has mean 7, and the highest still cannot exceed 6.
+
+## Try it yourself
+
+Choose representations for: add damage dice; detect two sixes; name result bands. Answer: summed distribution; unsummed pool until the count is known; named outcomes after classifying. A total of 12 on three dice can be (6,5,1) or (4,4,4), not evidence of a critical.
+
+## Rules and model notes
+
+[Blades in the Dark, core system](https://bladesinthedark.com/core-system). Position describes consequences and is separate from the number of dice. No stress, resistance, or effect-level calculation here. This is deliberately **not** the complete action roll: criticals and zero dice arrive in L23.
+
+## What you now know / where next
+
+Keep the faces until the rule is finished is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [blades-in-the-dark](../cookbook/blades-in-the-dark.html).

@@ -1,0 +1,239 @@
+{
+  "mode": "debug native CLI, median of three including process startup",
+  "defaults": [
+    {
+      "path": "tutorial/01-one-die.dice",
+      "median_ms": 35.54
+    },
+    {
+      "path": "tutorial/02-two-dice.dice",
+      "median_ms": 35.75
+    },
+    {
+      "path": "tutorial/03-modifiers.dice",
+      "median_ms": 37.95
+    },
+    {
+      "path": "tutorial/04-success.dice",
+      "median_ms": 35.08
+    },
+    {
+      "path": "tutorial/05-roll-under.dice",
+      "median_ms": 35.19
+    },
+    {
+      "path": "tutorial/06-averages-and-chances.dice",
+      "median_ms": 42.42
+    },
+    {
+      "path": "tutorial/07-probability-tables.dice",
+      "median_ms": 36.14
+    },
+    {
+      "path": "tutorial/08-comparison-loops.dice",
+      "median_ms": 37.06
+    },
+    {
+      "path": "tutorial/09-named-outcomes.dice",
+      "median_ms": 35.06
+    },
+    {
+      "path": "tutorial/10-outcome-queries.dice",
+      "median_ms": 36.01
+    },
+    {
+      "path": "tutorial/11-faces-before-totals.dice",
+      "median_ms": 38.59
+    },
+    {
+      "path": "tutorial/12-advantage.dice",
+      "median_ms": 37.39
+    },
+    {
+      "path": "tutorial/13-keep-and-drop.dice",
+      "median_ms": 44.54
+    },
+    {
+      "path": "tutorial/14-any-and-none.dice",
+      "median_ms": 37.81
+    },
+    {
+      "path": "tutorial/15-counting-successes.dice",
+      "median_ms": 36.11
+    },
+    {
+      "path": "tutorial/16-mixed-weapons.dice",
+      "median_ms": 36.3
+    },
+    {
+      "path": "tutorial/17-custom-fate-dice.dice",
+      "median_ms": 36.86
+    },
+    {
+      "path": "tutorial/18-independent-versus-shared.dice",
+      "median_ms": 38.94
+    },
+    {
+      "path": "tutorial/19-armour-floor.dice",
+      "median_ms": 35.78
+    },
+    {
+      "path": "tutorial/20-round-each-result.dice",
+      "median_ms": 51.11
+    },
+    {
+      "path": "tutorial/21-functions.dice",
+      "median_ms": 36.69
+    },
+    {
+      "path": "tutorial/22-natural-face-exceptions.dice",
+      "median_ms": 35.84
+    },
+    {
+      "path": "tutorial/23-shared-pool-rule.dice",
+      "median_ms": 35.94
+    },
+    {
+      "path": "tutorial/24-opposed-rolls.dice",
+      "median_ms": 38.84
+    },
+    {
+      "path": "tutorial/25-damage-dependent-save.dice",
+      "median_ms": 37.23
+    },
+    {
+      "path": "tutorial/26-reroll-once.dice",
+      "median_ms": 36.17
+    },
+    {
+      "path": "tutorial/27-conditioning.dice",
+      "median_ms": 37.9
+    },
+    {
+      "path": "tutorial/28-explosion-caps.dice",
+      "median_ms": 39.76
+    },
+    {
+      "path": "tutorial/29-open-ended-procedures.dice",
+      "median_ms": 47.19
+    },
+    {
+      "path": "tutorial/30-after-roll-decisions.dice",
+      "median_ms": 37.05
+    },
+    {
+      "path": "tutorial/31-report-labels.dice",
+      "median_ms": 38.92
+    },
+    {
+      "path": "tutorial/32-build-and-defend.dice",
+      "median_ms": 42.13
+    },
+    {
+      "path": "cookbook/dnd2014-ability-check.dice",
+      "median_ms": 38.65
+    },
+    {
+      "path": "cookbook/coc7-regular-check.dice",
+      "median_ms": 36.88
+    },
+    {
+      "path": "cookbook/cairn-blood-elk.dice",
+      "median_ms": 40.63
+    },
+    {
+      "path": "cookbook/ability-scores-4d6dl1.dice",
+      "median_ms": 44.3
+    },
+    {
+      "path": "cookbook/blades-in-the-dark.dice",
+      "median_ms": 35.61
+    },
+    {
+      "path": "cookbook/brindlewood-bay-theorize.dice",
+      "median_ms": 36.91
+    },
+    {
+      "path": "cookbook/count-high-faces.dice",
+      "median_ms": 36.66
+    },
+    {
+      "path": "cookbook/exploding-dice.dice",
+      "median_ms": 39.16
+    },
+    {
+      "path": "cookbook/fireball-half-damage.dice",
+      "median_ms": 51.44
+    },
+    {
+      "path": "cookbook/fudge-4df.dice",
+      "median_ms": 36.82
+    },
+    {
+      "path": "cookbook/rolemaster-open-ended.dice",
+      "median_ms": 48.03
+    },
+    {
+      "path": "cookbook/the-pool.dice",
+      "median_ms": 38.05
+    },
+    {
+      "path": "cookbook/dnd2014-attacks.dice",
+      "median_ms": 36.62
+    },
+    {
+      "path": "cookbook/fireball-one-target.dice",
+      "median_ms": 42.04
+    },
+    {
+      "path": "cookbook/fate-opposition.dice",
+      "median_ms": 37.33
+    },
+    {
+      "path": "cookbook/fate-invocation.dice",
+      "median_ms": 36.97
+    },
+    {
+      "path": "cookbook/cairn-armour.dice",
+      "median_ms": 35.56
+    },
+    {
+      "path": "cookbook/cairn-dual-weapons.dice",
+      "median_ms": 36.56
+    },
+    {
+      "path": "cookbook/dungeon-world-defy-danger.dice",
+      "median_ms": 34.47
+    },
+    {
+      "path": "cookbook/reroll-once.dice",
+      "median_ms": 36.02
+    },
+    {
+      "path": "cookbook/filter-or-zero.dice",
+      "median_ms": 38.49
+    },
+    {
+      "path": "cookbook/independent-versus-shared.dice",
+      "median_ms": 38.63
+    }
+  ],
+  "supported_bounds": [
+    {
+      "name": "callback-five-dice",
+      "median_ms": 238.32
+    },
+    {
+      "name": "decomposition-twenty-dice",
+      "median_ms": 36.14
+    },
+    {
+      "name": "open-ended-three-continuations",
+      "median_ms": 49.17
+    },
+    {
+      "name": "explosion-six-extra-rolls",
+      "median_ms": 48.77
+    }
+  ]
+}

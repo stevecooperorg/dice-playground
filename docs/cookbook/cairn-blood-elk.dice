@@ -74,7 +74,7 @@ out = joint_classify(d(8), d(20), Scale, blood_elk_hit)
 output("blood_elk_horns", out)
 output("p_protection_loss_or_worse", out.p_at_least("HIT_PROTECTION_LOSS"))
 output("p_scar_or_worse", out.p_at_least("SCAR"))
-output("p_critical_damage", out.p_at_least("CRITICAL_DAMAGE"))
+output("Critical damage or death", out.p_at_least("CRITICAL_DAMAGE"))
 ```
 
 ## Reading and checking the report
@@ -90,7 +90,7 @@ output("p_critical_damage", out.p_at_least("CRITICAL_DAMAGE"))
 
 The default scar is keyed to 4 HP lost (Broken Limb), but its later rolls are
 outside this report. The last probability includes critical damage **or death**;
-the stable output identifier is retained for existing consumers.
+the output title states both possibilities rather than hiding death in a critical-damage label.
 
 ## Adaptations and boundaries
 

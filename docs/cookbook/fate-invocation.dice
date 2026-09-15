@@ -1,0 +1,62 @@
+# Fate Core — one invocation, +2 or reroll?
+
+**R14 · Advanced · Scoped component**
+
+## Question and scope
+
+In Fate Core you have one available fate point and a relevant aspect whose invocation is agreed. Against fixed passive opposition +2, your skill is +2. After seeing 4dF, choose +2 or reroll all dice. The objective is **strictly exceed opposition without a cost**, not merely obtain a tie. Predict which initial rolls need a reroll rather than a guaranteed +2 rescue.
+
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
+
+## Inputs and model limits
+
+Integer skill and fixed passive opposition, default both +2; one available paid invocation and an applicable agreed aspect. Objective is strict success without cost.
+
+## Complete runnable model
+
+A policy is a function from information already seen to a decision. Keep an already successful roll without spending. If +2 guarantees strict success, choose it. Otherwise reroll and accept the replacement. The callback may inspect the potential reroll only after the decision to reroll has been made.
+
+```dice
+skill = 2
+opposition = 2
+f = die_faces([-1, 0, 1])
+roll = f + f + f + f
+bands = scale().step("Objective missed").step("Strict success")
+def policy(first, replacement):
+    if first > opposition:
+        return "Strict success"
+    if first + 2 > opposition:
+        return "Strict success"
+    if replacement > opposition:
+        return "Strict success"
+    return "Objective missed"
+result = joint_classify(roll + skill, roll + skill, bands, policy)
+output("One-invocation policy", result)
+output("Strict success chance", result.pmf("Strict success"))
+output("Chance of spending the point", (roll + skill).cdf(opposition))
+```
+
+## Reading the report and independent checks
+
+Initial totals with dice ≥−1 are already successful or can be rescued by +2: 66/81. The remaining 15/81 need a reroll, which strictly succeeds 31/81 of the time. Thus success is 5811/6561. A point is spent on the original non-successes: 50/81. Ties may achieve an overcome goal at a minor cost, but deliberately do not meet our stricter objective.
+
+## Safe changes
+
+Change skill to +3. The policy now rerolls only original dice −3 or −4. State the objective and budget again before comparing probabilities.
+
+## Composition and boundary checks
+
+Could “look at the replacement, then decide whether to take +2” do better? Yes, but it is illegal future information in this model. Answer check: at the original skill, always taking +2 after any miss succeeds only 66/81; the fixed policy adds the reroll rescue term, not hindsight.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+[Fate Core: Invoking Aspects](https://fate-srd.com/fate-core/invoking-compelling-aspects) and [Overcome](https://fate-srd.com/fate-core/four-actions). One paid invocation, no free invokes, defender responses, later resources, or further invocations. Relevant aspect and point availability are assumptions, not outcomes.
+
+## Related learning
+
+[Lesson L30](../tutorial/30-after-roll-decisions.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.

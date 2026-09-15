@@ -1,5 +1,7 @@
 // Whole-document handoff: same-origin published source, bounded before storage.
 // Keep this key in sync with src/ui/playground_handoff.rs.
+// Published sources are literate: the 256 KiB bound matches MAX_LITERATE_BYTES
+// in src/engine/literate/mod.rs (legacy scripts have a separate 64 KiB bound).
 "use strict";
 document.addEventListener("click", async (event) => {
   const link = event.target.closest("a.open-dice-document");
@@ -15,8 +17,8 @@ document.addEventListener("click", async (event) => {
     const response = await fetch(url, { redirect: "error" });
     if (!response.ok) throw new Error(`Source request failed (${response.status})`);
     const content = await response.text();
-    if (new TextEncoder().encode(content).length > 64 * 1024) {
-      throw new Error("Source exceeds the 64 KiB handoff limit");
+    if (new TextEncoder().encode(content).length > 256 * 1024) {
+      throw new Error("Source exceeds the 256 KiB handoff limit");
     }
     const filename = decodeURIComponent(url.pathname.split("/").pop());
     localStorage.setItem("dice_playground_pending_load", JSON.stringify({ content, filename }));

@@ -1,0 +1,41 @@
+# A count is itself a distribution
+
+**Part D · L15 · Prerequisite: L14 · One modelling idea**
+
+## Situation, question, and prediction
+
+In a generic hits-counting component, each d6 showing 5 or 6 is one hit. Roll three dice. Is the average number of hits the same thing as the chance of at least one hit? Predict before running.
+
+## Build
+
+`.count([5, 6])` preserves the chance of each possible **number** of matching dice. The brackets describe acceptable faces, not two separate throws. `.p_at_least(2, [5, 6])` queries whether enough dice match.
+
+```dice
+pool = dice_pool(3, 6)
+hits = pool.count([5, 6])
+output("Number of hits", hits)
+output("Any hit", pool.p_any([5, 6]))
+output("At least two hits", pool.p_at_least(2, [5, 6]))
+```
+
+## Run, read, and check
+
+Counts 0,1,2,3 have probabilities 8/27,12/27,6/27,1/27. Mean hits is 1; any hit is 19/27, and at least two is 7/27. A mean count of 1 is not a 100% success chance. For zero hits, all three dice must miss: (2/3)^3.
+
+## Change one thing
+
+Count sixes only. Mean hits falls to 1/2; at least two sixes is 16/216 = 2/27.
+
+## Try it yourself
+
+Build a two-die count report for 5–6. Answer: probabilities 4/9,4/9,1/9 for counts 0,1,2. Checkpoint: choose `.sum`, `.p_any`, or `.count` based on whether the rule asks for total, any match, or number of matches.
+
+## Rules and model notes
+
+Generic building block. It resembles a raw-hits component used by some games, but makes no claim to implement Shadowrun 5e limits, Edge, or glitches; edition-source verification is still required for that named recipe.
+
+## What you now know / where next
+
+A count is itself a distribution is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [count-high-faces](../cookbook/count-high-faces.html).

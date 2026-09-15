@@ -1,0 +1,52 @@
+# Define what a tie means before comparing rolls
+
+**Part F · L24 · Prerequisite: L23 · One modelling idea**
+
+## Situation, question, and prediction
+
+A Fate Core overcome action faces active opposition from another character with equal skill. Compare their independent 4dF rolls. Predict whether strict wins and strict losses are equally likely, and whether a tie is failure.
+
+## Build
+
+`joint_classify(left, right, scale, function)` calls the function with one value from each distribution. Subtracting the actual callback values gives their shared margin. For an overcome action, a tie attains the goal at a minor cost; a positive margin succeeds, and margin 3+ succeeds with style.
+
+```dice
+f = die_faces([-1, 0, 1])
+roll = f + f + f + f
+bands = scale().step("Below opposition").step("Tie: minor cost").step("Succeed").step("With style")
+def compare(left, right):
+    margin = left - right
+    if margin < 0:
+        return "Below opposition"
+    if margin == 0:
+        return "Tie: minor cost"
+    if margin >= 3:
+        return "With style"
+    return "Succeed"
+result = joint_classify(roll, roll, bands, compare)
+output("Equal-skill overcome action", result)
+output("Tie", result.pmf("Tie: minor cost"))
+output("Strictly beat opposition", result.p_at_least("Succeed"))
+```
+
+## Run, read, and check
+
+Tie probability is 1107/6561. Strictly beating opposition is 2727/6561, equal to falling below it by symmetry. The denominator is 81×81 sign sequences. A below-opposition result can still lead to success at a serious cost by the game’s rules; this report does not choose that option.
+
+## Change one thing
+
+Add +1 to the first roll only. Strict wins increase; symmetry between win and loss is broken. Ties must still be reported under the same convention.
+
+## Try it yourself
+
+For two opposed d6, build lose/tie/win categories. Answer: 15/36,6/36,15/36. Checkpoint: name the tie rule and explain why both dice are independent, even if both arguments reference one distribution variable.
+
+## Rules and model notes
+
+[Fate Core SRD, dice and the ladder](https://fate-srd.com/fate-core/taking-action-dice-ladder). Four independent Fate dice; their faces are equally weighted −1, 0, +1. Other Fate/Fudge variants are not implied. [Four Actions: Overcome](https://fate-srd.com/fate-core/four-actions). Outcome classification only; no invocations, active-defender resources, or choice of serious cost.
+
+## What you now know / where next
+
+Define what a tie means before comparing rolls is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [fate-opposition](../cookbook/fate-opposition.html).

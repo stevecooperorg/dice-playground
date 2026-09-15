@@ -1,28 +1,708 @@
 {
   "version": 1,
   "pages": [
-    {"id":"L01","path":"tutorial/01-one-die.dice","part":"A — From a die to an answer","objective":"Read one probability row and check the range","status":"pilot","game":"Generic","mechanic":"Damage","scope":"component"},
-    {"id":"L02","path":"tutorial/02-two-dice.dice","part":"A — From a die to an answer","objective":"Count equally likely pairs behind a total","status":"pilot","game":"Generic","mechanic":"Totals","scope":"component"},
-    {"id":"L03","path":"tutorial/03-modifiers.dice","part":"A — From a die to an answer","objective":"Use names to parameterise a modifier","status":"pilot","game":"Generic","mechanic":"Totals","scope":"component"},
-    {"id":"L04","path":"tutorial/04-success.dice","part":"A — From a die to an answer","objective":"Build and check an inclusive target query","status":"pilot","game":"Generic","mechanic":"Target checks","scope":"house rule"},
-    {"id":"legacy-T05","path":"tutorial/05-dice-notation.dice","part":"Existing lessons — awaiting rewrite","destination":"L13","status":"legacy"},
-    {"id":"legacy-T06","path":"tutorial/06-dice-pools.dice","part":"Existing lessons — awaiting rewrite","destination":"L11–12","status":"legacy"},
-    {"id":"legacy-T07","path":"tutorial/07-mixed-dice-pools.dice","part":"Existing lessons — awaiting rewrite","destination":"L16","status":"legacy"},
-    {"id":"legacy-T08","path":"tutorial/08-restrict-faces.dice","part":"Existing lessons — awaiting rewrite","destination":"L19/L27","status":"legacy"},
-    {"id":"legacy-T09","path":"tutorial/09-pool-success-counts.dice","part":"Existing lessons — awaiting rewrite","destination":"L14–15","status":"legacy"},
-    {"id":"legacy-T10","path":"tutorial/10-tables.dice","part":"Existing lessons — awaiting rewrite","destination":"L07–08/L31","status":"legacy"},
-    {"id":"legacy-T11","path":"tutorial/11-ordered-outcomes.dice","part":"Existing lessons — awaiting rewrite","destination":"L09–10","status":"legacy"},
-    {"id":"legacy-T12","path":"tutorial/12-dnd5e-d20-check.dice","part":"Existing lessons — awaiting rewrite","destination":"L06/L12/L21–22","status":"legacy"},
-    {"id":"legacy-T13","path":"tutorial/13-pbta-2d6-move.dice","part":"Existing lessons — awaiting rewrite","destination":"L09–10","status":"legacy"},
-    {"id":"R03","path":"cookbook/ability-scores-4d6dl1.dice","game":"D&D","mechanic":"Keep/drop","scope":"component","status":"legacy"},
-    {"id":"R18","path":"cookbook/blades-in-the-dark.dice","game":"Blades in the Dark","mechanic":"Pools","scope":"scoped procedure","status":"legacy"},
-    {"id":"R20","path":"cookbook/brindlewood-bay-theorize.dice","game":"Brindlewood Bay","mechanic":"Graded outcomes","scope":"component","status":"source pending"},
-    {"id":"R23","path":"cookbook/cairn-blood-elk.dice","game":"Cairn 2e","mechanic":"Dependent saves","scope":"component","status":"pilot"},
-    {"id":"C01","path":"cookbook/count-high-faces.dice","game":"Generic","mechanic":"Pools","scope":"component","status":"legacy"},
-    {"id":"C09","path":"cookbook/exploding-dice.dice","game":"Generic","mechanic":"Explosions","scope":"bounded approximation","status":"legacy"},
-    {"id":"R04","path":"cookbook/fireball-half-damage.dice","game":"D&D","mechanic":"Damage","scope":"conditional component","status":"legacy"},
-    {"id":"R12","path":"cookbook/fudge-4df.dice","game":"Fudge/Fate","mechanic":"Custom dice","scope":"component","status":"legacy"},
-    {"id":"R26","path":"cookbook/rolemaster-open-ended.dice","game":"Rolemaster","mechanic":"Explosions","scope":"bounded approximation","status":"source pending"},
-    {"id":"R17","path":"cookbook/the-pool.dice","game":"The Pool","mechanic":"Pools","scope":"component","status":"legacy"}
+    {
+      "id": "L01",
+      "path": "tutorial/01-one-die.dice",
+      "part": "A \u2014 From a die to an answer",
+      "objective": "Read one probability row and check the range",
+      "status": "pilot",
+      "game": "Generic",
+      "mechanic": "Damage",
+      "scope": "component"
+    },
+    {
+      "id": "L02",
+      "path": "tutorial/02-two-dice.dice",
+      "part": "A \u2014 From a die to an answer",
+      "objective": "Count equally likely pairs behind a total",
+      "status": "pilot",
+      "game": "Generic",
+      "mechanic": "Totals",
+      "scope": "component"
+    },
+    {
+      "id": "L03",
+      "path": "tutorial/03-modifiers.dice",
+      "part": "A \u2014 From a die to an answer",
+      "objective": "Use names to parameterise a modifier",
+      "status": "pilot",
+      "game": "Generic",
+      "mechanic": "Totals",
+      "scope": "component"
+    },
+    {
+      "id": "L04",
+      "path": "tutorial/04-success.dice",
+      "part": "A \u2014 From a die to an answer",
+      "objective": "Build and check an inclusive target query",
+      "status": "pilot",
+      "game": "Generic",
+      "mechanic": "Target checks",
+      "scope": "house rule"
+    },
+    {
+      "id": "L05",
+      "path": "tutorial/05-roll-under.dice",
+      "part": "B \u2014 Comparing choices and building reports",
+      "objective": "Ask an inclusive roll-under question",
+      "status": "pilot",
+      "game": "Call of Cthulhu 7e",
+      "mechanic": "Target checks",
+      "scope": "component",
+      "difficulty": "beginner",
+      "prerequisites": [
+        "L04"
+      ],
+      "rules_review": "source checked 2026-09-15; human review pending"
+    },
+    {
+      "id": "L06",
+      "path": "tutorial/06-averages-and-chances.dice",
+      "part": "B \u2014 Comparing choices and building reports",
+      "objective": "Distinguish mean total from success probability",
+      "status": "pilot",
+      "game": "D&D 2014",
+      "mechanic": "Target checks",
+      "scope": "component",
+      "difficulty": "beginner",
+      "prerequisites": [
+        "L05"
+      ],
+      "rules_review": "source checked 2026-09-15; human review pending"
+    },
+    {
+      "id": "L07",
+      "path": "tutorial/07-probability-tables.dice",
+      "part": "B \u2014 Comparing choices and building reports",
+      "objective": "Build one table of labelled probability questions",
+      "status": "pilot",
+      "game": "D&D 2014",
+      "mechanic": "Comparisons",
+      "scope": "component",
+      "difficulty": "beginner",
+      "prerequisites": [
+        "L06"
+      ],
+      "rules_review": "source checked 2026-09-15; human review pending"
+    },
+    {
+      "id": "L08",
+      "path": "tutorial/08-comparison-loops.dice",
+      "part": "B \u2014 Comparing choices and building reports",
+      "objective": "Use a loop to construct a useful comparison",
+      "status": "pilot",
+      "game": "D&D 2014",
+      "mechanic": "Comparisons",
+      "scope": "component",
+      "difficulty": "beginner",
+      "prerequisites": [
+        "L07"
+      ],
+      "rules_review": "source checked 2026-09-15; human review pending"
+    },
+    {
+      "id": "L09",
+      "path": "tutorial/09-named-outcomes.dice",
+      "part": "C \u2014 What information does the rule need?",
+      "objective": "Name the outcome, not just the total",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L08"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L10",
+      "path": "tutorial/10-outcome-queries.dice",
+      "part": "C \u2014 What information does the rule need?",
+      "objective": "Exactly this outcome, or this good or better?",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L09"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L11",
+      "path": "tutorial/11-faces-before-totals.dice",
+      "part": "C \u2014 What information does the rule need?",
+      "objective": "Keep the faces until the rule is finished",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L10"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L12",
+      "path": "tutorial/12-advantage.dice",
+      "part": "C \u2014 What information does the rule need?",
+      "objective": "Advantage changes the shape, not a fixed bonus",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L11"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L13",
+      "path": "tutorial/13-keep-and-drop.dice",
+      "part": "D \u2014 Reading a handful of dice",
+      "objective": "Keeping three equals dropping one",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L12"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L14",
+      "path": "tutorial/14-any-and-none.dice",
+      "part": "D \u2014 Reading a handful of dice",
+      "objective": "Any and none are complementary questions",
+      "status": "source pending",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L13"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L15",
+      "path": "tutorial/15-counting-successes.dice",
+      "part": "D \u2014 Reading a handful of dice",
+      "objective": "A count is itself a distribution",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L14"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L16",
+      "path": "tutorial/16-mixed-weapons.dice",
+      "part": "D \u2014 Reading a handful of dice",
+      "objective": "Join unlike dice without adding their damage",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L15"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L17",
+      "path": "tutorial/17-custom-fate-dice.dice",
+      "part": "E \u2014 Custom dice and transformations",
+      "objective": "A custom face list describes a die",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L16"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L18",
+      "path": "tutorial/18-independent-versus-shared.dice",
+      "part": "E \u2014 Custom dice and transformations",
+      "objective": "Reusing a distribution is not reusing a face",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L17"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L19",
+      "path": "tutorial/19-armour-floor.dice",
+      "part": "E \u2014 Custom dice and transformations",
+      "objective": "Armour cannot create negative damage",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L18"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L20",
+      "path": "tutorial/20-round-each-result.dice",
+      "part": "E \u2014 Custom dice and transformations",
+      "objective": "Round each result, not the average",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L19"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L21",
+      "path": "tutorial/21-functions.dice",
+      "part": "F \u2014 Writing rules of your own",
+      "objective": "A function returns a reusable calculation",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L20"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L22",
+      "path": "tutorial/22-natural-face-exceptions.dice",
+      "part": "F \u2014 Writing rules of your own",
+      "objective": "Test natural-face exceptions before totals",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L21"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L23",
+      "path": "tutorial/23-shared-pool-rule.dice",
+      "part": "F \u2014 Writing rules of your own",
+      "objective": "Inspect the same pool faces in one callback",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L22"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L24",
+      "path": "tutorial/24-opposed-rolls.dice",
+      "part": "F \u2014 Writing rules of your own",
+      "objective": "Define what a tie means before comparing rolls",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L23"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L25",
+      "path": "tutorial/25-damage-dependent-save.dice",
+      "part": "G \u2014 Decisions, rerolls, and open-ended rules",
+      "objective": "A later save can depend on earlier damage",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L24"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L26",
+      "path": "tutorial/26-reroll-once.dice",
+      "part": "G \u2014 Decisions, rerolls, and open-ended rules",
+      "objective": "Rerolling once is a policy, not filtering",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L25"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L27",
+      "path": "tutorial/27-conditioning.dice",
+      "part": "G \u2014 Decisions, rerolls, and open-ended rules",
+      "objective": "Conditioning changes the question",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L26"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L28",
+      "path": "tutorial/28-explosion-caps.dice",
+      "part": "G \u2014 Decisions, rerolls, and open-ended rules",
+      "objective": "An unbounded rule needs an explicit cap",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L27"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L29",
+      "path": "tutorial/29-open-ended-procedures.dice",
+      "part": "H \u2014 Build and defend a report",
+      "objective": "Continuation rules matter as much as the die",
+      "status": "source pending",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L28"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L30",
+      "path": "tutorial/30-after-roll-decisions.dice",
+      "part": "H \u2014 Build and defend a report",
+      "objective": "Choose a policy before seeing its future roll",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L29"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L31",
+      "path": "tutorial/31-report-labels.dice",
+      "part": "H \u2014 Build and defend a report",
+      "objective": "Distinguish Theorize eligibility, accounted Clues, and result queries",
+      "status": "pilot",
+      "rules_review": "source checked 2026-09-15 against user-supplied text; printing unidentified; human review pending",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L30"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "L32",
+      "path": "tutorial/32-build-and-defend.dice",
+      "part": "H \u2014 Build and defend a report",
+      "objective": "Build and defend a complete scoped model",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L31"
+      ],
+      "scope": "scoped teaching model"
+    },
+    {
+      "id": "R01",
+      "path": "cookbook/dnd2014-ability-check.dice",
+      "game": "D&D 2014",
+      "mechanic": "Target checks",
+      "scope": "complete scoped mechanic",
+      "status": "pilot",
+      "difficulty": "beginner",
+      "prerequisites": [
+        "L06",
+        "L07",
+        "L08"
+      ],
+      "rules_review": "source checked 2026-09-15; human review pending"
+    },
+    {
+      "id": "R09-regular",
+      "path": "cookbook/coc7-regular-check.dice",
+      "game": "Call of Cthulhu 7e",
+      "mechanic": "Target checks",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "beginner",
+      "prerequisites": [
+        "L05",
+        "L07",
+        "L08"
+      ],
+      "rules_review": "source checked 2026-09-15; human review pending"
+    },
+    {
+      "id": "R23",
+      "path": "cookbook/cairn-blood-elk.dice",
+      "game": "Cairn 2e",
+      "mechanic": "Dependent saves",
+      "scope": "component",
+      "status": "pilot"
+    },
+    {
+      "id": "R03",
+      "path": "cookbook/ability-scores-4d6dl1.dice",
+      "game": "D&D 2014",
+      "mechanic": "Keep/drop",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L13"
+      ]
+    },
+    {
+      "id": "R18",
+      "path": "cookbook/blades-in-the-dark.dice",
+      "game": "Blades in the Dark",
+      "mechanic": "Pools",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L23"
+      ]
+    },
+    {
+      "id": "R20",
+      "path": "cookbook/brindlewood-bay-theorize.dice",
+      "game": "Brindlewood Bay (supplied text)",
+      "mechanic": "Graded outcomes",
+      "scope": "initial standard-mystery roll before Crowns",
+      "status": "pilot",
+      "rules_review": "source checked 2026-09-15 against user-supplied text; printing unidentified; human review pending",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L31"
+      ]
+    },
+    {
+      "id": "C01",
+      "path": "cookbook/count-high-faces.dice",
+      "game": "Generic",
+      "mechanic": "Pools",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L15"
+      ]
+    },
+    {
+      "id": "C09",
+      "path": "cookbook/exploding-dice.dice",
+      "game": "Generic",
+      "mechanic": "Explosions",
+      "scope": "bounded approximation",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L28"
+      ]
+    },
+    {
+      "id": "R04",
+      "path": "cookbook/fireball-half-damage.dice",
+      "game": "D&D 2014",
+      "mechanic": "Damage",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L20"
+      ]
+    },
+    {
+      "id": "R12",
+      "path": "cookbook/fudge-4df.dice",
+      "game": "Fate Core",
+      "mechanic": "Custom dice",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L17"
+      ]
+    },
+    {
+      "id": "R26",
+      "path": "cookbook/rolemaster-open-ended.dice",
+      "game": "Generic; RMSS verification pending",
+      "mechanic": "Explosions",
+      "scope": "bounded approximation",
+      "status": "source pending",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L29"
+      ]
+    },
+    {
+      "id": "R17",
+      "path": "cookbook/the-pool.dice",
+      "game": "The Pool; source pending",
+      "mechanic": "Pools",
+      "scope": "component",
+      "status": "source pending",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L14"
+      ]
+    },
+    {
+      "id": "R02",
+      "path": "cookbook/dnd2014-attacks.dice",
+      "game": "D&D 2014",
+      "mechanic": "Natural-face exceptions",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L22"
+      ]
+    },
+    {
+      "id": "R05",
+      "path": "cookbook/fireball-one-target.dice",
+      "game": "D&D 2014",
+      "mechanic": "Dependent outcome",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L32"
+      ]
+    },
+    {
+      "id": "R13",
+      "path": "cookbook/fate-opposition.dice",
+      "game": "Fate Core",
+      "mechanic": "Opposed rolls",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L24"
+      ]
+    },
+    {
+      "id": "R14",
+      "path": "cookbook/fate-invocation.dice",
+      "game": "Fate Core",
+      "mechanic": "Decisions",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L30"
+      ]
+    },
+    {
+      "id": "R21",
+      "path": "cookbook/cairn-armour.dice",
+      "game": "Cairn 2e",
+      "mechanic": "Damage",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L19"
+      ]
+    },
+    {
+      "id": "R22",
+      "path": "cookbook/cairn-dual-weapons.dice",
+      "game": "Cairn 2e",
+      "mechanic": "Mixed pools",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L16"
+      ]
+    },
+    {
+      "id": "DW01",
+      "path": "cookbook/dungeon-world-defy-danger.dice",
+      "game": "Dungeon World",
+      "mechanic": "Graded outcomes",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L09"
+      ]
+    },
+    {
+      "id": "C03",
+      "path": "cookbook/reroll-once.dice",
+      "game": "Generic",
+      "mechanic": "Rerolls",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L26"
+      ]
+    },
+    {
+      "id": "C02",
+      "path": "cookbook/filter-or-zero.dice",
+      "game": "Generic",
+      "mechanic": "Conditioning",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "advanced",
+      "prerequisites": [
+        "L27"
+      ]
+    },
+    {
+      "id": "C11",
+      "path": "cookbook/independent-versus-shared.dice",
+      "game": "Generic / D&D 2014 contrast",
+      "mechanic": "Dependence",
+      "scope": "component",
+      "status": "pilot",
+      "difficulty": "intermediate",
+      "prerequisites": [
+        "L18"
+      ]
+    }
+  ],
+  "aliases": [
+    {
+      "id": "legacy-T05",
+      "path": "tutorial/05-dice-notation.dice",
+      "target": "L13"
+    },
+    {
+      "id": "legacy-T06",
+      "path": "tutorial/06-dice-pools.dice",
+      "target": "L11"
+    },
+    {
+      "id": "legacy-T07",
+      "path": "tutorial/07-mixed-dice-pools.dice",
+      "target": "L16"
+    },
+    {
+      "id": "legacy-T08",
+      "path": "tutorial/08-restrict-faces.dice",
+      "target": "L27"
+    },
+    {
+      "id": "legacy-T09",
+      "path": "tutorial/09-pool-success-counts.dice",
+      "target": "L15"
+    },
+    {
+      "id": "legacy-T10",
+      "path": "tutorial/10-tables.dice",
+      "target": "L08"
+    },
+    {
+      "id": "legacy-T11",
+      "path": "tutorial/11-ordered-outcomes.dice",
+      "target": "L09"
+    },
+    {
+      "id": "legacy-T12",
+      "path": "tutorial/12-dnd5e-d20-check.dice",
+      "target": "L22"
+    },
+    {
+      "id": "legacy-T13",
+      "path": "tutorial/13-pbta-2d6-move.dice",
+      "target": "L09"
+    }
   ]
 }

@@ -1,0 +1,41 @@
+# Armour cannot create negative damage
+
+**Part E · L19 · Prerequisite: L18 · One modelling idea**
+
+## Situation, question, and prediction
+
+Cairn 2e subtracts armour from damage. For a d8 hit against armour 2, how often does no damage get through? Predict what should happen when the raw roll is 1.
+
+## Build
+
+Subtract armour first. `.clamp(0, 8)` floors negative values at zero and puts a ceiling of 8 on the result. The ceiling here is deliberately at the original die maximum, so it cannot reduce any legitimate post-armour result. Probabilities of all floored results collect at zero.
+
+```dice
+armour = 2
+raw = d(8)
+damage = (raw - armour).clamp(0, 8)
+output("Damage after armour", damage)
+output("No damage gets through", damage.pmf(0))
+```
+
+## Run, read, and check
+
+Raw 1 and 2 both become zero: probability 2/8 = 1/4. The remaining values 1–6 each have probability 1/8. The mean is (1+2+3+4+5+6)/8 = 21/8, not raw mean 4.5 minus 2: flooring changes the calculation.
+
+## Change one thing
+
+Use armour 3, within Cairn’s cap. No damage becomes 3/8 and mean damage 15/8.
+
+## Try it yourself
+
+Apply armour 2 to the mixed-weapon maximum from L16. Answer: join dice, select maximum, subtract, then clamp. Chance of no damage is (2/6)(2/8) = 1/12. Do not armour each weapon and add the results.
+
+## Rules and model notes
+
+[Cairn second edition, core rules](https://cairnrpg.com/second-edition/players-guide/core-rules/), Armor and Attack Modifiers. Only this damage component; no HP, STR, scars, impairment, or enhancement unless explicitly stated. Armour inputs here are integers 0–3.
+
+## What you now know / where next
+
+Armour cannot create negative damage is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [cairn-armour](../cookbook/cairn-armour.html).

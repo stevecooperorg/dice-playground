@@ -1,0 +1,41 @@
+# Reusing a distribution is not reusing a face
+
+**Part E · L18 · Prerequisite: L17 · One modelling idea**
+
+## Situation, question, and prediction
+
+A D&D 2014 critical hit rolls extra damage dice; an invented house rule doubles the damage number instead. For a d6 weapon, compare two independent d6 with twice one d6. Predict whether their means or possible results differ.
+
+## Build
+
+A roll variable stores a distribution, not a secretly sampled face. `r + r` combines two independent copies. `r * 2` transforms each outcome of one roll by multiplication. Neither expression retrieves the faces of a previous runtime roll.
+
+```dice
+r = d(6)
+output("Two independent damage dice", r + r)
+output("House rule: double one face", r * 2)
+output("Two dice can total seven", (r + r).pmf(7))
+output("Doubled face can total seven", (r * 2).pmf(7))
+```
+
+## Run, read, and check
+
+Both means are 7 and ranges are 2–12. The sum can make every integer in between; doubled damage only makes even numbers. Seven has probability 1/6 for the sum and zero for the doubled face. Same mean does not imply same distribution.
+
+## Change one thing
+
+Use d4 instead. Both means become 5; only the independent sum can total 5 (probability 1/4).
+
+## Try it yourself
+
+If a weapon adds +3 damage, which dice-only critical expression keeps that modifier once? Answer: `r + r + 3`, not `(r + 3) * 2`. Later joint callbacks preserve a shared face when a rule must inspect it more than once.
+
+## Rules and model notes
+
+[D&D Basic Rules 2014, Combat: Critical Hits](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/combat). Only damage dice conditional on an ordinary critical hit; no hit chance or extra damage features. Doubling a face is explicitly a house rule.
+
+## What you now know / where next
+
+Reusing a distribution is not reusing a face is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [independent-versus-shared](../cookbook/independent-versus-shared.html).

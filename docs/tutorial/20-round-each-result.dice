@@ -1,0 +1,40 @@
+# Round each result, not the average
+
+**Part E · L20 · Prerequisite: L19 · One modelling idea**
+
+## Situation, question, and prediction
+
+D&D 2014 Fireball at its base spell level deals 8d6 damage, halved on a successful Dexterity save. **Given that the save succeeded**, what is mean damage? Predict whether it is exactly half of 28.
+
+## Build
+
+`dice_pool(8, 6).sum()` efficiently builds the ordinary total. `// 2` divides each possible integer result and rounds down. This is a transformation of the entire distribution, not division of a summary number.
+
+```dice
+full = dice_pool(8, 6).sum()
+half = full // 2
+output("Damage given failed save", full)
+output("Damage given successful save", half)
+```
+
+## Run, read, and check
+
+Full mean is 28; successful-save mean is **13.75**, not 14. Half the possible probability mass is on odd totals, where rounding loses half a point, giving a mean loss of 1/4. Half-damage range is 4–24.
+
+## Change one thing
+
+Use one d6 instead: full mean 3.5, rounded-half mean 1.5. Verify by writing transformed faces 0,1,1,2,2,3.
+
+## Try it yourself
+
+Why is this not the overall expected damage to a target? Answer: it conditions on the save result. You must also know the target’s save chance; L32 builds that full scoped question. Checkpoint: keep the conditioning statement in every output label.
+
+## Rules and model notes
+
+[D&D Basic Rules 2014, Fireball](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/spells) and the basic round-down convention. Base third-level spell, one target; no resistance, vulnerability, Evasion, or other damage reductions.
+
+## What you now know / where next
+
+Round each result, not the average is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [fireball-half-damage](../cookbook/fireball-half-damage.html).

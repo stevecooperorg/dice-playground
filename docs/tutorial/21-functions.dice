@@ -1,0 +1,44 @@
+# A function returns a reusable calculation
+
+**Part F · L21 · Prerequisite: L20 · One modelling idea**
+
+## Situation, question, and prediction
+
+You have already written the same ordinary D&D check calculation several times. How can one definition answer different DC and bonus questions without copying the formula? Predict what should change between calling a helper and displaying its result.
+
+## Build
+
+`def` defines a function. Its parameters name inputs local to that call. Indented statements form the body; `return` gives the computed value back to the caller. The helper does not call `output`: calculations and presentation have separate jobs. Calling it uses parentheses with actual arguments.
+
+```dice
+def check_chance(bonus, dc):
+    roll = d(20) + bonus
+    return roll.p_ge(dc)
+
+rows = [("Bonus 2 at DC 15", check_chance(2, 15)),
+        ("Bonus 5 at DC 15", check_chance(5, 15)),
+        ("Bonus 5 at DC 20", check_chance(5, 20))]
+output("Reusable ability-check helper", prob_table(rows))
+```
+
+## Run, read, and check
+
+The rows reproduce L06: 0.4, 0.55, 0.3. A function packages familiar reasoning; it should not hide a new game rule. Its local variable `roll` does not need to exist outside the function.
+
+## Change one thing
+
+Call `check_chance(5, 26)`. Answer: zero. A helper still needs boundary checks; abstraction does not certify it.
+
+## Try it yourself
+
+Write a helper accepting a percentile skill and returning its regular-difficulty chance. Answer shape: define one parameter, return `d(100).cdf(skill)`, and keep scope 1–99. Call it for 40 and 65 to get 0.4 and 0.65.
+
+## Rules and model notes
+
+D&D Basic Rules **2014**, [Using Ability Scores](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/using-ability-scores). Ordinary checks only; no attack exceptions, rerolls, or special features.
+
+## What you now know / where next
+
+A function returns a reusable calculation is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [dnd2014-ability-check](../cookbook/dnd2014-ability-check.html).

@@ -1,0 +1,73 @@
+# One table, several questions
+
+**Part B · L07 · 5–10 minutes · Prerequisite: L06**
+
+## The situation and question
+
+Keep the **D&D 2014 ordinary ability check** from L06, with a total bonus of +5.
+How often would it meet DC 10, 15, or 20? These are three alternative difficulty
+settings, not three successive checks or three opponents.
+
+## Predict
+
+Should the three probabilities add to 100%? A total of 20 meets *all three*
+thresholds. The questions overlap, so there is no reason for their sum to be one.
+
+## Build
+
+Square brackets make a **list**: an ordered collection of values. Here, each
+value is a labelled pair. Parentheses around `("Meet DC 10", chance)` group the
+label and its probability into a two-item **tuple**. A comma separates the
+items; commas also separate the rows. Tuples keep the two parts of a row together.
+
+`prob_table(rows)` turns that list into one probability table. `output` still
+presents the result. Every row's second item must be a probability between 0 and
+1—not a mean, count, or percentage multiplied by 100. The table formats it for you.
+
+```dice
+bonus = 5
+check = d(20) + bonus
+rows = [
+    ("Meet DC 10", check.p_ge(10)),
+    ("Meet DC 15", check.p_ge(15)),
+    ("Meet DC 20", check.p_ge(20)),
+]
+output("One ability check, alternative difficulties", prob_table(rows))
+```
+
+## Run and read
+
+The rows should be **80%, 55%, and 30%**. For DC 10, natural faces 5–20
+succeed: sixteen of twenty. The other counts are eleven and six of twenty.
+Their sum is 165%, which is fine: they are separate, overlapping questions,
+not exclusive outcomes. Do not multiply them to infer a chance of meeting all
+three with one roll. On that same roll, meeting DC 20 already meets the others.
+
+## Change one thing
+
+Add a fourth row for DC 25 inside the list. Keep its label consistent with its
+query. **Check:** the new row is 5%, one natural face out of twenty.
+
+## Try it yourself
+
+Build a two-row table for a single unmodified d6: “Exactly six” and “Four or
+more.” **Answer check:** `.pmf(6)` gives 1/6 and `.p_ge(4)` gives 1/2. These
+also overlap. You have assembled a report from a question, not simulated rolls.
+
+## What you now know
+
+A list of labelled probability questions makes a compact comparison. A report
+must say whether rows are categories, alternative settings, or overlapping events.
+
+## Rules and model notes
+
+[D&D Basic Rules 2014, Using Ability Scores](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/using-ability-scores),
+**Ability Checks** and **Typical Difficulty Classes**, checked 2026-09-15.
+Same scope as L06: one ordinary check, fixed total bonus, no attack exceptions,
+advantage, rerolls, or special features. A harder DC changes the query, not the die.
+
+## Where next
+
+[Previous: averages and chances](06-averages-and-chances.html) · [Next: a loop](08-comparison-loops.html).
+The [ordinary ability-check recipe](../cookbook/dnd2014-ability-check.html)
+uses tables to keep related questions in one report.

@@ -1,0 +1,59 @@
+# D&D 2014 — miss, hit, or critical
+
+**R02 · Advanced · Scoped component**
+
+## Question and scope
+
+A D&D 2014 attack with +5 targets AC 15. A natural 1 automatically misses; a natural 20 is a critical hit. How do these exceptions differ from L21’s ability check? Predict what happens against impossibly high AC.
+
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
+
+## Inputs and model limits
+
+Integer attack bonus and AC; defaults +5 and 15. Natural 1 misses, natural 20 critically hits. No expanded critical range or damage.
+
+## Complete runnable model
+
+`if` tests a condition; `==` compares equality, while `>=` means at least. Indentation controls each branch. `return` exits the function immediately, so test exceptions before ordinary success. Pass the function **name**, without calling it, to `classify`; it will receive each possible natural face.
+
+```dice
+bonus = 5
+ac = 15
+bands = scale().step("Miss").step("Hit").step("Critical")
+def attack(face):
+    if face == 1:
+        return "Miss"
+    if face == 20:
+        return "Critical"
+    if face + bonus >= ac:
+        return "Hit"
+    return "Miss"
+result = classify(d(20), bands, attack)
+output("Attack categories", result)
+output("Hit including critical", result.p_at_least("Hit"))
+```
+
+## Reading the report and independent checks
+
+At defaults: miss 9/20, ordinary hit 10/20, critical 1/20. Total chance to hit is 11/20. No extra “fumble” effect is assumed. The die passed to `classify` is unmodified because its natural face matters.
+
+## Safe changes
+
+Set AC to 100: only critical remains a hit, 1/20. Set AC to 1: natural 1 still misses, so hit including critical is 19/20.
+
+## Composition and boundary checks
+
+Use advantage by replacing `d(20)` with `keep_highest(2, 20, 1)`. Answer: hit including critical 319/400 and critical 39/400 at defaults. Checkpoint: classify a new rule with explicit equality and exception boundaries before trusting the graph.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+[D&D Basic Rules 2014, Combat: Attack Rolls and Rolling 1 or 20](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/combat). Ordinary attack categories only; no expanded critical range, damage, or house-rule fumbles.
+
+## Related learning
+
+[Lesson L22](../tutorial/22-natural-face-exceptions.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.

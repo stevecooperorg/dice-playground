@@ -1,82 +1,109 @@
-# Brindlewood Bay — Theorize
+# Brindlewood Bay — Theorize before Crown use
 
-## At the table
+**R20 · Intermediate · Scoped procedure: initial standard-mystery Theorize roll**
 
-In [*Brindlewood Bay*](https://evilhat.itch.io/brindlewood-bay), the **Theorize** move is how the Mavens nail down whodunit. Once they have talked through a theory (and hold enough Clues—at least half the mystery’s **Complexity**, rounded up), they roll:
+## Question and scope
 
-**2d6 + Clues in the theory − Complexity**
+Given an eligible, consensual theory, what are the chances it is incorrect,
+correct with complications, cleanly correct, or also reveals a conspiracy figure?
+The supplied rules distinguish **Clues gathered** (eligibility) from **Clues
+incorporated into the theory or otherwise explained away** (the roll bonus).
 
-Read the total:
+The Mavens must gather at least half Complexity, rounded up, and reach consensus.
+Then roll 2d6 + accounted Clues − Complexity. A 7–9 result is correct with an
+unwelcome complication or a complicated/dangerous opportunity to resolve the
+case. At 10+ the solution is correct and the Keeper presents an opportunity to
+resolve it. At 12+ someone involved in the dark conspiracy additionally reveals
+themselves. “Clean” below is shorthand for 10+, not an automatic finished case.
 
-| Total | Result |
-|-------|--------|
-| **6−** | The theory is **wrong**; the Keeper responds. |
-| **7–9** | The theory is **right**, but the Keeper adds a snag to the answer or makes acting on it risky. |
-| **10–11** | The theory is **right**; the Keeper offers a clear chance to stop the culprit or avert disaster. |
-| **12+** | As 10+, and someone tied to Brindlewood’s conspiracy **outs themselves** to the Mavens. |
+## Inputs and assumptions
 
-“Clues in the theory” means clues you folded into the explanation or accounted for—not every Clue the table might hold.
+| Input | Default | Supported values |
+|---|---:|---|
+| `complexity` | 6 | Integer 6–8, the text’s standard mystery range |
+| `gathered_clues` | 6 | Integer at least ceil(Complexity/2); ordinary mystery Clues |
+| `accounted_clues` | 6 | Integer 0–gathered; incorporated or explained away |
 
-## Try it
+Consensus and which Clues qualify are established at the table, not by the
+script. Void Clues have no direct bearing on ordinary mystery resolution and
+are excluded from these counts. Special conversions and the Void Mystery
+variant require their own scope. There is no requirement here that every
+gathered Clue be counted in the modifier.
 
-In the playground, open this recipe in the playground and click **Run**. Defaults use Complexity **6** and **5** clues in the roll; tweak `COMPLEXITY` and `CLUES` in the editor to match your mystery.
+## Complete runnable model
 
-## The script
-
-```text
-Scale = (
-    scale()
-    .step("INCORRECT", ..6)
-    .step("CORRECT_COMPLICATION", 7..9)
-    .step("CORRECT", 10..11)
-    .step("CONSPIRACY_REVEAL", 12..)
-)
-
-COMPLEXITY = 6
-CLUES = 5
-
-roll = 2d6 + CLUES - COMPLEXITY
-out = roll.bucket(Scale)
-output("theorize", out)
-output("p_not_wrong", out.p_at_least("CORRECT_COMPLICATION"))
-output("p_clean_correct", out.p_at_least("CORRECT"))
-output("p_conspiracy_reveal", out.p_at_least("CONSPIRACY_REVEAL"))
-
-rows = [
-    ("{} clues in theory".format(c), (2d6 + c - COMPLEXITY).bucket(Scale).p_at_least("CORRECT_COMPLICATION"))
-    for c in range(3, 9)
-]
-output("p_clean_by_clues", prob_table(rows))
-```
-
-- Four labels get **four ranges**: `..6`, `7..9`, `10..11`, `12..` (same idea as the [PbtA 2d6 lesson](../tutorial/13-pbta-2d6-move.html), with an extra top band). Equivalent to cuts `[6, 9, 11]`.
-- `p_at_least("CORRECT")` is **10+** (clean correct plus conspiracy reveal).
-- `prob_table` lists how **7+** odds change (any correct theory, including complications) if you put **3–8** clues into the theory at fixed Complexity (3 is the minimum when Complexity is 6—half Complexity, rounded up).
+`fail` rejects inputs outside the stated scope. The named bands are exclusive;
+the subsequent probability-table questions overlap and must not be added.
 
 ```dice
-# Brindlewood Bay — Theorize: 2d6 + clues used − mystery complexity (four PbtA-style bands, 12+ extra).
-Scale = (
-    scale()
-    .step("INCORRECT", ..6)
-    .step("CORRECT_COMPLICATION", 7..9)
-    .step("CORRECT", 10..11)
-    .step("CONSPIRACY_REVEAL", 12..)
-)
+complexity = 6
+gathered_clues = 6
+accounted_clues = 6
+if type(complexity) != "int" or complexity < 6 or complexity > 8:
+    fail("Use standard mystery Complexity 6–8")
+if type(gathered_clues) != "int" or type(accounted_clues) != "int":
+    fail("Clue counts must be integers")
+minimum_clues = (complexity + 1) // 2
+if gathered_clues < minimum_clues:
+    fail("Not enough gathered Clues to trigger Theorize")
+if accounted_clues < 0 or accounted_clues > gathered_clues:
+    fail("Accounted Clues must be between zero and gathered Clues")
 
-COMPLEXITY = 6
-CLUES = 5
-
-roll = 2d6 + CLUES - COMPLEXITY
-out = roll.bucket(Scale)
-output("theorize", out)
-output("p_not_wrong", out.p_at_least("CORRECT_COMPLICATION"))
-output("p_clean_correct", out.p_at_least("CORRECT"))
-output("p_conspiracy_reveal", out.p_at_least("CONSPIRACY_REVEAL"))
-
-# Chance of 7+ (correct theory or better) at each clue count (same mystery complexity).
-rows = [
-    ("{} clues in theory".format(c), (2d6 + c - COMPLEXITY).bucket(Scale).p_at_least("CORRECT_COMPLICATION"))
-    for c in range(3, 9)
-]
-output("p_clean_by_clues", prob_table(rows))
+total = d(6) + d(6) + accounted_clues - complexity
+bands = (scale()
+    .step("Incorrect", at_most(6))
+    .step("Correct with complications", through(7, 9))
+    .step("Clean, without revelation", through(10, 11))
+    .step("Clean plus conspiracy revelation", at_least(12)))
+output("Initial Theorize categories", bucket(total, bands))
+rows = [("Any correct theory (7+)", total.p_ge(7)),
+        ("Clean or better (10+)", total.p_ge(10)),
+        ("Conspiracy revelation (12+)", total.p_ge(12))]
+output("Nested Theorize questions", prob_table(rows))
 ```
+
+## Reading and independent checks
+
+At defaults the modifier is zero. Of the 36 equally likely d6 pairs:
+- 15 give an incorrect theory;
+- 15 give a correct theory with complications;
+- 5 give a clean result without the additional revelation;
+- 1 gives a clean result with the revelation.
+
+Thus any correct theory is **21/36**, clean or better **6/36**, and revelation
+**1/36**. Querying 7+ and labelling it “clean” would overstate that chance.
+
+At Complexity 6 with three gathered and three accounted Clues, the group is
+eligible, but clean is impossible; any correct theory is 6/36. Complexity 7
+requires **four** gathered Clues: three is rejected. With five gathered but
+four accounted, the modifier is −3 and those same probabilities apply. Adding
+an unaccounted Clue alone changes no probabilities once eligibility is met.
+
+## Adaptations, timing, and limits
+
+Change the three inputs independently while respecting their relationships.
+Accounted Clues equal to Complexity+3 give a clean-or-better chance of 21/36.
+This is a numerical comparison, not a recommendation that acquiring more
+Clues is always worth the danger.
+
+This is **before Crown use**, not a full player-resource policy. In the supplied
+text Theorize cannot take advantage/disadvantage or effects of other moves.
+Its tier can be raised by a Crown only if every Maven does so. A tier shift
+is not a fixed +1 bonus or a reroll, and resource availability/consent is not
+modelled. A failed attempt may be repeated only after the Keeper reacts and
+the Mavens deal with that reaction; this script does not model those events.
+
+## Source and related learning
+
+Jason Cordova, *Brindlewood Bay: A Dark & Cozy Mystery Game*, user-supplied
+`target/brindlewood-bay.md`, reviewed 2026-09-15. Sections: **Rolling Dice**,
+**The Crowns**, **Theorize**, **Complexity**, **Void Clues**, and the Keeper’s
+**Theorize** guidance. Edition/printing is not identified in the supplied text;
+this model is scoped to that source, not all editions. The source fingerprint
+and review record live in the repository’s `docs/design/learning-rules-core.md`.
+The full game text is not redistributed with this site.
+
+[Publisher’s game page](https://www.gauntlet-rpg.com/brindlewood-bay.html) ·
+[L31: designing the report](../tutorial/31-report-labels.html).
+Source review is complete against the supplied text; independent human rules
+and novice reviews remain pending.

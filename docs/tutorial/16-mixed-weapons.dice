@@ -1,0 +1,41 @@
+# Join unlike dice without adding their damage
+
+**Part D · L16 · Prerequisite: L15 · One modelling idea**
+
+## Situation, question, and prediction
+
+A Cairn 2e character attacks with d6 and d8 weapons together. The rule rolls both damage dice and takes the higher, not their sum. How does the second weapon change the chance of raw damage at least 6?
+
+## Build
+
+`dice_pool(1, 6) + dice_pool(1, 8)` joins the dice into one mixed pool. On pools, `+` joins; on numeric distributions, it adds independent values. Select the maximum only after joining. Keep these two meanings explicit.
+
+```dice
+weapons = dice_pool(1, 6) + dice_pool(1, 8)
+damage = weapons.order_stat(1)
+output("Dual-weapon raw damage", damage)
+output("Single d8: at least six", d(8).p_ge(6))
+output("Dual weapons: at least six", damage.p_ge(6))
+```
+
+## Run, read, and check
+
+Single d8 gives 3/8. Both weapons miss the threshold only when d6 ≤5 and d8 ≤5: 25/48. Dual weapons therefore give 23/48. The maximum remains 8, unlike adding damage, which could reach 14.
+
+## Change one thing
+
+Use two d6 instead: at least 6 becomes 11/36. It is not 2/6 because both dice can show 6 in the same throw.
+
+## Try it yourself
+
+Explain when armour belongs in this model. Answer: choose the raw maximum, then subtract armour and floor at zero. L19 teaches that transformation. Adding separately armoured weapon results would implement a different rule.
+
+## Rules and model notes
+
+[Cairn second edition, core rules](https://cairnrpg.com/second-edition/players-guide/core-rules/), Armor and Attack Modifiers. Only this damage component; no HP, STR, scars, impairment, or enhancement unless explicitly stated.
+
+## What you now know / where next
+
+Join unlike dice without adding their damage is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [cairn-dual-weapons](../cookbook/cairn-dual-weapons.html).

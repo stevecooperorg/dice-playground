@@ -38,14 +38,20 @@ fn cookbook_manifest_covers_all_files() {
         })
         .collect();
     on_disk.sort();
-    let mut listed: Vec<String> = SAMPLE_PATHS
+    let manifest: serde_json::Value =
+        serde_json::from_str(include_str!("../docs/learning-content.json")).unwrap();
+    let mut listed: Vec<String> = manifest["pages"]
+        .as_array()
+        .unwrap()
         .iter()
-        .map(|p| p.strip_prefix("docs/cookbook/").unwrap().to_string())
+        .filter_map(|page| page["path"].as_str())
+        .filter_map(|path| path.strip_prefix("cookbook/"))
+        .map(str::to_owned)
         .collect();
     listed.sort();
     assert_eq!(
         on_disk, listed,
-        "every docs/cookbook/* script must be listed in SAMPLE_PATHS"
+        "every docs/cookbook/* script must be listed in the content manifest"
     );
 }
 
@@ -62,7 +68,11 @@ fn eval_sample_or_panic(rel: &str) -> dice_playground::engine::EvalResult {
 #[test]
 fn cookbook_the_pool() {
     let res = eval_sample_or_panic(SAMPLE_PATHS[0]);
-    assert_eq!(res.outputs.len(), 10);
+    assert_eq!(res.outputs.len(), 3);
+    match &res.outputs[0] {
+        OutputEntry::Prob { value, .. } => assert!((*value - 11.0 / 36.0).abs() < 1e-10),
+        other => panic!("expected any-one probability, got {other:?}"),
+    }
 }
 
 #[test]
@@ -96,7 +106,7 @@ fn cookbook_fireball_half_damage() {
             assert!((*full - 28.0).abs() < 1e-9);
             assert_eq!(full_entries.last().map(|(k, _)| *k), Some(48));
             assert_eq!(half_entries.last().map(|(k, _)| *k), Some(24));
-            assert!(*half < *full);
+            assert!((*half - 13.75).abs() < 1e-10);
         }
         other => panic!("expected two dist outputs, got {other:?}"),
     }

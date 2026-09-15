@@ -1,0 +1,64 @@
+{
+  "browser": "Chromium headless; debug WASM",
+  "budgetMs": 5000,
+  "timing": "wall-clock click to rendered report, includes automation overhead",
+  "results": [
+    {
+      "file": "08-comparison-loops",
+      "elapsedMs": 280,
+      "sourceRoundTrip": true
+    },
+    {
+      "file": "23-shared-pool-rule",
+      "elapsedMs": 121,
+      "sourceRoundTrip": true
+    },
+    {
+      "file": "Blades callback at supported maximum five dice",
+      "elapsedMs": 494,
+      "editedRerun": true
+    },
+    {
+      "file": "25-damage-dependent-save",
+      "elapsedMs": 95,
+      "sourceRoundTrip": true
+    },
+    {
+      "file": "30-after-roll-decisions",
+      "elapsedMs": 124,
+      "sourceRoundTrip": true
+    },
+    {
+      "file": "31-report-labels",
+      "elapsedMs": 127,
+      "sourceRoundTrip": true
+    },
+    {
+      "file": "32-build-and-defend",
+      "elapsedMs": 110,
+      "sourceRoundTrip": true
+    },
+    {
+      "file": "Brindlewood supplied-text recipe",
+      "elapsedMs": 100,
+      "sourceRoundTrip": true
+    },
+    {
+      "file": "Blades decomposition at twenty dice",
+      "elapsedMs": 78,
+      "editedRerun": true
+    },
+    {
+      "file": "Long source beyond URL payload limit",
+      "bytes": 84066,
+      "elapsedMs": 98,
+      "sourceRoundTrip": true
+    },
+    {
+      "storageFailureFallback": true
+    },
+    {
+      "oldUrlMigration": true
+    }
+  ]
+}

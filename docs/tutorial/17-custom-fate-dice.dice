@@ -1,0 +1,41 @@
+# A custom face list describes a die
+
+**Part E · L17 · Prerequisite: L16 · One modelling idea**
+
+## Situation, question, and prediction
+
+Fate Core rolls four Fate dice, each with two minus, two blank, and two plus faces. What is the range of their total? Predict whether four pluses is as likely as a total of zero.
+
+## Build
+
+`die_faces([-1, -1, 0, 0, 1, 1])` assigns equal weight to each entry, including duplicates. A minus sign makes a number negative. Adding the die four times combines independent rolls; it does not force all four dice to show the same sign.
+
+```dice
+fate_die = die_faces([-1, -1, 0, 0, 1, 1])
+roll = fate_die + fate_die + fate_die + fate_die
+output("Four Fate dice", roll)
+output("All pluses", roll.pmf(4))
+output("Zero total", roll.pmf(0))
+```
+
+## Run, read, and check
+
+The possible range is **exactly −4 to +4**. Mean is zero. Each extreme has probability (1/3)^4 = 1/81; zero is 19/81. There are 3^4 equally likely sign sequences even though the physical dice have six faces.
+
+## Change one thing
+
+Replace the face list with `[-1, 0, 1]`. Nothing changes: all three signs still have equal weight. Replacing it with `[-1, 0, 1, 1]` would make plus twice as likely as either other sign.
+
+## Try it yourself
+
+Build a two-Fate-dice report. Answer: probabilities 1/9,2/9,3/9,2/9,1/9 at −2 through +2. Repeated entries describe weights, not outcomes to add together.
+
+## Rules and model notes
+
+[Fate Core SRD, dice and the ladder](https://fate-srd.com/fate-core/taking-action-dice-ladder). Four independent Fate dice; their faces are equally weighted −1, 0, +1. Other Fate/Fudge variants are not implied.
+
+## What you now know / where next
+
+A custom face list describes a die is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [fudge-4df](../cookbook/fudge-4df.html).

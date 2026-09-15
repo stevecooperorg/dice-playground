@@ -1,0 +1,44 @@
+# Name the outcome, not just the total
+
+**Part C · L09 · Prerequisite: L08 · One modelling idea**
+
+## Situation, question, and prediction
+
+In Dungeon World, you Defy Danger by acting despite an imminent threat. Roll two d6 plus the appropriate stat modifier. What proportion of rolls fall into each result band? Predict whether 7–9 or 10+ is more common at modifier zero.
+
+## Build
+
+`scale()` starts a ladder of labels. Each `.step(label, range)` adds a named band. `at_most(6)`, `through(7, 9)`, and `at_least(10)` include their endpoints. Chaining methods across parenthesised lines keeps one expression readable. `bucket` groups the total into those bands; it does not change the rolled number.
+
+```dice
+modifier = 0
+total = d(6) + d(6) + modifier
+bands = (scale()
+    .step("GM outcome", at_most(6))
+    .step("Bargain or worse outcome", through(7, 9))
+    .step("Threat avoided", at_least(10)))
+result = bucket(total, bands)
+output("Defy Danger bands", result)
+```
+
+## Run, read, and check
+
+The bands are 15/36, 15/36, and 6/36. Count totals 2–6, 7–9, and 10–12 independently. They cover every pair exactly once, so their probabilities add to one. This is a partition, unlike L07’s overlapping threshold questions.
+
+## Change one thing
+
+Set the modifier to +2: the bands become 6/36, 15/36, and 15/36. The 7–9 band happens to stay the same here; that is not true of every modifier.
+
+## Try it yourself
+
+Explain where totals 6, 7, 9, and 10 go without running. Answer: first, second, second, third bands. Checkpoint: a die sum needs a numeric distribution; an outcome report can group that distribution, but cannot recover individual faces from its total.
+
+## Rules and model notes
+
+[Dungeon World SRD, Defy Danger](https://www.dungeonworldsrd.com/moves/). This models outcome bands, not the GM’s choice or the fiction. A 6− leaves what happens to the GM; 7–9 is a worse outcome, hard bargain, or ugly choice, not universally a completed success.
+
+## What you now know / where next
+
+Name the outcome, not just the total is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [dungeon-world-defy-danger](../cookbook/dungeon-world-defy-danger.html).

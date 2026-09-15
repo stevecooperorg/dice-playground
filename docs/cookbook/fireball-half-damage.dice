@@ -1,28 +1,49 @@
-# Fireball half damage on save
+# D&D 2014 — Fireball damage given the save result
 
-## At the table
+**R04 · Intermediate · Scoped component**
 
-In **D&D 5e**, *Fireball* deals **8d6** fire damage on a failed Dexterity saving throw. On a **success**, the target takes **half** that damage, **rounded down** (same as halving each possible total with floor division).
+## Question and scope
 
-## Try it
+D&D 2014 Fireball at its base spell level deals 8d6 damage, halved on a successful Dexterity save. **Given that the save succeeded**, what is mean damage? Predict whether it is exactly half of 28.
 
-In the playground, open this recipe in the playground and click **Run**. **Output** shows the full-damage distribution and the succeeded-save distribution side by side.
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
 
-## The script
+## Inputs and model limits
 
-```text
-output("failed_save", 8d6)
-output("succeeded_save", 8d6 // 2)
-```
+Base spell level, 8d6; one target. Reports are conditional on success/failure, not weighted by a target’s save chance.
 
-- **`8d6`** expands to a summed pool—the usual fireball roll.
-- **`// 2`** applies **integer (floor) division** to every outcome of that total, matching “half damage, round down” for each roll result.
-- **`1d4 * 10`** and similar expressions scale each outcome by a constant (`d(4) * 10` after desugaring).
+## Complete runnable model
 
-Use `*` when a die result is multiplied (e.g. bonus dice that count as tens). Use `//` whenever rules say to halve or divide damage and round down.
+`dice_pool(8, 6).sum()` efficiently builds the ordinary total. `// 2` divides each possible integer result and rounds down. This is a transformation of the entire distribution, not division of a summary number.
 
 ```dice
-# D&D 5e Fireball: 8d6 on a failed Dex save, half damage (rounded down) on success.
-output("failed_save", 8d6)
-output("succeeded_save", 8d6 // 2)
+full = dice_pool(8, 6).sum()
+half = full // 2
+output("Damage given failed save", full)
+output("Damage given successful save", half)
 ```
+
+## Reading the report and independent checks
+
+Full mean is 28; successful-save mean is **13.75**, not 14. Half the possible probability mass is on odd totals, where rounding loses half a point, giving a mean loss of 1/4. Half-damage range is 4–24.
+
+## Safe changes
+
+Use one d6 instead: full mean 3.5, rounded-half mean 1.5. Verify by writing transformed faces 0,1,1,2,2,3.
+
+## Composition and boundary checks
+
+Why is this not the overall expected damage to a target? Answer: it conditions on the save result. You must also know the target’s save chance; L32 builds that full scoped question. Checkpoint: keep the conditioning statement in every output label.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+[D&D Basic Rules 2014, Fireball](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/spells) and the basic round-down convention. Base third-level spell, one target; no resistance, vulnerability, Evasion, or other damage reductions.
+
+## Related learning
+
+[Lesson L20](../tutorial/20-round-each-result.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.

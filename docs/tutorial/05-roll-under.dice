@@ -1,0 +1,74 @@
+# Roll-under checks: low can be good
+
+**Part B · L05 · 5–10 minutes · Prerequisite: L04**
+
+## The situation and question
+
+In **Call of Cthulhu 7th edition**, the Keeper asks for a regular-difficulty
+Spot Hidden check. Your investigator has skill 50. Roll percentile dice and
+succeed if the result is **equal to or below** the skill. How often do you succeed?
+
+This is one unopposed regular-difficulty check, without bonus/penalty dice,
+pushing, or spending Luck. We ask whether you meet the requirement, not whether
+you get *exactly* the game's Regular success level: better successes count too.
+
+## Predict
+
+Does skill 50 succeed on 49 faces, 50 faces, or 51 faces? Does rolling 50 count?
+
+## Build
+
+`d(100)` represents the 100 equally likely percentile results **1–100**. It
+never produces zero. At the table, two percentile dice encode these results;
+the double-zero combination means 100, not zero.
+
+In L04, `.p_ge(target)` counted results at or above a threshold. `.cdf(skill)`
+counts results at or **below** it, including the boundary. CDF means *cumulative
+distribution function*: accumulate the chances from the lowest result through
+the number you supply. You need not memorise the mathematical name to use it.
+
+```dice
+skill = 50
+percentile = d(100)
+output("Meet regular difficulty", percentile.cdf(skill))
+output("Roll exactly the skill value", percentile.pmf(skill))
+```
+
+## Run and read
+
+Faces 1 through 50 succeed: 50 out of 100, or **50%**. Exactly 50 is just one
+face, **1%**. The second question is included in the first; the two outputs are
+not mutually exclusive categories.
+
+Increasing the skill helps even though *lower rolls* are good. You are moving
+the acceptable boundary upwards, not changing the die or its mean of 50.5.
+
+## Change one thing
+
+Change `skill` to 65. **Check:** success rises to 65%; exactly the skill remains
+1%. Do not use `.p_ge(65)`—that asks the opposite-direction question.
+
+## Try it yourself
+
+Write a report for skill 40. Then explain the difference between “below 40” and
+“40 or below.” **Answer check:** regular difficulty succeeds 40% of the time;
+strictly below 40 is only 39%. Count 1–39 and then include the boundary face.
+
+## What you now know
+
+First decide which direction is favourable and whether equality counts. A
+roll-under rule can be modelled with an inclusive lower-tail query.
+
+## Rules and model notes
+
+Source: Chaosium's [7th-edition Quick-Start Rules](https://www.chaosium.com/cthulhu-quickstart/),
+**Reading D100 (Percentile Dice)** and **Skill Rolls and Difficulty Levels**
+(p. 10 in the linked PDF), checked 2026-09-15. This lesson uses integer skills
+1–99 and deliberately does not distinguish Hard, Extreme, critical, or fumble
+results. Do not extrapolate it to skills 100+ or bonus/penalty dice.
+
+## Where next
+
+[Previous: success](04-success.html) · [Next: averages and chances](06-averages-and-chances.html).
+The [regular-check recipe](../cookbook/coc7-regular-check.html) compares several
+skills and states what this component leaves out.

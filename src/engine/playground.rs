@@ -266,10 +266,10 @@ mod tests {
 
     #[test]
     fn eval_program_sample_space_ordinal_and_prob() {
-        let src = tutorial("docs/tutorial/13-pbta-2d6-move.dice");
+        let src = "bands = scale().step(\"MISS\").step(\"PARTIAL\").step(\"FULL\")\nresult = bucket(d(6) + d(6), bands, [6, 9])\noutput(\"result\", result)\noutput(\"p_full_success\", result.pmf(\"FULL\"))";
         let r = eval_program(
-            "13-pbta-2d6-move.dice",
-            &src,
+            "sample-space.dice",
+            src,
             EvalProgramOptions {
                 prob_format: ProbFormat::SampleSpace,
             },

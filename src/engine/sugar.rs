@@ -1,6 +1,6 @@
 //! Compatibility APIs for lowering tabletop literals to ordinary Starlark calls.
 //! Recognition is shared with highlighting; strings, comments, and whole native
-//! tokens are never rewritten. See `docs/tutorial/05-dice-notation.dice`.
+//! tokens are never rewritten. See `docs/tutorial/13-keep-and-drop.dice`.
 
 /// Expand dice and inclusive integer-band shorthand, preserving all other text.
 ///

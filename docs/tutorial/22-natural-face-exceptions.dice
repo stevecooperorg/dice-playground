@@ -1,0 +1,50 @@
+# Test natural-face exceptions before totals
+
+**Part F · L22 · Prerequisite: L21 · One modelling idea**
+
+## Situation, question, and prediction
+
+A D&D 2014 attack with +5 targets AC 15. A natural 1 automatically misses; a natural 20 is a critical hit. How do these exceptions differ from L21’s ability check? Predict what happens against impossibly high AC.
+
+## Build
+
+`if` tests a condition; `==` compares equality, while `>=` means at least. Indentation controls each branch. `return` exits the function immediately, so test exceptions before ordinary success. Pass the function **name**, without calling it, to `classify`; it will receive each possible natural face.
+
+```dice
+bonus = 5
+ac = 15
+bands = scale().step("Miss").step("Hit").step("Critical")
+def attack(face):
+    if face == 1:
+        return "Miss"
+    if face == 20:
+        return "Critical"
+    if face + bonus >= ac:
+        return "Hit"
+    return "Miss"
+result = classify(d(20), bands, attack)
+output("Attack categories", result)
+output("Hit including critical", result.p_at_least("Hit"))
+```
+
+## Run, read, and check
+
+At defaults: miss 9/20, ordinary hit 10/20, critical 1/20. Total chance to hit is 11/20. No extra “fumble” effect is assumed. The die passed to `classify` is unmodified because its natural face matters.
+
+## Change one thing
+
+Set AC to 100: only critical remains a hit, 1/20. Set AC to 1: natural 1 still misses, so hit including critical is 19/20.
+
+## Try it yourself
+
+Use advantage by replacing `d(20)` with `keep_highest(2, 20, 1)`. Answer: hit including critical 319/400 and critical 39/400 at defaults. Checkpoint: classify a new rule with explicit equality and exception boundaries before trusting the graph.
+
+## Rules and model notes
+
+[D&D Basic Rules 2014, Combat: Attack Rolls and Rolling 1 or 20](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/combat). Ordinary attack categories only; no expanded critical range, damage, or house-rule fumbles.
+
+## What you now know / where next
+
+Test natural-face exceptions before totals is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [dnd2014-attacks](../cookbook/dnd2014-attacks.html).

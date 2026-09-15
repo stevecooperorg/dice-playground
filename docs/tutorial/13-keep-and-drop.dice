@@ -1,0 +1,40 @@
+# Keeping three equals dropping one
+
+**Part D · L13 · Prerequisite: L12 · One modelling idea**
+
+## Situation, question, and prediction
+
+D&D 2014 offers random ability generation by rolling four d6 and adding the highest three. Compare one such score with 3d6. Predict whether dropping one positive die can increase the sum of those same four dice.
+
+## Build
+
+`4d6dl1` means four d6, drop the lowest one; `4d6kh3` means keep the highest three. Plain notation such as `roll = 4d6` preserves a pool, so use `roll.sum()` for its total. Keep/drop notation such as `score = 4d6dl1` already returns a numeric distribution: do **not** call `.sum()` on that score. The function form `keep_highest(4, 6, 3)` also returns the kept total.
+
+```dice
+score = keep_highest(4, 6, 3)
+output("One 4d6 drop-lowest score", score)
+output("Three d6", dice_pool(3, 6).sum())
+output("All four d6", dice_pool(4, 6).sum())
+```
+
+## Run, read, and check
+
+The score ranges 3–18 and has mean 12.2445987654. That exceeds 3d6’s 10.5, but is **below** 4d6’s 14. Discarding a positive die cannot increase that same throw’s total. Keeping three and dropping one have identical complete distributions, not just equal means.
+
+## Change one thing
+
+Keep the highest two instead. This equals dropping the lowest two; its mean is 9.34413580247 and range 2–12.
+
+## Try it yourself
+
+Explain why six independent score reports are not a complete character-generation policy. Answer: choosing assignments, reroll rules, and the quality of the whole array need additional questions. This page models one score only.
+
+## Rules and model notes
+
+D&D Basic Rules 2014, [Step-by-Step Characters](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/step-by-step-characters), Determine Ability Scores. One random score; no reroll policy, point buy, or six-score array ranking.
+
+## What you now know / where next
+
+Keeping three equals dropping one is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [ability-scores-4d6dl1](../cookbook/ability-scores-4d6dl1.html).

@@ -1,9 +1,10 @@
 .PHONY: help test check check-wasm serve static release-static references cli fmt clean \
-	cf-install cf-deploy cf-preview FORCE
+	cf-install cf-deploy cf-preview check-browser benchmark-learning FORCE
 
 TRUNK ?= trunk
 NPM ?= npm
 WRANGLER ?= npx wrangler
+LEARNING_SITE ?= dist
 
 all: help
 
@@ -13,6 +14,8 @@ help:
 	@echo "  make test            cargo test (engine + UI + integration)"
 	@echo "  make check           test + clippy (-Dwarnings) + fmt --check"
 	@echo "  make check-wasm      wasm32 check (no CLI/LSP features)"
+	@echo "  make check-browser   Chromium/WASM smoke test (LEARNING_SITE=dist, optional CHROME)"
+	@echo "  make benchmark-learning  Native defaults and supported parameter bounds"
 	@echo "  make serve           Trunk dev server (:8081); run make static for /tutorial/ HTML"
 	@echo "  make static          Trunk debug build + tutorial HTML in dist/"
 	@echo "  make release-static  Trunk release build + tutorial (CDN artifact)"
@@ -30,6 +33,7 @@ test: FORCE
 
 check: FORCE
 	python3 bin/learning-site.py
+	python3 -B -m unittest discover -s tests -p 'learning_site_test.py'
 	node --test tests/open_document.test.cjs
 	cargo test
 	cargo clippy --all-targets -- -Dwarnings
@@ -37,6 +41,14 @@ check: FORCE
 
 check-wasm: FORCE
 	cargo check --target wasm32-unknown-unknown --no-default-features
+
+# Requires a Trunk-built site and Chromium (override CHROME outside macOS).
+check-browser: FORCE
+	node bin/browser-learning-smoke.mjs "$(LEARNING_SITE)"
+
+benchmark-learning: FORCE
+	cargo build --bin dice
+	python3 bin/benchmark-learning.py
 
 serve: FORCE
 	env -u NO_COLOR -u TRUNK_NO_COLOR $(TRUNK) serve

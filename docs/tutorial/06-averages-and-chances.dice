@@ -1,0 +1,86 @@
+# An average is not a success chance
+
+**Part B · L06 · 5–10 minutes · Prerequisite: L05**
+
+## The situation and question
+
+In **D&D 2014**, the DM calls for a Strength (Athletics) check to climb a difficult
+surface. The Difficulty Class (**DC**) is 15. Two characters have total check
+bonuses +2 and +5, already including any applicable proficiency. Which has the
+better chance on this single attempt, and how much better is it?
+
+For an ordinary ability check, roll a d20, add the bonus, and meet or beat the
+DC. These are not attacks: do not add automatic failure on a natural 1 or
+automatic success on a natural 20. This example excludes advantage, spells,
+rerolls, passive checks, and special class features.
+
+## Predict
+
+The +5 character's average total is above 15. Does that mean they usually
+succeed, always succeed, or need no roll? The DM still decides whether a check
+is called for; our calculation only answers the stated uncertain attempt.
+
+## Build
+
+We reuse assignment, addition, and `.p_ge` from Part A. Each roll variable is a
+distribution of totals. Report the totals to see their ranges and means, then
+ask a separate question about success. Four outputs are useful here because
+we are deliberately contrasting **two measurements for two choices**.
+
+```dice
+dc = 15
+bonus_a = 2
+bonus_b = 5
+check_a = d(20) + bonus_a
+check_b = d(20) + bonus_b
+output("Character A: check totals", check_a)
+output("Character B: check totals", check_b)
+output("Character A: chance to meet DC", check_a.p_ge(dc))
+output("Character B: chance to meet DC", check_b.p_ge(dc))
+```
+
+## Run and read
+
+| Character | Range | Mean total | Successful natural faces at DC 15 | Chance |
+|---|---|---|---|---|
+| A, +2 | 3–22 | 12.5 | 13–20: eight faces | 40% |
+| B, +5 | 6–25 | 15.5 | 10–20: eleven faces | 55% |
+
+The +5 choice improves this chance by **15 percentage points**, not “three
+percent” because its mean is three higher. A mean is measured in points on the
+roll; a probability is a proportion of attempts. Character B can still fail
+45% of the time despite a mean above the DC.
+
+For these identical dice with different flat bonuses, the larger bonus cannot
+reduce success at a fixed DC. That does not make a mean a universal substitute
+for a threshold query when other distributions or rules change.
+
+## Change one thing
+
+Raise `dc` to 20. **Check:** A succeeds on 18–20 (15%); B on 15–20 (30%). The
+means do not change: the rule for rolling is unchanged; only the question changed.
+
+## Try it yourself
+
+For bonus +5, compare DC 25 and DC 26. **Answer check:** only natural 20 meets
+DC 25, giving 5%; no face meets DC 26, giving 0%. A natural 20 is not an automatic
+success for this ordinary ability check. At DC 6 every face succeeds, including
+natural 1. Do not transfer those boundary conclusions to an attack roll.
+
+## What you now know
+
+Pick the measurement that answers the decision. Mean total and success chance
+are useful, different quantities; neither describes every possible outcome.
+
+## Rules and model notes
+
+Source: [D&D Basic Rules 2014, Using Ability Scores](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/using-ability-scores),
+**Ability Checks**, **Skills**, and **Strength Checks**, checked 2026-09-15.
+The total integer bonus is an input, not a model of character creation. This
+report does not decide eligibility, repeated attempts, or the cost of failure.
+
+## Where next
+
+[Previous: roll-under](05-roll-under.html) · [Next: one comparison table](07-probability-tables.html).
+See the [ordinary ability-check recipe](../cookbook/dnd2014-ability-check.html)
+for a reusable, explicitly non-attack model.

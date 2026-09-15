@@ -1,0 +1,43 @@
+# Exactly this outcome, or this good or better?
+
+**Part C · L10 · Prerequisite: L09 · One modelling idea**
+
+## Situation, question, and prediction
+
+Revisit Defy Danger without learning another game. Is the chance of receiving the middle-band offer the same as the chance of rolling at least 7? Predict which question includes more results.
+
+## Build
+
+On named outcomes, `.pmf(label)` means exactly that label. `.p_at_least(label)` means that step and every later step in the ladder. The order comes from `.step`, not alphabetical sorting. It is a reporting order, not a universal ranking of every fictional choice.
+
+```dice
+total = d(6) + d(6)
+bands = scale().step("GM outcome").step("Bargain").step("Threat avoided")
+result = bucket(total, bands, [6, 9])
+rows = [("Exactly the middle band", result.pmf("Bargain")),
+        ("Seven or more", result.p_at_least("Bargain")),
+        ("Ten or more", result.pmf("Threat avoided"))]
+output("Different outcome questions", prob_table(rows))
+```
+
+## Run, read, and check
+
+The rows are 15/36, 21/36, and 6/36. Seven or more includes both the middle and top bands. Cut points `[6, 9]` mean the first band ends at 6 and the second at 9; everything higher goes to the last band.
+
+## Change one thing
+
+Add +2 to the total. Exactly middle stays 15/36; seven or more becomes 30/36; ten or more becomes 15/36.
+
+## Try it yourself
+
+Write a query for exactly the lowest band, then explain the complement of seven or more. Answer: `result.pmf("GM outcome")` is 15/36, and 1 − 21/36 agrees. Do not add all three displayed rows: they overlap.
+
+## Rules and model notes
+
+[Dungeon World SRD, Defy Danger](https://www.dungeonworldsrd.com/moves/). This models outcome bands, not the GM’s choice or the fiction. A 6− leaves what happens to the GM; 7–9 is a worse outcome, hard bargain, or ugly choice, not universally a completed success.
+
+## What you now know / where next
+
+Exactly this outcome, or this good or better? is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [dungeon-world-defy-danger](../cookbook/dungeon-world-defy-danger.html).

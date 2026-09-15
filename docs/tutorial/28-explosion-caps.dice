@@ -1,0 +1,41 @@
+# An unbounded rule needs an explicit cap
+
+**Part G · L28 · Prerequisite: L27 · One modelling idea**
+
+## Situation, question, and prediction
+
+A generic acing damage component rolls again on a d6 maximum and adds the result. Real unlimited chains have no finite upper bound. With one extra roll allowed, predict why a total of 12 appears even though unlimited acing would continue.
+
+## Build
+
+`explode(d(6), max_depth=cap)` allows at most `cap` extra rolls. `max_depth=cap` is a named argument: it supplies the value of our variable `cap` to the function’s `max_depth` option. The terminal roll counts even when it shows 6. Compare caps rather than calling the bounded result an exact model of an infinite rule.
+
+```dice
+cap = 1
+bounded = explode(d(6), max_depth=cap)
+output("Acing d6: one extra roll", bounded)
+output("Acing d6: two extra rolls", explode(d(6), max_depth=2))
+output("Terminal twelve at cap one", bounded.pmf(12))
+```
+
+## Run, read, and check
+
+At cap one, faces 1–5 each have probability 1/6 and totals 7–12 each 1/36; no 6 is possible. Mean is 49/12. At cap two, mean is 301/72. The unlimited mean is 4.2, so the first cap’s mean error is 7/60, not 1/36.
+
+## Change one thing
+
+Use cap zero: no extra roll is allowed and the mean returns to 3.5. Keep the output title honest when changing the cap.
+
+## Try it yourself
+
+What is the probability the cap interrupts a continuing d6 chain? Answer: (1/6)^(cap+1), hence 1/36 at cap one. Under a shared roll sequence that bounds disagreement on an event, **not mean damage error**. Checkpoint: distinguish bounded explosion, once-only reroll, and conditioning.
+
+## Rules and model notes
+
+Generic bounded acing component. Not a complete Savage Worlds trait roll: no Wild Die, critical failure, modifiers, raises, or Bennies. A pool of exploding dice needs careful performance analysis; exploding a sum is a different rule.
+
+## What you now know / where next
+
+An unbounded rule needs an explicit cap is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [exploding-dice](../cookbook/exploding-dice.html).

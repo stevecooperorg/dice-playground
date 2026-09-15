@@ -1,0 +1,61 @@
+# Inspect the same pool faces in one callback
+
+**Part F · L23 · Prerequisite: L22 · One modelling idea**
+
+## Situation, question, and prediction
+
+A Blades action roll is critical with at least two sixes; otherwise read the highest die. At zero dice, roll two and take the lower, with no critical. Predict why a maximum alone cannot distinguish one six from two.
+
+## Build
+
+`pool_map` passes a list of faces to your function and collects its integer return codes. `faces[0]` is the first element: list indexing starts at **zero**, unlike `order_stat`. A loop can inspect each face while tracking the maximum and count of sixes. Return codes 0–3 are grouped into named categories with cut points. `or` joins two invalid-input conditions; `fail` stops with an explanation rather than trying an unsupported pool. `else` selects the ordinary-pool branch when the preceding zero-dice test is false.
+
+```dice
+dice = 2
+if dice < 0 or dice > 5:
+    fail("This interactive callback supports 0–5 dice; use the cookbook for larger pools")
+bands = scale().step("Bad").step("Partial").step("Clean").step("Critical")
+def read_faces(faces):
+    highest = faces[0]
+    sixes = 0
+    for face in faces:
+        if face > highest:
+            highest = face
+        if face == 6:
+            sixes = sixes + 1
+    if sixes >= 2:
+        return 3
+    if highest == 6:
+        return 2
+    if highest >= 4:
+        return 1
+    return 0
+if dice == 0:
+    result = bucket(keep_lowest(2, 6, 1), bands, [3, 5, 6])
+else:
+    codes = pool_map(dice_pool(dice, 6), read_faces)
+    result = bucket(codes, bands, [0, 1, 2])
+output("Blades action categories", result)
+```
+
+## Run, read, and check
+
+Two dice: bad 9/36, partial 16/36, clean 10/36, critical 1/36. Those 36 face pairs are disjointly classified. Returning only a maximum would merge the critical pair (6,6) with ordinary single-six outcomes.
+
+## Change one thing
+
+Set dice to zero: bad 27/36, partial 8/36, clean 1/36, critical zero. Zero dice is **not** desperate position. Four dice give clean or critical combined above 50%.
+
+## Try it yourself
+
+Why stop this interactive example at five dice? Tuple enumeration grows as 6^n: five uses 7,776 tuples; seven uses 279,936 and took roughly 13 seconds in a debug-WASM browser test. Eight exceeds the 1,000,000-cell guard, but staying below that guard alone does not guarantee responsiveness. The linked cookbook uses a count-based decomposition for larger pools.
+
+## Rules and model notes
+
+[Blades in the Dark, core system](https://bladesinthedark.com/core-system). Position describes consequences and is separate from the number of dice. No stress, resistance, or effect-level calculation here. Action criticals increase effect; they do not mean merely “no consequences.” [Action roll](https://bladesinthedark.com/action-roll).
+
+## What you now know / where next
+
+Inspect the same pool faces in one callback is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [blades-in-the-dark](../cookbook/blades-in-the-dark.html).

@@ -20,13 +20,13 @@ async function open({ content = '# Full lesson\n```dice\noutput("d6", d(6))\n```
 }
 
 test('whole source beyond inline URL limit retains filename and Unicode', async () => {
-  const content = '# Lesson 🎲\n' + 'Long prose. '.repeat(1000);
+  const content = '# Lesson 🎲\n' + 'Long prose. '.repeat(7000);
   const result = await open({ content });
   assert.deepEqual(result.stored, ['dice_playground_pending_load', { content, filename: 'pilot.dice' }]);
   assert.equal(result.destination, '/');
 });
 
-for (const options of [{ ok: false }, { storageFails: true }, { href: 'https://other.example/pilot.dice' }, { content: 'x'.repeat(64 * 1024 + 1) }]) {
+for (const options of [{ ok: false }, { storageFails: true }, { href: 'https://other.example/pilot.dice' }, { content: 'x'.repeat(256 * 1024 + 1) }]) {
   test(`handoff failure is visible: ${JSON.stringify(options).slice(0, 80)}`, async () => {
     const result = await open(options);
     assert.equal(result.destination, undefined);

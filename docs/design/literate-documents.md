@@ -120,6 +120,8 @@ All resulting user-content HTML must pass engine-side sanitization before browse
 
 ## Output placement and identity
 
+Executable fence source is now displayed directly before its results, escaped and sanitized as code. Tutorial/cookbook authors must not maintain a second display-only copy.
+
 The initial placement rule is **immediately below the executable fence responsible for an output**, in document order. Within a fence, outputs retain evaluation order. At minimum every recorded `output()` entry appears once in the report.
 
 The source specification allows two implementation strategies:
@@ -130,6 +132,8 @@ The source specification allows two implementation strategies:
 It requires the selected strategy to be documented and tested with fixtures that distinguish the alternatives. This is an important unresolved boundary, not a reason to imply arbitrary outputs can always be assigned correctly by counting source text.
 
 **Implementation observation:** the current weave uses a static count of lines containing `output(` to consume outputs in global evaluation order, then attaches leftovers to the last fence. That is a heuristic, not precise runtime provenance. Loops, conditionals, multiple calls on one line, and functions defined in one block but called in another need explicit treatment before claiming general per-fence placement.
+
+The rewritten learning corpus uses a tested **single executable fence per document** restriction. All setup and outputs live in that fence, so loops and helper calls retain evaluation order without relying on per-fence provenance. The manifest validator and actual literate-parser corpus tests enforce this interim contract; general multi-fence provenance remains deferred.
 
 The original format also says duplicate names use the **last output for named binding**, with a check-mode warning recommended. That sits awkwardly beside “every output appears once”, particularly when a chart is located by name but its adjacent table belongs to an earlier entry. The [review notes](../requirements/review-notes.md#document-rules) preserve the need for a consistent identity policy. Authors can avoid the ambiguity by using distinct names.
 

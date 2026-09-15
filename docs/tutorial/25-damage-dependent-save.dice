@@ -1,0 +1,59 @@
+# A later save can depend on earlier damage
+
+**Part G · L25 · Prerequisite: L24 · One modelling idea**
+
+## Situation, question, and prediction
+
+A Cairn Blood Elk hits a PC with HP 4, armour 2, and STR 11. Damage overflow reduces STR before a save. Predict why a single precomputed “save chance at STR 11” cannot model every damage branch.
+
+## Build
+
+Pair raw damage with an independent potential d20 save using `joint_classify`. The callback subtracts armour, checks HP, then computes reduced STR. It ignores the potential save when no save is required. Death at STR zero must be checked before the natural-1 success exception. `max(0, raw - armour)` takes the larger of zero and the reduced damage: it is the scalar version of L19’s zero floor.
+
+```dice
+hp = 4
+armour = 2
+strength = 11
+bands = scale().step("No effect").step("HP loss").step("Scar").step("STR loss, save passed").step("Critical damage").step("Death")
+def injury(raw, save):
+    damage = max(0, raw - armour)
+    if damage == 0:
+        return "No effect"
+    if damage < hp:
+        return "HP loss"
+    if damage == hp:
+        return "Scar"
+    remaining = strength - (damage - hp)
+    if remaining <= 0:
+        return "Death"
+    if save == 1:
+        return "STR loss, save passed"
+    if save == 20:
+        return "Critical damage"
+    if save <= remaining:
+        return "STR loss, save passed"
+    return "Critical damage"
+output("One Blood Elk hit", joint_classify(d(8), d(20), bands, injury))
+```
+
+## Run, read, and check
+
+The default categories are 1/4,3/8,1/8,19/160,21/160,0. Horn faces 7 and 8 leave STR 10 and 9, so their passed-save pairs total 10+9 out of 160. Low-damage outcomes ignore the save; counting all twenty potential values still gives the right total probability.
+
+## Change one thing
+
+Set strength to 1. Both overflowing damage faces now cause death, probability 1/4. A potential save of 1 cannot rescue zero STR.
+
+## Try it yourself
+
+At strength 2, which horn faces cause death? Answer: only 8, probability 1/8. Explain why multiplying an independent “STR loss chance” by an unchanged STR-11 save chance would be wrong.
+
+## Rules and model notes
+
+[Cairn 2e core rules](https://cairnrpg.com/second-edition/players-guide/core-rules/), Critical Damage and Attribute Loss; [Blood Elk](https://cairnrpg.com/second-edition/wardens-guide/bestiary/#blood-elk). Positive integer HP, armour 0–3, STR 1–20. Immediate categories only: no scar resolution, recovery, subsequent attacks, or goring aftermath.
+
+## What you now know / where next
+
+A later save can depend on earlier damage is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [cairn-blood-elk](../cookbook/cairn-blood-elk.html).

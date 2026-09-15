@@ -1,304 +1,75 @@
-use std::ffi::OsStr;
-use std::fs;
+//! Tutorial inventory, opening lessons, and preserved keep/drop regression oracles.
+use dice_playground::engine::{eval_program, EvalProgramOptions, OutputEntry};
 use std::path::PathBuf;
-
-use dice_playground::engine::OutputEntry;
-
-const TUTORIAL_DIR: &str = "docs/tutorial";
-
-const SAMPLE_PATHS: &[&str] = &[
-    "docs/tutorial/02-two-dice.dice",
-    "docs/tutorial/03-modifiers.dice",
-    "docs/tutorial/04-success.dice",
-    "docs/tutorial/05-dice-notation.dice",
-    "docs/tutorial/06-dice-pools.dice",
-    "docs/tutorial/07-mixed-dice-pools.dice",
-    "docs/tutorial/08-restrict-faces.dice",
-    "docs/tutorial/09-pool-success-counts.dice",
-    "docs/tutorial/10-tables.dice",
-    "docs/tutorial/11-ordered-outcomes.dice",
-    "docs/tutorial/12-dnd5e-d20-check.dice",
-    "docs/tutorial/13-pbta-2d6-move.dice",
-];
-
-fn manifest_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-}
-
-fn sample_path(rel: &str) -> PathBuf {
-    manifest_dir().join(rel)
-}
-
-fn eval_sample(rel: &str) -> dice_playground::engine::EvalResult {
-    use dice_playground::engine::{eval_program, EvalProgramOptions};
-    let path = sample_path(rel);
-    let content = fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("read tutorial sample {}: {e}", path.display()));
-    let path_str = path.to_string_lossy();
-    let r = eval_program(&path_str, &content, EvalProgramOptions::default())
-        .unwrap_or_else(|e| panic!("eval {}: {e:#}", path.display()));
-    dice_playground::engine::EvalResult {
-        return_value: r.return_value,
-        outputs: r.outputs,
-    }
-}
 
 #[test]
 fn tutorial_manifest_covers_all_files() {
-    let dir = manifest_dir().join(TUTORIAL_DIR);
-    let mut on_disk = Vec::new();
-    for entry in fs::read_dir(&dir).unwrap_or_else(|e| panic!("read_dir {}: {e}", dir.display())) {
-        let entry = entry.expect("dir entry");
-        let path = entry.path();
-        if path.extension() == Some(OsStr::new("dice")) {
-            let rel = path
-                .strip_prefix(manifest_dir())
-                .expect("under manifest")
-                .to_string_lossy()
-                .into_owned();
-            on_disk.push(rel);
-        }
-    }
-    on_disk.sort();
-    let mut expected: Vec<String> = SAMPLE_PATHS.iter().map(|s| (*s).to_owned()).collect();
-    expected.push("docs/tutorial/01-one-die.dice".to_owned());
-    expected.sort();
-    assert_eq!(
-        on_disk, expected,
-        "every docs/tutorial/* literate script must be listed in SAMPLE_PATHS"
-    );
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let manifest: serde_json::Value =
+        serde_json::from_str(include_str!("../docs/learning-content.json")).unwrap();
+    let mut listed: Vec<_> = manifest["pages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|p| p["path"].as_str())
+        .filter(|p| p.starts_with("tutorial/"))
+        .map(str::to_owned)
+        .collect();
+    let mut actual: Vec<_> = std::fs::read_dir(root.join("docs/tutorial"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "dice"))
+        .map(|p| format!("tutorial/{}", p.file_name().unwrap().to_string_lossy()))
+        .collect();
+    listed.sort();
+    actual.sort();
+    assert_eq!(listed, actual);
+    assert_eq!(listed.len(), 32, "the complete core course");
 }
 
 #[test]
-fn tutorial_02_two_d6() {
-    let res = eval_sample(SAMPLE_PATHS[0]);
-    assert_eq!(res.outputs.len(), 1);
-    match &res.outputs[0] {
-        OutputEntry::DieRoll { name, mean, .. } => {
-            assert_eq!(name, "Two independent d6 added");
-            assert!((*mean - 7.0).abs() < 1e-9);
-        }
-        other => panic!("expected dist output, got {other:?}"),
-    }
-}
-
-#[test]
-fn tutorial_03_modifier_shift() {
-    let res = eval_sample(SAMPLE_PATHS[1]);
-    assert_eq!(res.outputs.len(), 2);
-    let (base_mean, shifted_mean) = match (&res.outputs[0], &res.outputs[1]) {
+fn opening_lessons_have_checked_means() {
+    for (source, expected) in [
+        (include_str!("../docs/tutorial/01-one-die.dice"), vec![3.5]),
+        (include_str!("../docs/tutorial/02-two-dice.dice"), vec![7.0]),
         (
-            OutputEntry::DieRoll {
-                name: n0, mean: m0, ..
-            },
-            OutputEntry::DieRoll {
-                name: n1, mean: m1, ..
-            },
-        ) => {
-            assert_eq!(n0, "Before the modifier");
-            assert_eq!(n1, "After the modifier");
-            (*m0, *m1)
-        }
-        other => panic!("expected two dist outputs, got {other:?}"),
-    };
-    assert!((base_mean - 7.0).abs() < 1e-9);
-    assert!((shifted_mean - base_mean - 2.0).abs() < 1e-9);
-}
-
-#[test]
-fn tutorial_04_success_chance() {
-    let res = eval_sample(SAMPLE_PATHS[2]);
-    assert_eq!(res.outputs.len(), 2);
-    for (output, expected_name, expected_value) in [
-        (&res.outputs[0], "Success: eight or more", 15.0 / 36.0),
-        (&res.outputs[1], "Exactly eight", 5.0 / 36.0),
+            include_str!("../docs/tutorial/03-modifiers.dice"),
+            vec![7.0, 9.0],
+        ),
     ] {
-        match output {
-            OutputEntry::Prob { name, value } => {
-                assert_eq!(name, expected_name);
-                assert!((*value - expected_value).abs() < 1e-9);
+        let result = eval_program("lesson.dice", source, EvalProgramOptions::default()).unwrap();
+        let means: Vec<_> = result
+            .outputs
+            .iter()
+            .filter_map(|entry| match entry {
+                OutputEntry::DieRoll { mean, .. } => Some(*mean),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(means.len(), expected.len());
+        for (actual, expected) in means.iter().zip(expected) {
+            assert!((actual - expected).abs() < 1e-10);
+        }
+    }
+}
+
+#[test]
+fn keep_drop_equivalences_compare_whole_distributions() {
+    let source = "drop_one = 4d6dl1\nkeep_three = 4d6kh3\ndrop_two = 4d6dl2\nkeep_two = 4d6kh2\noutput(\"drop one\", drop_one)\noutput(\"keep three\", keep_three)\noutput(\"drop two\", drop_two)\noutput(\"keep two\", keep_two)";
+    let result = eval_program("equivalence.dice", source, EvalProgramOptions::default()).unwrap();
+    for (a, b) in [(0, 1), (2, 3)] {
+        match (&result.outputs[a], &result.outputs[b]) {
+            (
+                OutputEntry::DieRoll { entries: left, .. },
+                OutputEntry::DieRoll { entries: right, .. },
+            ) => {
+                assert_eq!(left.len(), right.len());
+                for ((lf, lp), (rf, rp)) in left.iter().zip(right) {
+                    assert_eq!(lf, rf);
+                    assert!((lp - rp).abs() < 1e-10);
+                }
             }
-            other => panic!("expected prob output, got {other:?}"),
+            _ => panic!("expected distributions"),
         }
-    }
-}
-
-fn dist_mean_by_name(res: &dice_playground::engine::EvalResult, name: &str) -> f64 {
-    for out in &res.outputs {
-        if let OutputEntry::DieRoll { name: n, mean, .. } = out {
-            if n == name {
-                return *mean;
-            }
-        }
-    }
-    panic!("missing dist output {name:?}");
-}
-
-#[test]
-fn tutorial_05_dice_notation() {
-    let res = eval_sample(SAMPLE_PATHS[3]);
-    assert_eq!(res.outputs.len(), 8);
-    assert!((dist_mean_by_name(&res, "one_d4") - 2.5).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "two_d6") - 7.0).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "two_d6_plus_3") - 10.0).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "four_d6") - 14.0).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "four_d6dl1") - 12.244598765432098).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "four_d6dh1") - 8.755401234567925).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "four_d6kh2") - 9.344135802469168).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "three_d12kl1") - 3.5208333333333326).abs() < 1e-9);
-}
-
-#[test]
-fn tutorial_06_dice_pools() {
-    let res = eval_sample(SAMPLE_PATHS[4]);
-    assert_eq!(res.outputs.len(), 3);
-    let pool_mean = dist_mean_by_name(&res, "pool_sum");
-    let notation_mean = dist_mean_by_name(&res, "notation_sum");
-    assert!((pool_mean - notation_mean).abs() < 1e-9);
-    assert!((pool_mean - 10.5).abs() < 1e-9);
-    let hi = dist_mean_by_name(&res, "highest_die");
-    assert!(hi > 4.0 && hi < 6.0);
-}
-
-#[test]
-fn tutorial_07_mixed_dice_pools() {
-    let res = eval_sample(SAMPLE_PATHS[5]);
-    assert_eq!(res.outputs.len(), 3);
-    let hi = dist_mean_by_name(&res, "highest");
-    assert!(hi > 6.0 && hi < 8.0);
-    let three_d6_hi = dist_mean_by_name(&res, "same_as_three_d6_highest");
-    assert!(three_d6_hi < hi);
-}
-
-#[test]
-fn tutorial_08_restrict_faces() {
-    let res = eval_sample(SAMPLE_PATHS[6]);
-    assert_eq!(res.outputs.len(), 3);
-    let die_mean = dist_mean_by_name(&res, "high_die");
-    assert!((die_mean - 5.5).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "conditional_pool_sum") - 16.5).abs() < 1e-9);
-    assert!((dist_mean_by_name(&res, "ignored_pool_sum") - 5.5).abs() < 1e-9);
-}
-
-#[test]
-fn tutorial_09_pool_success_counts() {
-    let res = eval_sample(SAMPLE_PATHS[7]);
-    assert_eq!(res.outputs.len(), 2);
-    match &res.outputs[0] {
-        OutputEntry::DieRoll { name, mean, .. } => {
-            assert_eq!(name, "how_many_high");
-            assert!((*mean - 1.0).abs() < 1e-9);
-        }
-        other => panic!("expected dist output, got {other:?}"),
-    }
-    match &res.outputs[1] {
-        OutputEntry::Prob { name, value } => {
-            assert_eq!(name, "any_one");
-            assert!((*value - 11.0 / 36.0).abs() < 1e-9);
-        }
-        other => panic!("expected prob output, got {other:?}"),
-    }
-}
-
-#[test]
-fn tutorial_11_ordered_outcomes() {
-    let res = eval_sample(SAMPLE_PATHS[9]);
-    assert_eq!(res.outputs.len(), 2);
-    match &res.outputs[0] {
-        OutputEntry::Outcomes {
-            name,
-            scale,
-            entries,
-        } => {
-            assert_eq!(name, "check");
-            assert_eq!(scale.len(), 4);
-            assert_eq!(entries.len(), 4);
-            let sum: f64 = entries.iter().map(|(_, p)| p).sum();
-            assert!((sum - 1.0).abs() < 1e-9);
-        }
-        other => panic!("expected ordinal output, got {other:?}"),
-    }
-    match &res.outputs[1] {
-        OutputEntry::Prob { name, value } => {
-            assert_eq!(name, "p_success_plus");
-            assert!(*value > 0.0 && *value < 1.0);
-        }
-        other => panic!("expected prob output, got {other:?}"),
-    }
-}
-
-#[test]
-fn tutorial_12_dnd5e_d20_check() {
-    let res = eval_sample(SAMPLE_PATHS[10]);
-    assert_eq!(res.outputs.len(), 2);
-    match &res.outputs[0] {
-        OutputEntry::Outcomes {
-            name,
-            scale,
-            entries,
-        } => {
-            assert_eq!(name, "advantage_check");
-            assert_eq!(scale.len(), 4);
-            assert_eq!(entries.len(), 4);
-            let sum: f64 = entries.iter().map(|(_, p)| p).sum();
-            assert!((sum - 1.0).abs() < 1e-9);
-        }
-        other => panic!("expected ordinal output, got {other:?}"),
-    }
-    match &res.outputs[1] {
-        OutputEntry::Prob { name, value } => {
-            assert_eq!(name, "p_hit_or_better");
-            assert!(*value > 0.0 && *value < 1.0);
-        }
-        other => panic!("expected prob output, got {other:?}"),
-    }
-}
-
-#[test]
-fn tutorial_13_pbta_2d6_move() {
-    let res = eval_sample(SAMPLE_PATHS[11]);
-    assert_eq!(res.outputs.len(), 3);
-    match &res.outputs[0] {
-        OutputEntry::Outcomes {
-            name,
-            scale,
-            entries,
-        } => {
-            assert_eq!(name, "move");
-            assert_eq!(scale, &["MISS", "PARTIAL", "FULL_SUCCESS"]);
-            assert_eq!(entries.len(), 3);
-            let sum: f64 = entries.iter().map(|(_, p)| p).sum();
-            assert!((sum - 1.0).abs() < 1e-9);
-        }
-        other => panic!("expected ordinal output, got {other:?}"),
-    }
-    // STAT=2: full success needs shifted total >= 10 → 2d6 >= 8 → 15/36
-    match &res.outputs[1] {
-        OutputEntry::Prob { name, value } => {
-            assert_eq!(name, "p_full_success");
-            assert!((*value - 15.0 / 36.0).abs() < 1e-9);
-        }
-        other => panic!("expected prob output, got {other:?}"),
-    }
-}
-
-#[test]
-fn tutorial_10_table_2d10() {
-    let res = eval_sample(SAMPLE_PATHS[8]);
-    assert_eq!(res.outputs.len(), 1);
-    const EPS: f64 = 1e-9;
-    match &res.outputs[0] {
-        OutputEntry::Table { name, entries } => {
-            assert_eq!(name, "success_grid");
-            assert_eq!(entries.len(), 13 * 11);
-            for (label, value) in entries {
-                assert!(label.starts_with("modifier "));
-                assert!(
-                    *value >= -EPS && *value <= 1.0 + EPS,
-                    "prob out of range for {label}: {value}"
-                );
-            }
-        }
-        other => panic!("expected single table output, got {other:?}"),
     }
 }

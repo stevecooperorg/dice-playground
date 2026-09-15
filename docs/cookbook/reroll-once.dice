@@ -1,0 +1,54 @@
+# Reroll a bad face once
+
+**C03 · Advanced · Scoped component**
+
+## Question and scope
+
+A house rule says “if your first d6 is a 1, reroll it once and keep the second face, even another 1.” Is rolling a 1 now impossible? Predict before examining the report.
+
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
+
+## Inputs and model limits
+
+First d6 and one independent potential replacement. Replace a first 1 once; must keep the second face even if worse. No resource cost.
+
+## Complete runnable model
+
+Use a two-die pool for the first and potential replacement faces. Index 0 is first, index 1 is second. The callback decides using only the first face, then returns either that face or the mandatory replacement. `pool_map` returns the numeric distribution.
+
+```dice
+def reroll_once(faces):
+    first = faces[0]
+    replacement = faces[1]
+    if first == 1:
+        return replacement
+    return first
+result = pool_map(dice_pool(2, 6), reroll_once)
+output("Reroll one once", result)
+output("A one remains possible", result.pmf(1))
+```
+
+## Reading the report and independent checks
+
+Only pair (1,1) ends at 1, so its probability is 1/36. Each other face gets its original 1/6 plus replacement probability 1/36 = 7/36. Mean is 47/12. The potential replacement is ignored when the first roll is kept.
+
+## Safe changes
+
+Reroll 1 or 2 instead by testing `first <= 2`. Each of 1 and 2 then has probability 2/36; each other face has 8/36.
+
+## Composition and boundary checks
+
+Why is always rolling two dice and keeping the higher a different rule? Answer: a first 2 and potential second 6 would become 6, while our once-only policy keeps the 2 and ignores the potential second face. For the guided variant that rerolls 1 or 2, a first 2 and replacement 1 must become 1—not retain the 2 after inspecting the replacement. A named game ability needs its own edition-specific timing check.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+Explicit generic house rule. Two independent d6, at most one replacement, no resource cost. Do not silently substitute it for a named game’s reroll timing or optional keep rule.
+
+## Related learning
+
+[Lesson L26](../tutorial/26-reroll-once.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.

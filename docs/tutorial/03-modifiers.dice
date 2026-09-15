@@ -55,5 +55,5 @@ shifts a distribution without changing its shape.
 ## Where next
 
 [Previous: two dice](02-two-dice.html) · [Next: success](04-success.html).
-For a named-game application, see [D&D checks](12-dnd5e-d20-check.html);
+For a named-game application, see [ordinary D&D ability checks](../cookbook/dnd2014-ability-check.html);
 attack-specific natural-face rules must not be assumed for ordinary checks.

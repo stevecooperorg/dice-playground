@@ -1,25 +1,50 @@
-# Exploding dice
+# How much does an explosion cap matter?
 
-## At the table
+**C09 · Advanced · Bounded approximation**
 
-**Exploding** (or “open-ended”) dice add another roll when you hit the die’s **maximum** face, and keep adding until you stop exploding. *Savage Worlds* uses this on raising and damage; many house rules explode d4s or d6s on max.
+## Question and scope
 
-## Try it
+A generic acing damage component rolls again on a d6 maximum and adds the result. Real unlimited chains have no finite upper bound. With one extra roll allowed, predict why a total of 12 appears even though unlimited acing would continue.
 
-In the playground, open this recipe in the playground and click **Run**. **Output** shows the distribution of one **d4** exploding up to **two** extra rolls on max.
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
 
-## The script
+## Inputs and model limits
 
-```text
-output("exploded", explode(d(4), 2))
-```
+One fair d6. Integer extra-roll cap 0–6; default 1, compared with 2. No unlimited-distribution claim.
 
-- `explode(die, max_depth)` sums the initial roll plus rerolls while the face equals the die’s maximum.
-- Increase `max_depth` for longer tails; very high depths widen the support quickly.
+## Complete runnable model
 
-For **multiple** exploding dice, build a pool of exploded dice (e.g. sum independent `explode(d(6), 2)` via convolution) or roll pools with per-die rules via `pool_map`.
+`explode(d(6), max_depth=cap)` allows at most `cap` extra rolls. The terminal roll counts even when it shows 6. Compare caps rather than calling the bounded result an exact model of an infinite rule.
 
 ```dice
-# Exploding d4: reroll and add while the die shows its maximum (depth 2).
-output("exploded", explode(d(4), 2))
+cap = 1
+bounded = explode(d(6), max_depth=cap)
+output("Acing d6: one extra roll", bounded)
+output("Acing d6: two extra rolls", explode(d(6), max_depth=2))
+output("Terminal twelve at cap one", bounded.pmf(12))
 ```
+
+## Reading the report and independent checks
+
+At cap one, faces 1–5 each have probability 1/6 and totals 7–12 each 1/36; no 6 is possible. Mean is 49/12. At cap two, mean is 301/72. The unlimited mean is 4.2, so the first cap’s mean error is 7/60, not 1/36.
+
+## Safe changes
+
+Use cap zero: no extra roll is allowed and the mean returns to 3.5. Keep the output title honest when changing the cap.
+
+## Composition and boundary checks
+
+What is the probability the cap interrupts a continuing d6 chain? Answer: (1/6)^(cap+1), hence 1/36 at cap one. Under a shared roll sequence that bounds disagreement on an event, **not mean damage error**. Checkpoint: distinguish bounded explosion, once-only reroll, and conditioning.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+Generic bounded acing component. Not a complete Savage Worlds trait roll: no Wild Die, critical failure, modifiers, raises, or Bennies. A pool of exploding dice needs careful performance analysis; exploding a sum is a different rule.
+
+## Related learning
+
+[Lesson L28](../tutorial/28-explosion-caps.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.

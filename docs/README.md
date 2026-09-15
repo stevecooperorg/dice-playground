@@ -17,22 +17,26 @@ On a lesson or recipe, choose **Open this document in the playground** to load i
 
 ## Tutorial
 
-Start with [lesson 1](tutorial/01-one-die.html). The first four lessons form a
-continuous pilot: read a die distribution, add dice, name a modifier, then build
-and independently check a success report. Each includes predictions, guided
-edits, and a transfer exercise with an answer check.
+Start with [lesson 1](tutorial/01-one-die.html). The **32-lesson, eight-part
+course** progresses from one die through useful comparisons, named outcomes,
+pools, transformations, functions, dependent rules, and after-roll decisions.
+It ends with a model-construction task, not just another parameter edit.
+Each lesson includes a prediction, worked checks, a guided change, and a transfer task.
 
 The [tutorial index](../tutorial/index.html) is generated from the content
-manifest and shows the current order, objectives, and review status. Later
-lessons retain the older sequence while the planned eight-part course is
-rewritten. Existing URLs retain their identities; future lessons must not reuse
-an old URL for a different topic.
+manifest and shows order, objectives, and review status. Nine old lesson URLs
+now show explicit migration pages to their replacements; no number silently
+points to an unrelated lesson. The course is implemented, while human novice
+review remains pending. Source-pending game examples explicitly teach scoped
+mathematical components rather than claiming edition-specific fidelity.
 
 ## Cookbook
 
 **Short recipes** for mechanics you see at the table—named after a technique or a well-known game, with pointers to where similar rules appear elsewhere.
 
-See the [cookbook index](../cookbook/index.html).
+The [cookbook index](../cookbook/index.html) browses **22 self-contained recipes**
+by game or mechanic. Component, bounded-model, and source-review labels explain
+what each recipe does—and what it does not claim.
 
 ## Function reference
 
@@ -64,4 +68,4 @@ Copy the script the model returns into the playground editor, fix any **Diagnost
 
 ## Contributing
 
-See [AGENT.md](AGENT.md) for how agents and contributors work in this repo.
+See the [contributor standards](https://github.com/stevecooperorg/dice-playground/blob/main/.agents/skills/dice-playground-standards/SKILL.md) and the repository’s `docs/design/learning-rewrite-progress.md` for validation evidence and remaining review gates.

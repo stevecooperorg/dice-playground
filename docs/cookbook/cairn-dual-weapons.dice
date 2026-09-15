@@ -1,0 +1,50 @@
+# Cairn 2e — dual-weapon damage
+
+**R22 · Intermediate · Scoped component**
+
+## Question and scope
+
+A Cairn 2e character attacks with d6 and d8 weapons together. The rule rolls both damage dice and takes the higher, not their sum. How does the second weapon change the chance of raw damage at least 6?
+
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
+
+## Inputs and model limits
+
+One d6 and one d8 weapon, choose the higher. Before armour; no impaired/enhanced attack or multiple-target rules.
+
+## Complete runnable model
+
+`dice_pool(1, 6) + dice_pool(1, 8)` joins the dice into one mixed pool. On pools, `+` joins; on numeric distributions, it adds independent values. Select the maximum only after joining. Keep these two meanings explicit.
+
+```dice
+weapons = dice_pool(1, 6) + dice_pool(1, 8)
+damage = weapons.order_stat(1)
+output("Dual-weapon raw damage", damage)
+output("Single d8: at least six", d(8).p_ge(6))
+output("Dual weapons: at least six", damage.p_ge(6))
+```
+
+## Reading the report and independent checks
+
+Single d8 gives 3/8. Both weapons miss the threshold only when d6 ≤5 and d8 ≤5: 25/48. Dual weapons therefore give 23/48. The maximum remains 8, unlike adding damage, which could reach 14.
+
+## Safe changes
+
+Use two d6 instead: at least 6 becomes 11/36. It is not 2/6 because both dice can show 6 in the same throw.
+
+## Composition and boundary checks
+
+Explain when armour belongs in this model. Answer: choose the raw maximum, then subtract armour and floor at zero. L19 teaches that transformation. Adding separately armoured weapon results would implement a different rule.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+[Cairn second edition, core rules](https://cairnrpg.com/second-edition/players-guide/core-rules/), Armor and Attack Modifiers. Only this damage component; no HP, STR, scars, impairment, or enhancement unless explicitly stated.
+
+## Related learning
+
+[Lesson L16](../tutorial/16-mixed-weapons.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.

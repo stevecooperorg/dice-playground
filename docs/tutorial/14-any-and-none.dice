@@ -1,0 +1,43 @@
+# Any and none are complementary questions
+
+**Part D · L14 · Prerequisite: L13 · One modelling idea**
+
+## Situation, question, and prediction
+
+The Pool uses any natural 1 as its success trigger. Given an already assembled pool of two d6, how often does at least one 1 appear? Predict why adding a die helps less when the pool is already large.
+
+## Build
+
+`.p_any(1)` asks whether one or more faces match. `.p_none(1)` asks whether no face matches. Both return probabilities, not counts. Pool assembly, gambling, rewards, and narration decisions are outside this trigger component.
+
+```dice
+pool = dice_pool(2, 6)
+output("Any natural one", pool.p_any(1))
+output("No natural ones", pool.p_none(1))
+rows = []
+for count in range(1, 6):
+    rows.append((str(count) + " dice", dice_pool(count, 6).p_any(1)))
+output("Success trigger by supplied pool size", prob_table(rows))
+```
+
+## Run, read, and check
+
+No ones on two dice means 5 × 5 of 36 pairs: 25/36. Its complement is 11/36. For n dice, any one is 1 − (5/6)^n. Each added die rescues only some previously unsuccessful rolls, so the gains diminish.
+
+## Change one thing
+
+Use one die: any one is 1/6 and none is 5/6. No probability can grow above one.
+
+## Try it yourself
+
+Ask for any six instead. Answer: the probability is unchanged for fair d6, but the event is different. For a biased custom die you must check face weights. “Any” does not tell you how many matches occurred.
+
+## Rules and model notes
+
+The Pool trigger component; author-rules source review remains pending. The fully specified mathematical question here is **at least one 1 on n independent fair d6**, not a certified complete game procedure.
+
+## What you now know / where next
+
+Any and none are complementary questions is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [the-pool](../cookbook/the-pool.html).

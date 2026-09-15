@@ -1,0 +1,93 @@
+# Brindlewood Bay: a report must distinguish eligibility from odds
+
+**Part H · L31 · Prerequisite: L30 · One modelling idea**
+
+## Situation, question, and prediction
+
+The Murder Mavens have a theory. In the supplied **Brindlewood Bay** rules,
+they must first gather at least half the mystery’s Complexity, rounded up,
+and reach a consensus. The roll is 2d6 plus the number of Clues incorporated
+into the theory or otherwise explained away, minus Complexity.
+
+How many accounted-for Clues give a clean-or-better chance above half?
+Predict whether merely being eligible to roll means the theory is likely correct.
+
+## Build
+
+This comparison assumes **every gathered ordinary Clue is accounted for**.
+That assumption makes one number serve both purposes here; the cookbook
+separates them. Void Clues are not counted as ordinary mystery Clues.
+
+The supplied text describes standard mystery Complexity as 6–8. Use
+`(complexity + 1) // 2` to round half upwards for an integer. The loop starts
+at that eligibility minimum, not a hard-coded three. It ends at Complexity+4
+for a short comparison; this endpoint is a reporting choice, not a game limit.
+
+```dice
+complexity = 6
+if type(complexity) != "int" or complexity < 6 or complexity > 8:
+    fail("This report covers standard mystery Complexity 6–8")
+minimum_clues = (complexity + 1) // 2
+rows = []
+for clues in range(minimum_clues, complexity + 5):
+    total = d(6) + d(6) + clues - complexity
+    rows.append((str(clues) + " clues: clean or better", total.p_ge(10)))
+output("Clean theory comparison", prob_table(rows))
+base = d(6) + d(6)
+output("Any correct at equal clues and complexity", base.p_ge(7))
+output("Conspiracy revelation at equal clues and complexity", base.p_ge(12))
+```
+
+## Run, read, and check
+
+At Complexity 6, compare 3–10 Clues. Clean-or-better probabilities are
+**0, 1, 3, 6, 10, 15, 21, 26 out of 36** respectively. Nine accounted-for
+Clues is the first compared setting above half. Three Clues makes the group
+eligible, but its maximum modified total is 9: a clean result is impossible.
+
+At equal accounted Clues and Complexity, any correct theory (7+) is 21/36,
+clean or better (10+) is 6/36, and the additional conspiracy revelation (12+)
+is 1/36. These are nested events, not probabilities to add together.
+
+A 7–9 theory is correct but brings a complication or a dangerous/complicated
+opportunity to act. A 10+ gives a correct solution and an opportunity to resolve
+it; 12+ additionally reveals someone involved in the dark conspiracy. “Clean”
+is this report’s shorthand for 10+, not a claim that the mystery is already resolved.
+
+## Change one thing
+
+Set Complexity to 7. The legal starting count becomes 4, not 3; the table
+covers 4–11 Clues. The same probabilities appear because its modifiers again
+run from −3 through +4. Ten accounted-for Clues is the first above-half setting.
+
+## Try it yourself
+
+At Complexity 7, the Mavens have gathered five ordinary Clues but account for
+only four. Can they roll, assuming consensus? What is their modifier?
+**Answer:** yes, five exceeds the eligibility minimum of four; the modifier
+is **4−7 = −3**, not 5−7. Clean-or-better is impossible, while any correct
+theory is 6/36. Eligibility and the roll modifier ask different questions.
+
+Write a recommendation limited to this report: at Complexity 6, with all
+Clues accounted for and no Crown use, nine Clues first exceeds 50% for 10+.
+Do not infer whether gathering those Clues is worth the fictional risk.
+
+## Rules and model notes
+
+Source: Jason Cordova, *Brindlewood Bay: A Dark & Cozy Mystery Game*, the
+user-supplied text reviewed on 2026-09-15: **Rolling Dice**, **Theorize**,
+**Complexity**, **Void Clues**, and the Keeper’s **Theorize** guidance.
+The supplied file does not identify its edition/printing; this page is tied
+to that text, not every version. See the [publisher’s game page](https://www.gauntlet-rpg.com/brindlewood-bay.html)
+for the game, not as a substitute citation for the checked procedure.
+
+This is the **initial roll before Crowns**. Theorize cannot use advantage,
+disadvantage, or effects of other moves. In this text, a Crown can raise the
+success tier only if **every Maven** puts one on; it is not simply +1 to the
+dice total. Crown decisions, repeats after a Keeper reaction, and the Void
+Mystery variant are excluded. Independent human review remains pending.
+
+## Where next
+
+[Theorize recipe](../cookbook/brindlewood-bay-theorize.html) separates gathered
+and accounted Clues. Continue to [build and defend a model](32-build-and-defend.html).

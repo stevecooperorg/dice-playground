@@ -1,0 +1,85 @@
+# A loop builds a comparison, not a simulation
+
+**Part B · L08 · 5–10 minutes · Prerequisite: L07**
+
+## The situation and question
+
+For the same **D&D 2014 ordinary ability check**, keep DC 15 fixed and compare
+total bonuses +2 through +6. Which bonuses give at least a 50% success chance?
+Five useful rows are easier to read than a large grid of every imaginable DC.
+
+## Predict
+
+Will each +1 help by the same amount here? What might happen when the chance
+reaches 0% or 100%?
+
+## Build
+
+`rows = []` starts an empty list. A `for` loop repeats its indented instructions
+once for each value supplied by `range`. `range(2, 7)` supplies **2, 3, 4, 5, 6**:
+the starting value is included, but the ending value 7 is excluded.
+
+The colon starts the loop body. Indentation (the spaces at the start of a line)
+marks which instructions belong to it. Each repetition assigns a new value to
+`bonus`. `rows.append(...)` adds one pair to the existing list: lists **can be
+changed**. `str(bonus)` converts a whole number to text so `"Bonus +" + str(bonus)`
+can make an accurate label. Here `+` joins two pieces of text, rather than adding
+numbers. The final unindented `output` runs once, after the list is complete.
+
+```dice
+dc = 15
+rows = []
+for bonus in range(2, 7):
+    check = d(20) + bonus
+    label = "Bonus +" + str(bonus)
+    rows.append((label, check.p_ge(dc)))
+output("Success by bonus at the chosen DC", prob_table(rows))
+```
+
+## Run and read
+
+The five rows are **40%, 45%, 50%, 55%, 60%**. Bonuses +4, +5, and +6 reach
+at least half. Each step adds one successful natural face here, or five percentage
+points. This does not continue beyond certainty: success probabilities stay in
+0–1 even when bonuses keep rising.
+
+The loop performs five deterministic distribution calculations. It does **not**
+roll five random dice and estimate a success rate from that tiny sample.
+
+## Change one thing
+
+Use `range(0, 5)` for bonuses +0 through +4. **Check:** the rows become 30%,
+35%, 40%, 45%, 50%. Keep the range short enough that every row answers a useful
+question. Moving `output` into the loop would produce multiple reports instead
+of the single comparison we want.
+
+## Part B checkpoint: try it yourself
+
+Starting from a blank script, compare skill values 40, 41, 42, 43, and 44 for
+one Call of Cthulhu 7e regular-difficulty check. Reuse L05's scope. Produce **one**
+labelled table and a sentence identifying which choices reach at least 42%.
+
+**Solution reasoning:** use `range(40, 45)`, calculate `d(100).cdf(skill)` for
+each skill, append a labelled pair, then output the table after the loop. The
+rows are 40% through 44%; 42, 43, and 44 meet the stated objective. There is no
+need for functions, a second loop, or a simulated trial count.
+
+## What you now know
+
+A loop automates a repeated calculation while keeping the question and labels
+clear. You can now construct a comparison report from inputs, not just edit a
+die size in a finished script.
+
+## Rules and model notes
+
+[D&D Basic Rules 2014, Using Ability Scores](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/using-ability-scores),
+**Ability Checks**, checked 2026-09-15. Bonuses include all applicable modifiers;
+this is not an attack, passive check, or a model of future character progression.
+The checkpoint uses Chaosium's [7th-edition Quick-Start Rules](https://www.chaosium.com/cthulhu-quickstart/),
+**Skill Rolls and Difficulty Levels**, under L05's stated restrictions.
+
+## Where next
+
+[Previous: probability tables](07-probability-tables.html) · [Next: named outcomes](09-named-outcomes.html).
+Part C asks which information a rule needs before you reduce its dice to a total. For a self-contained application, see the
+[regular-check recipe](../cookbook/coc7-regular-check.html).

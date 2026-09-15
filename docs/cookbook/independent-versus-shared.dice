@@ -1,0 +1,50 @@
+# Independent damage dice versus doubling one face
+
+**C11 · Intermediate · Scoped component**
+
+## Question and scope
+
+A D&D 2014 critical hit rolls extra damage dice; an invented house rule doubles the damage number instead. For a d6 weapon, compare two independent d6 with twice one d6. Predict whether their means or possible results differ.
+
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
+
+## Inputs and model limits
+
+One fair d6 distribution reused independently in addition, versus multiplication of each possible face. Critical-damage example is conditional on a hit already being critical.
+
+## Complete runnable model
+
+A roll variable stores a distribution, not a secretly sampled face. `r + r` combines two independent copies. `r * 2` transforms each outcome of one roll by multiplication. Neither expression retrieves the faces of a previous runtime roll.
+
+```dice
+r = d(6)
+output("Two independent damage dice", r + r)
+output("House rule: double one face", r * 2)
+output("Two dice can total seven", (r + r).pmf(7))
+output("Doubled face can total seven", (r * 2).pmf(7))
+```
+
+## Reading the report and independent checks
+
+Both means are 7 and ranges are 2–12. The sum can make every integer in between; doubled damage only makes even numbers. Seven has probability 1/6 for the sum and zero for the doubled face. Same mean does not imply same distribution.
+
+## Safe changes
+
+Use d4 instead. Both means become 5; only the independent sum can total 5 (probability 1/4).
+
+## Composition and boundary checks
+
+If a weapon adds +3 damage, which dice-only critical expression keeps that modifier once? Answer: `r + r + 3`, not `(r + 3) * 2`. Later joint callbacks preserve a shared face when a rule must inspect it more than once.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+[D&D Basic Rules 2014, Combat: Critical Hits](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/combat). Only damage dice conditional on an ordinary critical hit; no hit chance or extra damage features. Doubling a face is explicitly a house rule.
+
+## Related learning
+
+[Lesson L18](../tutorial/18-independent-versus-shared.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.

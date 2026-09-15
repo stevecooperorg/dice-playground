@@ -1,0 +1,75 @@
+# Call of Cthulhu 7e — meet regular difficulty
+
+**R09-regular · Beginner · Component: one unopposed regular-difficulty check**
+
+## Question and scope
+
+How often does an investigator meet regular difficulty at a supplied skill
+value? How much does improving that skill by ten points help?
+
+Roll percentile dice, interpreted as 1–100, and succeed when the result is
+at or below the skill. This report combines all results that meet regular
+difficulty; it does **not** mean *exactly Regular* rather than Hard or Extreme.
+No success degrees or critical/fumble categories are reported. It excludes
+bonus/penalty dice, pushed rolls, Luck spending, opposition, and skills 100+.
+
+## Inputs
+
+| Input | Default | Supported values |
+|---|---:|---|
+| `skill` | 50 | Integer 1–89, leaving room for the +10 comparison below 100 |
+
+The underlying ordinary threshold component is used only at skills 1–99.
+The narrower editable range ensures both rows stay within that scope.
+
+## Model and runnable source
+
+`d(100)` represents equally likely results 1–100, not 0–99. `.cdf(skill)` sums
+the chances up to and including the skill. `type` and `fail` enforce the input
+contract; `if` runs its indented instruction when a condition is true. `or`
+means any of the listed invalid conditions is enough to stop.
+
+```dice
+skill = 50
+if type(skill) != "int":
+    fail("Use an integer skill")
+if skill < 1 or skill > 89:
+    fail("Use skill 1–89 so skill + 10 remains below 100")
+
+percentile = d(100)
+rows = [
+    ("Meet regular difficulty at skill " + str(skill), percentile.cdf(skill)),
+    ("Meet regular difficulty at skill " + str(skill + 10), percentile.cdf(skill + 10)),
+]
+output("Alternative skill values: regular difficulty or better", prob_table(rows))
+```
+
+## Read and independently check
+
+At defaults, the rows are **50% and 60%**: exactly fifty and sixty of the hundred
+faces satisfy the respective thresholds. The improvement is ten **percentage
+points**. The die's average remains 50.5, so its mean alone cannot measure this
+improvement. The rows are alternative skill settings, not exclusive outcomes.
+
+Boundary inputs `skill = 1` and `skill = 89` produce (1%, 11%) and (89%, 99%).
+Values 0 and 90 are rejected by this recipe, rather than silently expanding its
+scope. Equality counts: skill 50 includes rolling 50, not just 1–49.
+
+## Adaptations and composition limits
+
+For a fixed skill 1–99 without the improvement comparison, use the single query
+in [L05](../tutorial/05-roll-under.html). Degrees of success need additional
+thresholds and category boundaries; bonus dice are not two independent d100
+rolls because they share a units digit. Neither extension is implemented here.
+Do not treat the two table rows as consecutive attempts or a pushed-roll policy.
+
+## Rules and related lessons
+
+Chaosium's [Call of Cthulhu 7th Edition Quick-Start Rules](https://www.chaosium.com/cthulhu-quickstart/),
+**Reading D100 (Percentile Dice)** and **Skill Rolls and Difficulty Levels**
+(p. 10 of the linked PDF), source checked 2026-09-15. Rules are paraphrased.
+Independent human rules review and browser/novice review remain pending.
+
+[L05](../tutorial/05-roll-under.html) introduces inclusive roll-under;
+[L07](../tutorial/07-probability-tables.html) explains the table structure;
+[L08](../tutorial/08-comparison-loops.html) builds a related comparison with a loop.

@@ -59,7 +59,6 @@ exact result, and a plausible average alone does not answer a success question.
 
 ## Where next
 
-[Previous: modifiers](03-modifiers.html) · [Existing notation guide](05-dice-notation.html).
-Part A is the rewrite pilot; the remaining lessons currently retain the older
-sequence. The [pool-count recipe](../cookbook/count-high-faces.html) later asks
+[Previous: modifiers](03-modifiers.html) · [Next: roll-under checks](05-roll-under.html).
+Continue into Part B to compare choices and build compact reports. The [pool-count recipe](../cookbook/count-high-faces.html) later asks
 how often *individual faces* match, rather than querying their sum.

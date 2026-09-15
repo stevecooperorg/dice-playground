@@ -25,7 +25,7 @@ class Links(HTMLParser):
 def check(root):
     root = root.resolve()
     errors = []
-    for section in ("tutorial", "cookbook"):
+    for section in ("tutorial", "cookbook", "docs", "references"):
         for page in (root / section).glob("*.html"):
             for href in Links(page.read_text()).links:
                 url = urlsplit(href)

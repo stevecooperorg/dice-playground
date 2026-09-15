@@ -1,90 +1,85 @@
-# Blades in the Dark — action roll
+# Blades in the Dark — action-result categories
 
-## At the table
+**R18 · Intermediate · Scoped procedure: base action-result bands**
 
-[*Blades in the Dark*](https://www.evilhat.com/en/home/home.html#blades) resolves risky actions with **d6 pools**. Roll all your dice at once and use only the **highest** face—everything else is ignored unless you need a critical (see below).
+## Question and scope
 
-| Highest die | What happens |
-|-------------|----------------|
-| **1–3** | **Bad outcome.** Things go wrong: you likely miss your goal and the GM brings extra trouble. |
-| **4–5** | **Partial success.** You get what you were after, but with a cost—harm, heat, reduced effect, a hard choice, or similar. |
-| **6** | **Full success.** It works; things go as you hoped. |
-| **Two or more 6s** | **Critical success.** As a full success, plus an extra edge (position, effect, or another boon depending on the move). |
+For a supplied number of dice, how often is an action roll bad, partial, clean,
+or critical? Take the highest d6 unless two or more sixes produce a critical.
+At zero dice, roll two and take the lower, with no critical.
 
-**Building the pool:** Take a number of dice equal to a **rating**—usually a player’s **action** (Prowl, Skirmish, Attune, and the rest) or sometimes crew **Tier**, a situation bonus, or a push. Ratings are often **one to four dice** in play. Even **one die** is respectable: you have a **50%** chance of partial success or better (4+ on that single die).
+**Zero dice is not desperate position.** Position sets consequences; effect
+sets what is accomplished. Neither is computed here. An action critical
+increases effect, not a separate universal damage bonus. This component does
+not assemble the pool, spend stress, resist consequences, or apply special abilities.
 
-**Zero or negative dice:** If you would roll no dice (or fewer than zero after modifiers), roll **2d6** and use the **lower** die only—the desperate position. You still use the same outcome bands, but you **cannot** roll a critical from a desperate roll (at most one 6 counts).
+## Inputs
 
-Most specialized rolls in the book (resistance, group actions, fortune rolls, etc.) are variations on this core chart. When you are learning, you can always fall back to “roll the pool, read the highest die” and look up the exact twist later.
+| Input | Default | Supported range |
+|---|---:|---|
+| `dice` | 2 | Integer 0–20; negative game pools should be supplied as zero |
 
-**Why partial success dominates:** On typical pools, **4/5 is the most common band**—characters often succeed, but rarely cleanly. That matches the game’s pitch: scrappy criminals in too deep. Complications are where play gets interesting; the dice keep nudging you there on purpose.
+This uses probability decomposition instead of enumerating every face tuple.
+The [tutorial callback](../tutorial/23-shared-pool-rule.html) is useful for learning
+shared-face rules, but its interactive limit is five dice. Seven dice took
+roughly 13 seconds in a debug-WASM test; the engine's tuple guard is not a speed guarantee.
 
-## Try it
+## Model
 
-In the playground, open this recipe in the playground and click **Run**. **Output** entries **`0d`** through **`7d`** give exact odds for each outcome band. Pool sizes **1d–4d** are what you see most often at the table; **`0d`** is the desperate case. **`5d`–`7d`** are included so you can see how crit-heavy larger pools behave.
-
-## The script
-
-```text
-Scale = scale().step("BAD").step("MESSY").step("CLEAN").step("CRITICAL")
-
-def blades_pool(faces):
-    high = max(faces)
-    if high == 6:
-        if len([f for f in faces if f == 6]) >= 2:
-            return 3
-        return 2
-    if high >= 4:
-        return 1
-    return 0
-
-def code_label(c):
-    return ["BAD", "MESSY", "CLEAN", "CRITICAL"][c]
-
-def desperate_label(n):
-    if n == 6:
-        return "CLEAN"
-    if n >= 4:
-        return "MESSY"
-    return "BAD"
-
-output("0d", classify(keep_lowest(2, 6, 1), Scale, desperate_label))
-for dice in range(1, 8):
-    codes = pool_map(dice_pool(dice, 6), blades_pool)
-    output("{}d".format(dice), classify(codes, Scale, code_label))
-```
-
-Script labels map to the table above: `BAD` (1–3), `MESSY` (partial / 4–5), `CLEAN` (full / single 6), `CRITICAL` (two or more 6s).
-
-- `pool_map` walks every joint outcome of the pool as a **list of face values**—needed because crits depend on **how many 6s** showed up, not the highest face alone.
-- `keep_lowest(2, 6, 1)` is the desperate roll (lowest of 2d6); `desperate_label` never returns `CRITICAL`.
-- On the **`1d`** row, `MESSY` + `CLEAN` + `CRITICAL` sums to **50%**—the “one die is pretty good” case from the rulebook.
+Bad means no die reaches 4. Partial means no six, minus the bad cases. Clean
+means exactly one six; critical means at least two. These are mutually exclusive
+and exhaustive categories, so this particular table **does** sum to one.
+`pool.count(6)` constructs the count distribution efficiently without a custom
+callback. The zero-dice branch uses the lower of two d6 explicitly.
 
 ```dice
-Scale = scale().step("BAD").step("MESSY").step("CLEAN").step("CRITICAL")
-
-def blades_pool(faces):
-    high = max(faces)
-    if high == 6:
-        if len([f for f in faces if f == 6]) >= 2:
-            return 3
-        return 2
-    if high >= 4:
-        return 1
-    return 0
-
-def code_label(c):
-    return ["BAD", "MESSY", "CLEAN", "CRITICAL"][c]
-
-def desperate_label(n):
-    if n == 6:
-        return "CLEAN"
-    if n >= 4:
-        return "MESSY"
-    return "BAD"
-
-output("0d", classify(keep_lowest(2, 6, 1), Scale, desperate_label))
-for dice in range(1, 8):
-    codes = pool_map(dice_pool(dice, 6), blades_pool)
-    output("{}d".format(dice), classify(codes, Scale, code_label))
+dice = 2
+if type(dice) != "int" or dice < 0 or dice > 20:
+    fail("Use an integer dice count 0–20")
+if dice == 0:
+    lowest = keep_lowest(2, 6, 1)
+    bad = lowest.cdf(3)
+    partial = lowest.cdf(5) - bad
+    clean = lowest.pmf(6)
+    critical = 0.0
+else:
+    pool = dice_pool(dice, 6)
+    sixes = pool.count(6)
+    bad = pool.p_none([4, 5, 6])
+    partial = pool.p_none(6) - bad
+    clean = sixes.pmf(1)
+    critical = sixes.p_ge(2)
+rows = [("Bad", bad), ("Partial", partial), ("Clean", clean), ("Critical", critical)]
+output("Blades action categories", prob_table(rows))
 ```
+
+## Reading and independent checks
+
+At two dice, the rows are 9/36, 16/36, 10/36, and 1/36. At zero dice they are
+27/36, 8/36, 1/36, and zero. At one die, bad is 1/2 and partial is 1/3:
+partial is not the most common band. At four dice, clean plus critical is
+1 − (5/6)^4 = 671/1296, over half.
+
+For positive n, an independent oracle is:
+- bad = (1/2)^n;
+- partial = (5/6)^n − (1/2)^n;
+- clean = n × (1/6) × (5/6)^(n−1);
+- critical = 1 − (5/6)^n − clean.
+
+Tests compare this decomposition against a separate face count for small pools
+and these formulas through the documented upper bound.
+
+## Adaptations and limits
+
+Change `dice` without changing the resolution rule. Do not treat a probability
+of a clean result as a probability of a particular fictional consequence: that
+also depends on position and the situation. Do not multiply these rows together;
+they are exclusive categories from the same roll.
+
+## Rules and related lessons
+
+[Blades core system](https://bladesinthedark.com/core-system) and
+[action roll](https://bladesinthedark.com/action-roll), source checked 2026-09-15.
+Independent human rules/novice review remains pending. Read
+[L15](../tutorial/15-counting-successes.html) for counts and
+[L23](../tutorial/23-shared-pool-rule.html) for the equivalent callback approach.

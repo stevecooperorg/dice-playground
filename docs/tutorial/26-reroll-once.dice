@@ -1,0 +1,45 @@
+# Rerolling once is a policy, not filtering
+
+**Part G · L26 · Prerequisite: L25 · One modelling idea**
+
+## Situation, question, and prediction
+
+A house rule says “if your first d6 is a 1, reroll it once and keep the second face, even another 1.” Is rolling a 1 now impossible? Predict before examining the report.
+
+## Build
+
+Use a two-die pool for the first and potential replacement faces. Index 0 is first, index 1 is second. The callback decides using only the first face, then returns either that face or the mandatory replacement. `pool_map` returns the numeric distribution.
+
+```dice
+def reroll_once(faces):
+    first = faces[0]
+    replacement = faces[1]
+    if first == 1:
+        return replacement
+    return first
+result = pool_map(dice_pool(2, 6), reroll_once)
+output("Reroll one once", result)
+output("A one remains possible", result.pmf(1))
+```
+
+## Run, read, and check
+
+Only pair (1,1) ends at 1, so its probability is 1/36. Each other face gets its original 1/6 plus replacement probability 1/36 = 7/36. Mean is 47/12. The potential replacement is ignored when the first roll is kept.
+
+## Change one thing
+
+Reroll 1 or 2 instead by testing `first <= 2`. Each of 1 and 2 then has probability 2/36; each other face has 8/36.
+
+## Try it yourself
+
+Why is always rolling two dice and keeping the higher a different rule? Answer: a first 2 and potential second 6 would become 6, while our once-only policy keeps the 2 and ignores the potential second face. For the guided variant that rerolls 1 or 2, a first 2 and replacement 1 must become 1—not retain the 2 after inspecting the replacement. A named game ability needs its own edition-specific timing check.
+
+## Rules and model notes
+
+Explicit generic house rule. Two independent d6, at most one replacement, no resource cost. Do not silently substitute it for a named game’s reroll timing or optional keep rule.
+
+## What you now know / where next
+
+Rerolling once is a policy, not filtering is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [reroll-once](../cookbook/reroll-once.html).

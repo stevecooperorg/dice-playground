@@ -1,0 +1,39 @@
+# Continuation rules matter as much as the die
+
+**Part H · L29 · Prerequisite: L28 · One modelling idea**
+
+## Situation, question, and prediction
+
+Compare an acing d100 that repeats only on 100 with the engine’s Rolemaster-style open-ended helper. The latter opens low on 1–5 and high on 96–100. Predict whether low opening changes to addition when a later 97 appears.
+
+## Build
+
+`open_ended_d100(max_chain=0)` still permits the **first** extra roll. `max_chain` caps additional high-result continuations after that. Initial 1–5 chooses subtraction; initial 96–100 chooses addition. Later 96–100 results continue in the same direction. Initial 6–95 stops immediately.
+
+```dice
+output("Open-ended model, first extra roll only", open_ended_d100(max_chain=0))
+output("Open-ended model, one continuation", open_ended_d100(max_chain=1))
+output("Above 100 at cap zero", open_ended_d100(max_chain=0).p_ge(101))
+```
+
+## Run, read, and check
+
+The high worked path 97,98,4 totals +199. The low path 4,97,3 totals −96: it remains subtraction. At cap zero, above 100 has probability (96+97+98+99+100)/10000 = 0.049. Initial low/high bands balance in the mean, which remains 50.5 for these symmetric caps; tails still differ.
+
+## Change one thing
+
+Increase max_chain from zero to one and inspect tails. At zero, minimum is −99 and maximum 200; at one they become −199 and 300. A reported finite maximum is a cap artefact.
+
+## Try it yourself
+
+Why is `explode(d(100))` not a substitute? Answer: it repeats only the maximum, never subtracts, and has different cap semantics. The chance a continuing chain is truncated here is 0.10 × 0.05^(max_chain+1). Do not call the distribution a particular RMSS printing without a verified source.
+
+## Rules and model notes
+
+**Implementation-defined mathematical component; RMSS edition/printing source review pending.** This teaches the documented helper, not certified Rolemaster attack or manoeuvre rules. No alleged rulebook typo is asserted.
+
+## What you now know / where next
+
+Continuation rules matter as much as the die is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [rolemaster-open-ended](../cookbook/rolemaster-open-ended.html).

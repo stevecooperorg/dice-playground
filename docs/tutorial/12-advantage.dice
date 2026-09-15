@@ -1,0 +1,43 @@
+# Advantage changes the shape, not a fixed bonus
+
+**Part C · L12 · Prerequisite: L11 · One modelling idea**
+
+## Situation, question, and prediction
+
+A D&D 2014 ordinary ability check gains advantage: roll two d20 and take the higher. Disadvantage takes the lower. At an unmodified DC 11, predict whether advantage is equivalent to adding +5 at every DC.
+
+## Build
+
+`keep_highest(count, sides, keep)` returns the sum of the kept dice. Keeping one gives the selected face. `keep_lowest` is its counterpart. This is a new distribution, not a query on a normal die.
+
+```dice
+dc = 11
+normal = d(20)
+advantage = keep_highest(2, 20, 1)
+disadvantage = keep_lowest(2, 20, 1)
+rows = [("Normal", normal.p_ge(dc)), ("Advantage", advantage.p_ge(dc)),
+        ("Disadvantage", disadvantage.p_ge(dc))]
+output("Ability check at chosen DC", prob_table(rows))
+```
+
+## Run, read, and check
+
+At DC 11 the rows are 1/2, 3/4, 1/4. For a normal success probability p, advantage succeeds unless both independent dice fail: 1 − (1−p)^2. Disadvantage needs both to succeed: p².
+
+## Change one thing
+
+Change DC to 20: normal 1/20, advantage 39/400, disadvantage 1/400. The improvement is much smaller than at DC 11.
+
+## Try it yourself
+
+Add +3 to each roll and use DC 14. Answer: the required natural face is again 11, giving 1/2, 3/4, 1/4. Checkpoint: represent advantage with selected faces, not a fixed bonus; it cannot produce a natural result above 20.
+
+## Rules and model notes
+
+D&D Basic Rules **2014**, [Using Ability Scores](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/using-ability-scores). Ordinary checks only; no attack exceptions, rerolls, or special features. Advantage and disadvantage together cancel rather than adding more dice.
+
+## What you now know / where next
+
+Advantage changes the shape, not a fixed bonus is the reusable idea. Follow the generated
+previous/next links below, or return to the [course index](index.html).
+For a complete self-contained application, see [dnd2014-ability-check](../cookbook/dnd2014-ability-check.html).

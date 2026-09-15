@@ -1,0 +1,384 @@
+{
+  "tutorial/09-named-outcomes.dice": {
+    "outcomes": {
+      "Defy Danger bands": {
+        "GM outcome": 0.4166666666666667,
+        "Bargain or worse outcome": 0.4166666666666667,
+        "Threat avoided": 0.16666666666666666
+      }
+    }
+  },
+  "tutorial/10-outcome-queries.dice": {
+    "tables": {
+      "Different outcome questions": {
+        "Exactly the middle band": 0.4166666666666667,
+        "Seven or more": 0.5833333333333334,
+        "Ten or more": 0.16666666666666666
+      }
+    }
+  },
+  "tutorial/11-faces-before-totals.dice": {
+    "means": {
+      "Sum of three d6": 10.5
+    },
+    "probabilities": {
+      "Any six": 0.4212962962962963
+    }
+  },
+  "tutorial/12-advantage.dice": {
+    "tables": {
+      "Ability check at chosen DC": {
+        "Normal": 0.5,
+        "Advantage": 0.75,
+        "Disadvantage": 0.25
+      }
+    }
+  },
+  "tutorial/13-keep-and-drop.dice": {
+    "means": {
+      "One 4d6 drop-lowest score": 12.244598765432098,
+      "Three d6": 10.5,
+      "All four d6": 14.0
+    }
+  },
+  "tutorial/14-any-and-none.dice": {
+    "probabilities": {
+      "Any natural one": 0.3055555555555556,
+      "No natural ones": 0.6944444444444444
+    }
+  },
+  "tutorial/15-counting-successes.dice": {
+    "means": {
+      "Number of hits": 1
+    },
+    "pmfs": {
+      "Number of hits": {
+        "0": 0.2962962962962963,
+        "1": 0.4444444444444444,
+        "2": 0.2222222222222222,
+        "3": 0.037037037037037035
+      }
+    },
+    "probabilities": {
+      "Any hit": 0.7037037037037037,
+      "At least two hits": 0.25925925925925924
+    }
+  },
+  "tutorial/16-mixed-weapons.dice": {
+    "probabilities": {
+      "Single d8: at least six": 0.375,
+      "Dual weapons: at least six": 0.4791666666666667
+    }
+  },
+  "tutorial/17-custom-fate-dice.dice": {
+    "means": {
+      "Four Fate dice": 0
+    },
+    "probabilities": {
+      "All pluses": 0.012345679012345678,
+      "Zero total": 0.2345679012345679
+    }
+  },
+  "tutorial/18-independent-versus-shared.dice": {
+    "means": {
+      "Two independent damage dice": 7,
+      "House rule: double one face": 7
+    },
+    "probabilities": {
+      "Two dice can total seven": 0.16666666666666666,
+      "Doubled face can total seven": 0
+    }
+  },
+  "tutorial/19-armour-floor.dice": {
+    "means": {
+      "Damage after armour": 2.625
+    },
+    "probabilities": {
+      "No damage gets through": 0.25
+    }
+  },
+  "tutorial/20-round-each-result.dice": {
+    "means": {
+      "Damage given failed save": 28,
+      "Damage given successful save": 13.75
+    }
+  },
+  "tutorial/21-functions.dice": {
+    "tables": {
+      "Reusable ability-check helper": {
+        "Bonus 2 at DC 15": 0.4,
+        "Bonus 5 at DC 15": 0.55,
+        "Bonus 5 at DC 20": 0.3
+      }
+    }
+  },
+  "tutorial/22-natural-face-exceptions.dice": {
+    "outcomes": {
+      "Attack categories": {
+        "Miss": 0.45,
+        "Hit": 0.5,
+        "Critical": 0.05
+      }
+    },
+    "probabilities": {
+      "Hit including critical": 0.55
+    }
+  },
+  "tutorial/23-shared-pool-rule.dice": {
+    "outcomes": {
+      "Blades action categories": {
+        "Bad": 0.25,
+        "Partial": 0.4444444444444444,
+        "Clean": 0.2777777777777778,
+        "Critical": 0.027777777777777776
+      }
+    }
+  },
+  "tutorial/24-opposed-rolls.dice": {
+    "probabilities": {
+      "Tie": 0.16872427983539096,
+      "Strictly beat opposition": 0.4156378600823045
+    }
+  },
+  "tutorial/25-damage-dependent-save.dice": {
+    "outcomes": {
+      "One Blood Elk hit": {
+        "No effect": 0.25,
+        "HP loss": 0.375,
+        "Scar": 0.125,
+        "STR loss, save passed": 0.11875,
+        "Critical damage": 0.13125,
+        "Death": 0
+      }
+    }
+  },
+  "tutorial/26-reroll-once.dice": {
+    "means": {
+      "Reroll one once": 3.9166666666666665
+    },
+    "probabilities": {
+      "A one remains possible": 0.027777777777777776
+    }
+  },
+  "tutorial/27-conditioning.dice": {
+    "means": {
+      "Reroll once": 3.9166666666666665,
+      "Conditioned on not one": 4,
+      "One scores zero": 3.3333333333333335
+    }
+  },
+  "tutorial/28-explosion-caps.dice": {
+    "means": {
+      "Acing d6: one extra roll": 4.083333333333333,
+      "Acing d6: two extra rolls": 4.180555555555555
+    },
+    "probabilities": {
+      "Terminal twelve at cap one": 0.027777777777777776
+    }
+  },
+  "tutorial/29-open-ended-procedures.dice": {
+    "means": {
+      "Open-ended model, first extra roll only": 50.5,
+      "Open-ended model, one continuation": 50.5
+    },
+    "probabilities": {
+      "Above 100 at cap zero": 0.049
+    }
+  },
+  "tutorial/30-after-roll-decisions.dice": {
+    "probabilities": {
+      "Strict success chance": 0.8856881572930956,
+      "Chance of spending the point": 0.6172839506172839
+    }
+  },
+  "tutorial/31-report-labels.dice": {
+    "tables": {
+      "Clean theory comparison": {
+        "3 clues: clean or better": 0.0,
+        "4 clues: clean or better": 0.027777777777777776,
+        "5 clues: clean or better": 0.08333333333333333,
+        "6 clues: clean or better": 0.16666666666666666,
+        "7 clues: clean or better": 0.2777777777777778,
+        "8 clues: clean or better": 0.4166666666666667,
+        "9 clues: clean or better": 0.5833333333333334,
+        "10 clues: clean or better": 0.7222222222222222
+      }
+    },
+    "probabilities": {
+      "Any correct at equal clues and complexity": 0.5833333333333334,
+      "Conspiracy revelation at equal clues and complexity": 0.027777777777777776
+    }
+  },
+  "tutorial/32-build-and-defend.dice": {
+    "probabilities": {
+      "At least current HP in damage": 0.29725946287722904
+    }
+  },
+  "cookbook/ability-scores-4d6dl1.dice": {
+    "means": {
+      "One 4d6 drop-lowest score": 12.244598765432098,
+      "Three d6": 10.5,
+      "All four d6": 14.0
+    }
+  },
+  "cookbook/blades-in-the-dark.dice": {
+    "tables": {
+      "Blades action categories": {
+        "Bad": 0.25,
+        "Partial": 0.4444444444444444,
+        "Clean": 0.2777777777777778,
+        "Critical": 0.027777777777777776
+      }
+    }
+  },
+  "cookbook/brindlewood-bay-theorize.dice": {
+    "outcomes": {
+      "Initial Theorize categories": {
+        "Incorrect": 0.4166666666666667,
+        "Correct with complications": 0.4166666666666667,
+        "Clean, without revelation": 0.1388888888888889,
+        "Clean plus conspiracy revelation": 0.027777777777777776
+      }
+    },
+    "tables": {
+      "Nested Theorize questions": {
+        "Any correct theory (7+)": 0.5833333333333334,
+        "Clean or better (10+)": 0.16666666666666666,
+        "Conspiracy revelation (12+)": 0.027777777777777776
+      }
+    }
+  },
+  "cookbook/count-high-faces.dice": {
+    "means": {
+      "Number of hits": 1
+    },
+    "pmfs": {
+      "Number of hits": {
+        "0": 0.2962962962962963,
+        "1": 0.4444444444444444,
+        "2": 0.2222222222222222,
+        "3": 0.037037037037037035
+      }
+    },
+    "probabilities": {
+      "Any hit": 0.7037037037037037,
+      "At least two hits": 0.25925925925925924
+    }
+  },
+  "cookbook/exploding-dice.dice": {
+    "means": {
+      "Acing d6: one extra roll": 4.083333333333333,
+      "Acing d6: two extra rolls": 4.180555555555555
+    },
+    "probabilities": {
+      "Terminal twelve at cap one": 0.027777777777777776
+    }
+  },
+  "cookbook/fireball-half-damage.dice": {
+    "means": {
+      "Damage given failed save": 28,
+      "Damage given successful save": 13.75
+    }
+  },
+  "cookbook/fudge-4df.dice": {
+    "means": {
+      "Four Fate dice": 0
+    },
+    "probabilities": {
+      "All pluses": 0.012345679012345678,
+      "Zero total": 0.2345679012345679
+    }
+  },
+  "cookbook/rolemaster-open-ended.dice": {
+    "means": {
+      "Open-ended model, first extra roll only": 50.5,
+      "Open-ended model, one continuation": 50.5
+    },
+    "probabilities": {
+      "Above 100 at cap zero": 0.049
+    }
+  },
+  "cookbook/the-pool.dice": {
+    "probabilities": {
+      "Any natural one": 0.3055555555555556,
+      "No natural ones": 0.6944444444444444
+    }
+  },
+  "cookbook/dnd2014-attacks.dice": {
+    "outcomes": {
+      "Attack categories": {
+        "Miss": 0.45,
+        "Hit": 0.5,
+        "Critical": 0.05
+      }
+    },
+    "probabilities": {
+      "Hit including critical": 0.55
+    }
+  },
+  "cookbook/fireball-one-target.dice": {
+    "probabilities": {
+      "At least current HP in damage": 0.29725946287722904
+    }
+  },
+  "cookbook/fate-opposition.dice": {
+    "probabilities": {
+      "Tie": 0.16872427983539096,
+      "Strictly beat opposition": 0.4156378600823045
+    }
+  },
+  "cookbook/fate-invocation.dice": {
+    "probabilities": {
+      "Strict success chance": 0.8856881572930956,
+      "Chance of spending the point": 0.6172839506172839
+    }
+  },
+  "cookbook/cairn-armour.dice": {
+    "means": {
+      "Damage after armour": 2.625
+    },
+    "probabilities": {
+      "No damage gets through": 0.25
+    }
+  },
+  "cookbook/cairn-dual-weapons.dice": {
+    "probabilities": {
+      "Single d8: at least six": 0.375,
+      "Dual weapons: at least six": 0.4791666666666667
+    }
+  },
+  "cookbook/dungeon-world-defy-danger.dice": {
+    "outcomes": {
+      "Defy Danger bands": {
+        "GM outcome": 0.4166666666666667,
+        "Bargain or worse outcome": 0.4166666666666667,
+        "Threat avoided": 0.16666666666666666
+      }
+    }
+  },
+  "cookbook/reroll-once.dice": {
+    "means": {
+      "Reroll one once": 3.9166666666666665
+    },
+    "probabilities": {
+      "A one remains possible": 0.027777777777777776
+    }
+  },
+  "cookbook/filter-or-zero.dice": {
+    "means": {
+      "Reroll once": 3.9166666666666665,
+      "Conditioned on not one": 4,
+      "One scores zero": 3.3333333333333335
+    }
+  },
+  "cookbook/independent-versus-shared.dice": {
+    "means": {
+      "Two independent damage dice": 7,
+      "House rule: double one face": 7
+    },
+    "probabilities": {
+      "Two dice can total seven": 0.16666666666666666,
+      "Doubled face can total seven": 0
+    }
+  }
+}

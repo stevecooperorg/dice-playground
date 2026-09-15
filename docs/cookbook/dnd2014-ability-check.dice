@@ -1,0 +1,83 @@
+# D&D 2014 — ordinary ability checks
+
+**R01 · Beginner · Complete scoped mechanic: one ordinary unopposed check**
+
+## Question and scope
+
+How often does a character meet a supplied DC with an ordinary d20 ability
+check, and how sensitive is that chance to the DC? This is **not an attack
+roll**. A natural 1 can succeed when the bonus is sufficient, and a natural
+20 can fail when the target is too high.
+
+Included: a fair d20, a fixed total integer bonus, and success when total ≥ DC.
+Excluded: advantage/disadvantage, contests, passive/group checks, rerolls,
+spells, special features, and the DM's decision whether to permit or call for
+a roll. It does not model a whole encounter or repeated attempts.
+
+## Inputs
+
+| Input | Default | Meaning and supported values |
+|---|---:|---|
+| `bonus` | 5 | Integer total after applicable ability/proficiency adjustments |
+| `dc` | 15 | Integer target set by the DM; the comparison also checks DC ± 5 |
+
+Both inputs must be integers. Boundary DCs outside the die's possible range
+are valid mathematical checks, not an instruction to roll for a certain task.
+
+## Model and runnable source
+
+Add the bonus to the die's distribution, then ask inclusive threshold queries.
+`rows` is a list of label/probability pairs. Table rows are alternative settings,
+not independent events to multiply. See [L07](../tutorial/07-probability-tables.html)
+for lists and [L08](../tutorial/08-comparison-loops.html) for converting numbers
+to labels. `type` checks the kind of input; `fail` stops an invalid script with
+an explanation. Neither is part of the dice rule.
+
+```dice
+bonus = 5
+dc = 15
+if type(bonus) != "int" or type(dc) != "int":
+    fail("Use integer bonus and DC")
+
+check = d(20) + bonus
+rows = [
+    ("Meet DC " + str(dc - 5), check.p_ge(dc - 5)),
+    ("Meet DC " + str(dc), check.p_ge(dc)),
+    ("Meet DC " + str(dc + 5), check.p_ge(dc + 5)),
+]
+output("Ordinary ability-check totals", check)
+output("Alternative difficulties, same bonus", prob_table(rows))
+```
+
+## Read and independently check
+
+At defaults, totals range from 6 to 25 with mean 15.5. DCs 10, 15, and 20 have
+success chances **80%, 55%, and 30%**. For the middle row, natural faces 10–20
+are eleven successful faces out of twenty. The mean is not the success chance.
+
+For arbitrary inputs, count the integers from `dc - bonus` through 20, limited
+to faces 1–20, then divide that count by 20. Equivalently, clamp
+`21 + bonus - dc` to 0–20 and divide by 20. This simple hand count is independent
+of the distribution implementation.
+
+Boundary checks for bonus +5: DC 6 is certain, DC 25 is 5%, and DC 26 is
+impossible. These tests deliberately expose accidental attack-style natural
+1/20 exceptions.
+
+## Adaptations and composition limits
+
+Change the total bonus or target, not the number of faces, to compare ordinary
+characters or difficulties. Advantage needs a different roll distribution;
+attack criticals need natural-face classification. Do not turn these rows into
+a sequential success policy or multiply them for the *same* check. Independent
+repeated attempts require an explicit repeat rule and consequences of failure.
+
+## Rules and related lessons
+
+[D&D Basic Rules 2014, Using Ability Scores](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/using-ability-scores),
+**Ability Checks**, **Typical Difficulty Classes**, and **Proficiency Bonus**;
+source checked 2026-09-15. Rules are paraphrased. Independent human rules review
+and browser/novice review remain pending.
+
+[L06](../tutorial/06-averages-and-chances.html) compares means and probabilities;
+[L07](../tutorial/07-probability-tables.html) explains overlapping table rows.

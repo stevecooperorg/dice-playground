@@ -1,24 +1,49 @@
-# 4d6 drop lowest (ability scores)
+# D&D 2014 — one randomly generated ability score
 
-## At the table
+**R03 · Intermediate · Scoped component**
 
-Classic **D&amp;D** character creation: roll **four** d6, drop the **lowest**, sum the rest. The average is about **12.24**, noticeably higher than straight 3d6.
+## Question and scope
 
-## Try it
+D&D 2014 offers random ability generation by rolling four d6 and adding the highest three. Compare one such score with 3d6. Predict whether dropping one positive die can increase the sum of those same four dice.
 
-In the playground, open this recipe in the playground and click **Run**.
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
 
-## The script
+## Inputs and model limits
 
-```text
-output("ability", 4d6dl1)
-```
+Fixed four fair d6; compare keeping three with summing three or four. One score, not six-score array quality.
 
-Sugar expands `4d6dl1` to `drop_lowest(4, 6, 1)`, which returns the full distribution of ability scores.
+## Complete runnable model
 
-Lesson [5 — Dice notation](../tutorial/05-dice-notation.html) walks through `dl1`, `kh`, and related notation step by step.
+`4d6dl1` means four d6, drop the lowest one; `4d6kh3` means keep the highest three. Plain notation such as `roll = 4d6` preserves a pool, so use `roll.sum()` for its total. Keep/drop notation such as `score = 4d6dl1` already returns a numeric distribution: do **not** call `.sum()` on that score. The function form `keep_highest(4, 6, 3)` also returns the kept total.
 
 ```dice
-# Classic D&D ability score: 4d6 drop lowest.
-output("ability", 4d6dl1)
+score = keep_highest(4, 6, 3)
+output("One 4d6 drop-lowest score", score)
+output("Three d6", dice_pool(3, 6).sum())
+output("All four d6", dice_pool(4, 6).sum())
 ```
+
+## Reading the report and independent checks
+
+The score ranges 3–18 and has mean 12.2445987654. That exceeds 3d6’s 10.5, but is **below** 4d6’s 14. Discarding a positive die cannot increase that same throw’s total. Keeping three and dropping one have identical complete distributions, not just equal means.
+
+## Safe changes
+
+Keep the highest two instead. This equals dropping the lowest two; its mean is 9.34413580247 and range 2–12.
+
+## Composition and boundary checks
+
+Explain why six independent score reports are not a complete character-generation policy. Answer: choosing assignments, reroll rules, and the quality of the whole array need additional questions. This page models one score only.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+D&D Basic Rules 2014, [Step-by-Step Characters](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/step-by-step-characters), Determine Ability Scores. One random score; no reroll policy, point buy, or six-score array ranking.
+
+## Related learning
+
+[Lesson L13](../tutorial/13-keep-and-drop.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.

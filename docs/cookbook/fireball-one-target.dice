@@ -1,0 +1,60 @@
+# D&D 2014 — one target’s Fireball risk
+
+**R05 · Advanced · Scoped component**
+
+## Question and scope
+
+Graduation brief: model one target’s risk of taking at least 28 damage from a base D&D 2014 Fireball, with Dexterity save bonus +3 against DC 15. A success halves damage, rounded down. No resistance or Evasion. **Before reading the solution**, write assumptions, choose representations, predict bounds, and construct the report from a blank file.
+
+Source sections are linked under Rules below; primary-source review is recorded in the release dossier. Independent human and browser/usability review are separate gates.
+
+## Inputs and model limits
+
+Positive integer HP (default 28), integer save bonus +3 and DC 15. Base 8d6, half rounded down on save. Damage reaching HP is not a death classification.
+
+## Complete runnable model
+
+Sample solution: build the independent damage total and natural save, then classify their pair. Preserve the actual damage total while deciding whether to halve it. `>=` includes damage exactly equal to the target’s HP. The policy does not multiply unrelated hit and damage marginals; both determine one event inside the callback.
+
+```dice
+hp = 28
+save_bonus = 3
+save_dc = 15
+full = dice_pool(8, 6).sum()
+bands = scale().step("Below HP threshold").step("Damage reaches HP")
+def harm(raw_damage, natural_save):
+    damage = raw_damage
+    if natural_save + save_bonus >= save_dc:
+        damage = raw_damage // 2
+    if damage >= hp:
+        return "Damage reaches HP"
+    return "Below HP threshold"
+result = joint_classify(full, d(20), bands, harm)
+output("One-target Fireball risk", result)
+output("At least current HP in damage", result.pmf("Damage reaches HP"))
+```
+
+## Reading the report and independent checks
+
+The save succeeds on natural 12–20: 9/20. A successful save deals at most 24, so cannot reach 28 HP. An independent oracle is therefore (11/20) × P(8d6 ≥28). Count eight-d6 totals by repeated convolution or a separate small dynamic count. Overall mean damage is (11/20)×28 + (9/20)×13.75 = 21.5875, but the risk is a separate question.
+
+## Safe changes
+
+Set HP to 49: risk is zero. Set HP to 4: every possible damage result reaches it, so risk is one. At HP 28 with save bonus 20 the risk is zero because all ordinary saves succeed; at bonus −20 it becomes P(8d6 ≥28). These are model boundary checks, not special death-save rules.
+
+## Composition and boundary checks
+
+Graduation: invent a two-d6 rule where armour subtracts after taking the higher die, then ask about a specified HP threshold. Deliver a standalone literate file, one independent face count, at least two boundary checks, and exclusions. Acceptance criteria: use 36 equally likely pairs, keep the higher before armour, floor at zero, and query inclusively. Example d6+d6, armour 2, HP 4: only a maximum 6 reaches HP, probability 11/36. Do not reuse this Fireball script unchanged.
+
+Do not combine separate marginal reports and assume they preserve the same
+rolled faces. When an event depends on several properties of one roll, keep
+those properties together inside a single classifier or pool callback.
+
+## Rules
+
+[D&D Basic Rules 2014: Fireball](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/spells), ordinary saves, and rounding down. One target; no shared multi-target event, concentration, resistance, vulnerability, Evasion, or instant-death interpretation. “Damage reaches HP” is not a claim of death.
+
+## Related learning
+
+[Lesson L32](../tutorial/32-build-and-defend.html) explains the modelling idea step by step.
+[Cookbook index](index.html) offers both game and mechanic views of these same recipes.
