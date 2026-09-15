@@ -92,8 +92,11 @@ pub fn rewrite_markdown_links(markdown: &str, layout: MarkdownStaticLayout) -> S
                 continue;
             }
         }
-        out.push(char::from(bytes[i]));
-        i += 1;
+        // Advance by a whole character so prose and runnable examples retain UTF-8.
+        if let Some(ch) = markdown[i..].chars().next() {
+            out.push(ch);
+            i += ch.len_utf8();
+        }
     }
     out
 }
@@ -147,10 +150,23 @@ fn map_guide_link(target: &str) -> String {
     if target == "references/README.md" {
         return "../references/index.html".to_owned();
     }
+    if target == "references/api-conventions.md" {
+        return "../references/api-conventions.html".to_owned();
+    }
     target.to_owned()
 }
 
 fn map_reference_link(target: &str) -> String {
+    match target {
+        "../README.md#tutorial" => return "../tutorial/index.html".to_owned(),
+        "../README.md" => return "../docs/index.html".to_owned(),
+        "../cookbook/README.md" => return "../cookbook/index.html".to_owned(),
+        "stdlib.md" | "../references/stdlib.md" => return "stdlib.html".to_owned(),
+        "api-conventions.md" | "../references/api-conventions.md" => {
+            return "api-conventions.html".to_owned();
+        }
+        _ => {}
+    }
     if let Some(slug) = target.strip_prefix("../tutorial/") {
         if let Some(html) = lesson_slug_to_html(slug) {
             return html;
@@ -272,6 +288,33 @@ mod tests {
         let md = "[x](../tutorial/01-one-die.md)";
         let out = rewrite_markdown_links(md, MarkdownStaticLayout::Reference);
         assert_eq!(out, "[x](../tutorial/01-one-die.html)");
+    }
+
+    #[test]
+    fn reference_rewrites_published_pages() {
+        for (source, destination) in [
+            ("stdlib.md", "stdlib.html"),
+            ("api-conventions.md", "api-conventions.html"),
+            ("../references/api-conventions.md", "api-conventions.html"),
+            ("../README.md", "../docs/index.html"),
+            ("../README.md#tutorial", "../tutorial/index.html"),
+            ("../cookbook/README.md", "../cookbook/index.html"),
+        ] {
+            assert_eq!(map_reference_link(source), destination);
+        }
+        assert_eq!(
+            map_guide_link("references/api-conventions.md"),
+            "../references/api-conventions.html"
+        );
+    }
+
+    #[test]
+    fn link_rewriting_preserves_unicode_prose_and_examples() {
+        let md = "Chances: 50% → 100%.\n\n```dice\noutput(\"Résultat 🎲\", 1d6)\n```\n\n[Conventions](api-conventions.md)";
+        assert_eq!(
+            rewrite_markdown_links(md, MarkdownStaticLayout::Reference),
+            md.replace("api-conventions.md", "api-conventions.html")
+        );
     }
 
     #[test]

@@ -33,7 +33,7 @@ On **`DieRoll`** and **`DicePool`**, these four methods use a **FaceSpec**. On a
 - `dice_pool(3, 6).keep(5..).sum()` — each die can only show 5 or 6 (conditional die). Totals are 15–18 only (mean 16.5).
 - `dice_pool(3, 6).ignore(1..4).sum()` — full d6 rolls; faces 1–4 count as 0 toward the total. The sum distribution includes **0** (mean 5.5).
 
-`count(spec)` and pool `p_*` methods still use **unfiltered** dice: they count how many dice matched, not a kept or ignored sum.
+`count(spec)` and pool `p_*` methods examine the dice in the pool you give them: they count matching dice, not a sum. Calling them on the original pool leaves its faces unchanged. Calling them after `keep`, `remove`, `convert`, or `ignore` uses those changed faces.
 
 ### Joining mixed pools (`+`)
 

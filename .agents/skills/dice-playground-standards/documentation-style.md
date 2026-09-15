@@ -2,12 +2,9 @@
 
 ## Audience
 
-Assume the reader can program in Rust or Starlark but may not know:
+For the Rust engine API, assume the reader can program in Rust but may not know probability concepts such as probability mass functions (PMF), convolution, or independence. Bridge that gap before using precise terms.
 
-- Probability mass functions (PMF), convolution, independence
-- Tabletop notation (`2d6`, `4d6dl1`, keep-highest pools)
-
-Bridge that gap in one or two sentences, then use precise terms.
+For the **script-facing Rust doc comments** in `src/engine/starlark_guest/`, assume the reader knows their tabletop rule but is **new to scripting and Starlark**. These comments become the public script reference, not Rust implementation documentation. Match the tutorials' voice: describe what happens at the table, explain the operation, and show how to read its result.
 
 ## Rust doc example pattern
 
@@ -31,11 +28,14 @@ pub fn example() {}
 
 ## User-facing reference pattern
 
-1. **Core ideas** — `Dist` vs `RollPool` vs `LabelDist` in plain language.
-2. **At-the-table table** — what the player experiences.
-3. **API list** — function names last, grouped by topic.
+1. **Core ideas** — `DieRoll` vs `DicePool` vs `Outcomes` in plain language, with `Scale` for the ladder of labels.
+2. **At the table** — what the rule does before introducing technical terms.
+3. **How to use it** — arguments, returned value, important defaults and limits, and common confusions.
+4. **Try it** — a complete fenced `dice` example that runs independently and calls `output`. Explain unfamiliar syntax such as lists, method calls, or callback functions. Rust examples belong in the core Rust API, not in script-facing entries.
 
-Regenerate function reference: `make references` → `docs/references/stdlib.md`.
+Use the real parameter names under `# Arguments` so Starlark can attach their explanations to the generated signatures. Distinguish a probability (0–1) from a count or average, and do not display the latter as a probability.
+
+Regenerate the function reference with `make references` → `docs/references/stdlib.md`. Run `cargo test --test docs_reference` to check drift and execute the examples. Add new APIs to the curated lists in `src/engine/starlark_guest/docs.rs`; unit tests enforce exact coverage, argument help, and one runnable example per entry.
 
 ## What to avoid
 

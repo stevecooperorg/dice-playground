@@ -135,11 +135,13 @@ if [[ ${COOKBOOK_COUNT} -gt 0 ]]; then
 EOF
 fi
 
-REF_MD="${ROOT}/docs/references/stdlib.md"
-if [[ -f "${REF_MD}" ]]; then
-  cargo run --quiet --bin dice -- render-md "${REF_MD}" -o "${REF_OUT}/stdlib.html" --layout reference
-  cp "${REF_OUT}/stdlib.html" "${REF_OUT}/index.html"
-fi
+# Generate from the current API into the build output, not the checked-in snapshot.
+# Keep the Markdown alongside HTML as a downloadable reference source.
+REF_MD="${REF_OUT}/stdlib.md"
+cargo run --quiet --bin dice -- docs --out "${REF_MD}"
+cargo run --quiet --bin dice -- render-md "${REF_MD}" -o "${REF_OUT}/stdlib.html" --layout reference
+cp "${REF_OUT}/stdlib.html" "${REF_OUT}/index.html"
+cargo run --quiet --bin dice -- render-md "${ROOT}/docs/references/api-conventions.md" -o "${REF_OUT}/api-conventions.html" --layout reference
 
 GUIDE_MD="${ROOT}/docs/README.md"
 if [[ -f "${GUIDE_MD}" ]]; then

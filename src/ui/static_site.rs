@@ -37,6 +37,12 @@ fn enhance_pre_block(block: &str) -> anyhow::Result<String> {
         .find('>')
         .map(|i| code_open + i + 1)
         .context("code opening tag")?;
+    // Starlark renders API signatures as python fences. These describe calls;
+    // unlike the reference's dice fences, they are not executable examples.
+    let code_tag = &block[code_open..code_inner_start];
+    if code_tag.contains("language-python") {
+        return Ok(block.to_owned());
+    }
     let raw_inner = &block[code_inner_start..code_close];
     let decoded = decode_html_entities(raw_inner);
     if !looks_like_dice_script(&decoded) {
@@ -203,6 +209,16 @@ mod tests {
         assert!(out.contains("load-in-playground"));
         assert!(out.contains("dice_playground_load="));
         assert!(out.contains("code-with-playground"));
+    }
+
+    #[test]
+    fn skips_reference_signatures_but_links_dice_examples() {
+        let signature = "<pre><code class=\"language-python\">def dice_pool(count: int, sides: int) -&gt; DicePool</code></pre>";
+        assert_eq!(inject_playground_load_links(signature).unwrap(), signature);
+        let example = "<pre><code class=\"language-dice\">output(\"Pool total\", dice_pool(3, 6).sum())</code></pre>";
+        assert!(inject_playground_load_links(example)
+            .unwrap()
+            .contains("load-in-playground"));
     }
 
     #[test]

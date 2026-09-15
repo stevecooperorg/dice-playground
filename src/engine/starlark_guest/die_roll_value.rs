@@ -60,72 +60,158 @@ starlark::methods_static!(
 
 #[starlark_module]
 fn starlark_die_roll_methods(builder: &mut starlark::environment::MethodsBuilder) {
-    /// Chance of rolling **exactly** this number (one outcome, not “this or higher”).
+    /// Find the chance of rolling exactly one number.
     ///
-    /// Example: `output("pct_seven", 2d6.pmf(7))` for the probability of a 7 on 2d6.
+    /// For two d6, a total of 7 has a chance of 6 out of 36, about 16.7%.
+    /// The returned probability is a number from 0 to 1, not a percentage from 0 to 100.
+    /// `pmf` is short for “probability mass function”; think “chance of this exact result”.
+    /// Use `.p_ge(7)` instead if you mean “7 or higher”.
+    ///
+    /// ```dice
+    /// roll = dice_pool(2, 6).sum()
+    /// output("Exactly seven", roll.pmf(7))
+    /// ```
     ///
     /// # Arguments
-    /// * `value`: The total you care about.
+    /// * `value`: The whole-number result you want. An impossible result has chance 0.
     fn pmf(this: &StarlarkDieRoll, value: i32) -> anyhow::Result<f64> {
         Ok(this.inner.pmf(i64::from(value)))
     }
 
-    /// Chance the total is **this number or lower** (cumulative from the bottom).
+    /// Find the chance of this total or anything lower.
     ///
-    /// Less common than `p_ge` for “beat the DC” checks; useful when rules ask “at most X”.
+    /// Use this for roll-under rules, where low numbers are good.
+    /// `.cdf(8)` includes 8 itself. It returns a probability from 0 to 1.
+    /// `cdf` means “cumulative distribution function”: add up the chances from the bottom.
+    ///
+    /// ```dice
+    /// roll = dice_pool(2, 6).sum()
+    /// output("Eight or less", roll.cdf(8))
+    /// ```
     ///
     /// # Arguments
-    /// * `value`: Upper cap (inclusive).
+    /// * `value`: Highest total to include.
     fn cdf(this: &StarlarkDieRoll, value: i32) -> anyhow::Result<f64> {
         Ok(this.inner.cdf(i64::from(value)))
     }
 
-    /// Chance of **meeting or beating** a target number—your go-to for “need 15+ on 2d10”.
+    /// Find the chance of meeting or beating a target number.
     ///
-    /// Example: `output("success", (2d10 + 3).p_ge(15))`.
+    /// Use this for “need 15 or more” checks. The letters `ge` mean “greater than
+    /// or equal to”, so the target itself counts. The result is a probability from 0 to 1.
+    /// This checks the finished total, not each separate die.
+    ///
+    /// ```dice
+    /// roll = 2d10 + 3
+    /// output("Meet a target of 15", roll.p_ge(15))
+    /// ```
     ///
     /// # Arguments
-    /// * `value`: Target total (inclusive)—success if roll ≥ this.
+    /// * `value`: Lowest successful total.
     fn p_ge(this: &StarlarkDieRoll, value: i32) -> anyhow::Result<f64> {
         Ok(this.inner.p_ge(i64::from(value)))
     }
 
-    /// Average result if you rolled this distribution many times—the **mean** on the output table.
+    /// Find the average total you would get over many rolls.
+    ///
+    /// A d6 has a mean of 3.5 even though no face shows 3.5. This is an average,
+    /// not the most likely result and not a probability. The result is a decimal number.
+    /// The report for a full roll already includes its mean; use this method when
+    /// you need the number in a calculation.
+    ///
+    /// ```dice
+    /// roll = d(6)
+    /// average = roll.mean()  # 3.5; a number you can use in later calculations.
+    /// output("The roll, with its mean in the report", roll)
+    /// ```
     fn mean(this: &StarlarkDieRoll) -> anyhow::Result<f64> {
         Ok(this.inner.mean())
     }
 
-    /// How many different totals can occur with non-zero chance (size of the result table).
+    /// Count how many different numeric results are possible.
+    ///
+    /// Two d6 have 11 possible totals, 2 through 12, even though there are 36
+    /// ways the dice can land. The returned whole number counts totals, not combinations.
+    /// “Support” is the mathematical name for the set of possible results.
+    ///
+    /// ```dice
+    /// roll = dice_pool(2, 6).sum()
+    /// possible_totals = roll.support_size()  # 11, counting totals 2 through 12.
+    /// output("Two dice: eleven possible totals", roll)
+    /// ```
     fn support_size(this: &StarlarkDieRoll) -> anyhow::Result<i32> {
         i32::try_from(this.inner.support_size()).context("support_size fits in i32")
     }
 
-    /// Cap every outcome at `min` and `max` (inclusive), merging probability at the bounds.
+    /// Set a floor and a ceiling for the final result.
     ///
-    /// Example: `(3d6 + 5).clamp(3, 18)` for a boosted roll that cannot exceed 18.
+    /// Anything below the floor becomes the floor; anything above the ceiling
+    /// becomes the ceiling. Those chances are kept, not thrown away.
+    /// The returned `DieRoll` models a rule such as “damage is at least 1, at most 6”.
+    ///
+    /// ```dice
+    /// damage = d(6) + 2
+    /// output("Damage capped at six", damage.clamp(1, 6))
+    /// ```
     ///
     /// # Arguments
-    /// * `min`: Lower bound (inclusive).
-    /// * `max`: Upper bound (inclusive).
+    /// * `min`: Lowest result allowed.
+    /// * `max`: Highest result allowed; must be at least `min`.
     fn clamp(this: &StarlarkDieRoll, min: i32, max: i32) -> anyhow::Result<StarlarkDieRoll> {
         Ok(StarlarkDieRoll::new(
             this.inner.clamp(i64::from(min), i64::from(max))?,
         ))
     }
 
-    /// Keep only faces matching `spec`; drop others and renormalize. Not `.p_ge()` on totals.
+    /// Keep only matching results and recalculate their chances to add up to 100%.
+    ///
+    /// On a d6, keeping 5 and 6 makes each of them 50% likely. This describes
+    /// a roll restricted to those results, not the chance of rolling them on an ordinary d6.
+    /// Use `.p_ge(5)` for that probability. The returned `DieRoll` leaves the original unchanged.
+    /// Keeping no possible results is an error.
+    ///
+    /// ```dice
+    /// output("Only fives and sixes", d(6).keep([5, 6]))
+    /// ```
+    ///
+    /// # Arguments
+    /// * `spec`: One number, a non-empty list of numbers, or a range such as `at_least(5)`. After `.sum()`, this matches whole totals, not the individual dice.
     fn keep(this: &StarlarkDieRoll, spec: Value<'_>) -> anyhow::Result<StarlarkDieRoll> {
         let parsed = face_spec_from_value(spec)?;
         Ok(StarlarkDieRoll::new(this.inner.keep_faces_spec(parsed)?))
     }
 
-    /// Drop faces matching `spec`; renormalize the rest.
+    /// Remove matching results and share all the probability among those left.
+    ///
+    /// Removing 1 from a fair d6 leaves 2–6, each with a 20% chance.
+    /// This is different from `.ignore(1)`, which keeps the chance of rolling 1
+    /// but makes that result worth 0. The result is a new `DieRoll`;
+    /// removing every possible result is an error.
+    ///
+    /// ```dice
+    /// output("A die without ones", d(6).remove(1))
+    /// ```
+    ///
+    /// # Arguments
+    /// * `spec`: Results to remove: one number, a non-empty list, or a range such as `at_most(2)`. For a summed roll, these are totals.
     fn remove(this: &StarlarkDieRoll, spec: Value<'_>) -> anyhow::Result<StarlarkDieRoll> {
         let parsed = face_spec_from_value(spec)?;
         Ok(StarlarkDieRoll::new(this.inner.remove_faces_spec(parsed)?))
     }
 
-    /// Remap matching faces to `to`; other faces unchanged.
+    /// Change matching results to a new number without changing how often they happen.
+    ///
+    /// For a “sixes count double” rule, turn 6 into 12. Other results stay as they are.
+    /// If several results become the same number, their chances add together.
+    /// The result is a new `DieRoll`; the original is unchanged.
+    ///
+    /// ```dice
+    /// output("Sixes count as twelve", d(6).convert(6, 12))
+    /// ```
+    ///
+    /// # Arguments
+    /// * `spec`: Results to change: one number, a non-empty list, or a range such as `at_least(5)`. On a summed roll this matches totals.
+    /// * `to`: New whole-number value for every match.
     fn convert(
         this: &StarlarkDieRoll,
         spec: Value<'_>,
@@ -137,13 +223,38 @@ fn starlark_die_roll_methods(builder: &mut starlark::environment::MethodsBuilder
         ))
     }
 
-    /// Remap matching faces to 0 (`convert(spec, 0)`).
+    /// Make matching results worth zero, while keeping their chance of happening.
+    ///
+    /// On a d6, ignoring 1–4 gives a 4-in-6 chance of 0, plus the usual chances
+    /// of 5 and 6. Unlike `.remove(...)`, it does not rule out those rolls.
+    /// It returns a new `DieRoll` and is shorthand for `.convert(spec, 0)`.
+    ///
+    /// ```dice
+    /// output("Only high faces add points", d(6).ignore(through(1, 4)))
+    /// ```
+    ///
+    /// # Arguments
+    /// * `spec`: Results to turn into 0: one number, a non-empty list, or a range. On a summed roll this matches whole totals.
     fn ignore(this: &StarlarkDieRoll, spec: Value<'_>) -> anyhow::Result<StarlarkDieRoll> {
         let parsed = face_spec_from_value(spec)?;
         Ok(StarlarkDieRoll::new(this.inner.ignore_faces_spec(parsed)?))
     }
 
-    /// Label numeric totals using bands on `scale`, or pass cut list / bands to override.
+    /// Turn this roll's totals into named results using your scale.
+    ///
+    /// This is the same as `bucket(roll, results)`. It returns `Outcomes`,
+    /// which you can show as a table or ask about with `.p_at_least("Hit")`.
+    /// Each possible total must be covered by a band.
+    ///
+    /// ```dice
+    /// results = scale().step("Miss", at_most(6)).step("Hit", at_least(7))
+    /// roll = dice_pool(2, 6).sum()
+    /// output("Move result", roll.bucket(results))
+    /// ```
+    ///
+    /// # Arguments
+    /// * `scale`: Your ordered labels and their number ranges.
+    /// * `bands`: Optional replacement cut points or ranges, following the same rules as the `bucket` function. For two labels, `[6]` means 6 or less, then 7 or more.
     fn bucket(
         this: &StarlarkDieRoll,
         scale: &StarlarkScale,

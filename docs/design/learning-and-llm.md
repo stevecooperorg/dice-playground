@@ -74,7 +74,11 @@ The migration plan explicitly called for replacing migrated-page snippet injecti
 
 The reference is built from Starlark documentation metadata for the registered builtins and exposed value types. The renderer adds curated introductions, topic ordering, and terminology so that it is more useful than an alphabetical dump of signatures.
 
-`make references` invokes the native documentation command and writes `docs/references/stdlib.md`. `tests/docs_reference.rs` compares the committed file against the renderer output, catching drift between generated metadata and the checked-in reference. The site build renders that committed markdown; it does not itself regenerate it.
+`make references` invokes the native documentation command and writes `docs/references/stdlib.md`. `tests/docs_reference.rs` compares the committed file against the renderer output, runs each fenced `.dice` example independently, and checks key behavioral explanations. The script-facing Rust comments assume readers are new to scripting and Starlark: they explain arguments, returned values, defaults, and tabletop meaning rather than Rust internals.
+
+The renderer extracts constructor metadata directly instead of trimming type documentation as text. Builtins appear once in their topic, and type methods have qualified headings such as `DieRoll.pmf`. Unit tests require exact coverage of registered APIs, parameter help, runnable examples, and a consistent heading hierarchy.
+
+The site build regenerates the reference into the build output without changing the committed snapshot, then publishes HTML, downloadable Markdown, and the linked API conventions page. Reference signatures are not offered as runnable playground snippets.
 
 The human-maintained [API conventions](../references/api-conventions.md) page explains stable patterns that a signature alone cannot teach:
 

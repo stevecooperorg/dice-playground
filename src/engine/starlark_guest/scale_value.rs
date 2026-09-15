@@ -71,11 +71,29 @@ starlark::methods_static!(
 
 #[starlark_module]
 fn starlark_scale_methods(builder: &mut starlark::environment::MethodsBuilder) {
-    /// Append one outcome label (low → high). With no band, the step is for `classify` only.
+    /// Add the next named result to your ladder, working from worst to best.
     ///
-    /// With a band (`IntBand` or desugared `..6`, `7..9`, `10..`), the step buckets numeric totals.
-    /// Bands may overlap: **early** steps (see `early=True`) are checked first, then other steps, each in declaration order.
-    /// Declaration order still defines ladder rank for `p_at_least` / `p_at_most`.
+    /// Each call returns a new `Scale`; it does not change the old one.
+    /// Save the result with `results = results.step(...)`, or put several `.step(...)`
+    /// calls one after another. Give each label a number range when using `bucket`.
+    /// You can leave ranges out for `classify`, or supply them separately to `bucket`.
+    ///
+    /// ```dice
+    /// results = scale().step("Miss", at_most(6))
+    /// results = results.step("Partial", through(7, 9))
+    /// results = results.step("Hit", at_least(10))
+    /// output("Move result", bucket(2d6, results))
+    /// ```
+    ///
+    /// For overlapping ranges, `early=True` means “check this step before ordinary steps”.
+    /// `True` is Starlark's word for yes. Early steps are checked in the order added,
+    /// then ordinary steps in their order; the first match wins. This does not change
+    /// the ladder order used by `.p_at_least(...)` and `.p_at_most(...)`.
+    ///
+    /// # Arguments
+    /// * `label`: A unique text label in quotes, such as `"Hit"`.
+    /// * `band`: Optional number range, such as `at_most(6)`, `through(7, 9)`, or `at_least(10)`. A step without a range does not act as a catch-all for `bucket`.
+    /// * `early`: Optional named argument, `early=True` or `early=False`. Defaults to `False`.
     fn step(
         this: &StarlarkScale,
         label: &str,

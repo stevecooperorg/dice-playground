@@ -25,7 +25,7 @@ Same steps in the playground. The **text** tab lists every total and its exact p
 
 Longer scripts cover the rest of the table: advantage on the d20 (`2d20kh1`), natural 1 and 20 before modifiers, keep-highest pools (`3d6kh2`), exploding dice, save-for-half on `8d6`, or a grid of success rates across modifiers. Familiar faces use dice notation (`2d6`, `4d6dl1`, …); conditions, loops, and several named outputs use **Starlark**. Results appear as **text**, **JSON**, or a **graph**. Step-by-step notation is [lesson 5](docs/tutorial/05-dice-notation.html); worked recipes are in the cookbook (linked from the **[user guide](docs/README.md)**).
 
-Implementation: exact probability (no sampling), Starlark with `.dice` sugar, Leptos WASM front end in one crate; optional **`dice` CLI** and LSP (see below).
+Implementation: exact probability (no sampling), Starlark with `.dice` sugar, Leptos WASM front end in one crate; optional `dice` **CLI** and LSP (see below).
 
 ## Learn the language
 
@@ -40,12 +40,14 @@ cargo run --bin dice -- eval docs/tutorial/01-one-die.dice
 cargo run --bin dice -- lsp   # stdio language server (editor integration)
 ```
 
+
+
 ## Deploy your own copy
 
 The repo includes [Cloudflare Workers](https://developers.cloudflare.com/workers/) deployment via Wrangler. You get the playground, tutorial, and stdlib reference as one static site.
 
 1. Install [Node.js](https://nodejs.org/) and log in: `npx wrangler login`
-2. Set a unique Worker name in [`wrangler.toml`](wrangler.toml) (`name = "…"`)
+2. Set a unique Worker name in `[wrangler.toml](wrangler.toml)` (`name = "…"`)
 3. Install Wrangler and deploy:
 
 ```bash
@@ -60,13 +62,15 @@ To build `dist/` without uploading (S3, GitHub Pages, Azure, etc.): `make releas
 ## Layout
 
 
-| Path                 | Role                                                 |
-| -------------------- | ---------------------------------------------------- |
-| `src/engine/`        | Dice probability engine, Starlark guest, playground check/eval, LSP |
-| `src/ui/`            | Leptos CSR playground                                |
-| `src/bin/dice.rs`    | CLI (`eval`, `docs`, `table-2d10`, `lsp`)            |
-| `docs/`              | User guide + references                              |
-| `docs/tutorial/`   | Literate tutorial lessons (`.dice`; CI + static site) |
+| Path              | Role                                                                |
+| ----------------- | ------------------------------------------------------------------- |
+| `src/engine/`     | Dice probability engine, Starlark guest, playground check/eval, LSP |
+| `src/ui/`         | Leptos CSR playground                                               |
+| `src/bin/dice.rs` | CLI (`eval`, `docs`, `table-2d10`, `lsp`)                           |
+| `docs/`           | User guide + references                                             |
+| `docs/tutorial/`  | Literate tutorial lessons (`.dice`; CI + static site)               |
+
+
 
 
 ## Docs
@@ -75,6 +79,8 @@ To build `dist/` without uploading (S3, GitHub Pages, Azure, etc.): `make releas
 - [Product purpose and requirements](docs/requirements/README.md) — plain-English product requirements
 - [Technical design](docs/design/README.md) — mathematics, architecture, documentation, and LLM-assisted authoring
 - [Agent / architecture notes](docs/AGENT.md)
+
+
 
 ## CLI
 

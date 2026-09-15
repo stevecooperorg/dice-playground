@@ -14,12 +14,30 @@ pub fn sanitize_woven_html(fragment: &str) -> String {
         ],
     );
     builder.add_tag_attributes("section", &["class", "data-dice-output-name"]);
+    // Preserve fence identity for static playground links: python fences in the
+    // reference are signatures, while dice fences are executable examples.
+    builder.add_allowed_classes(
+        "code",
+        &["language-dice", "language-python", "language-text"],
+    );
     builder.clean(fragment).to_string()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn keeps_known_code_languages_without_allowing_arbitrary_attributes() {
+        for language in ["dice", "python", "text"] {
+            let raw = format!("<code class=\"language-{language} unexpected\" onclick=\"alert(1)\">example</code><script>alert(1)</script>");
+            let clean = sanitize_woven_html(&raw);
+            assert!(clean.contains(&format!("class=\"language-{language}\"")));
+            assert!(!clean.contains("unexpected"));
+            assert!(!clean.contains("onclick"));
+            assert!(!clean.contains("<script"));
+        }
+    }
 
     #[test]
     fn keeps_chart_data_attributes() {
