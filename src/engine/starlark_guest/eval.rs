@@ -799,15 +799,19 @@ pub fn eval_source_with_dialect(
     let ast = AstModule::parse(path, content.to_owned(), dialect)
         .map_err(starlark_err)
         .with_context(|| format!("parse {path}"))?;
+    eval_ast(ast)
+        .map_err(starlark_err)
+        .with_context(|| format!("eval {path}"))
+}
+
+/// Evaluate an already parsed module without discarding structured error locations.
+pub(crate) fn eval_ast(ast: AstModule) -> Result<EvalResult, starlark::Error> {
     let globals = dice_globals();
     let store = OutputStore::default();
-    let return_value = Module::with_temp_heap(|module| -> anyhow::Result<String> {
+    let return_value = Module::with_temp_heap(|module| -> Result<String, starlark::Error> {
         let mut eval = Evaluator::new(&module);
         eval.extra = Some(&store);
-        let res: Value = eval
-            .eval_module(ast, &globals)
-            .map_err(starlark_err)
-            .with_context(|| format!("eval {path}"))?;
+        let res: Value = eval.eval_module(ast, &globals)?;
         Ok(res.to_string())
     })?;
     let outputs = store.0.into_inner();

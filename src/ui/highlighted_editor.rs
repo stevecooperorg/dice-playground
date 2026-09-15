@@ -4,7 +4,7 @@ use leptos::ev;
 use leptos::html::{Div, Textarea};
 use leptos::prelude::*;
 
-use super::highlight::highlight_line;
+use super::highlight::highlight_document;
 
 pub const HIGHLIGHTED_EDITOR_STYLES: &str = r"
 .highlighted-editor {
@@ -68,6 +68,11 @@ pub const HIGHLIGHTED_EDITOR_STYLES: &str = r"
 .tok-num { color: #93c5fd; }
 .tok-com { color: #64748b; }
 .tok-dice { color: #34d399; }
+.tok-band { color: #c4b5fd; }
+.tok-md { color: #cbd5e1; }
+.tok-heading { color: #7dd3fc; }
+.tok-fence { color: #64748b; }
+.tok-error { color: #fda4af; text-decoration: underline wavy; }
 .tok-op { color: #94a3b8; }
 ";
 
@@ -81,10 +86,7 @@ pub fn HighlightedEditor(
     let backdrop_ref = NodeRef::<Div>::new();
     let textarea_ref = NodeRef::<Textarea>::new();
 
-    let highlighted_lines = Memo::new(move |_| {
-        let text = value.get();
-        text.split('\n').map(highlight_line).collect::<Vec<_>>()
-    });
+    let highlighted = Memo::new(move |_| highlight_document(&value.get()));
 
     let sync_scroll = move || {
         let Some(ta) = textarea_ref.get() else {
@@ -124,28 +126,10 @@ pub fn HighlightedEditor(
                     aria-hidden="true"
                 >
                     {move || {
-                        let lines = highlighted_lines.get();
-                        let last_idx = lines.len().saturating_sub(1);
-                        lines
-                            .into_iter()
-                            .enumerate()
-                            .map(|(i, line_spans)| {
-                                view! {
-                                    <>
-                                        {line_spans
-                                            .into_iter()
-                                            .map(|span| {
-                                                let class = span.class_name().to_string();
-                                                view! {
-                                                    <span class=class>{span.text}</span>
-                                                }
-                                            })
-                                            .collect_view()}
-                                        {(i < last_idx).then(|| view! { <br/> })}
-                                    </>
-                                }
-                            })
-                            .collect_view()
+                        highlighted.get().into_iter().map(|span| {
+                            let class = span.class_name();
+                            view! { <span class=class>{span.text}</span> }
+                        }).collect_view()
                     }}
                 </div>
                 <textarea

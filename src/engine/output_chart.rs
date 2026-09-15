@@ -38,7 +38,9 @@ pub fn chart_kind_for_entry(entry: &OutputEntry) -> Option<ChartKind> {
         OutputEntry::DieRoll { entries, .. } if !entries.is_empty() => Some(ChartKind::DieRoll),
         OutputEntry::Outcomes { entries, .. } if !entries.is_empty() => Some(ChartKind::Outcomes),
         OutputEntry::Prob { .. } => Some(ChartKind::Prob),
-        OutputEntry::Table { entries, .. } if !entries.is_empty() && entries.len() <= MAX_TABLE_CHART_ROWS => {
+        OutputEntry::Table { entries, .. }
+            if !entries.is_empty() && entries.len() <= MAX_TABLE_CHART_ROWS =>
+        {
             Some(ChartKind::Table)
         }
         _ => None,
@@ -55,9 +57,7 @@ mod tests {
 
     #[test]
     fn large_prob_table_skipped() {
-        let entries: Vec<(String, f64)> = (0..40)
-            .map(|i| (format!("row {i}"), 0.01))
-            .collect();
+        let entries: Vec<(String, f64)> = (0..40).map(|i| (format!("row {i}"), 0.01)).collect();
         let entry = OutputEntry::Table {
             name: "grid".into(),
             entries,

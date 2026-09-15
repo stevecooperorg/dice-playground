@@ -33,13 +33,10 @@ pub fn tangle(doc: &LiterateDocument) -> TangleResult {
     let mut line_map = Vec::new();
     let mut fence_tangled_lines = Vec::new();
 
-    for (idx, fence) in doc.fences.iter().enumerate() {
+    for fence in &doc.fences {
         if fence.body.is_empty() {
             fence_tangled_lines.push((0, 0));
             continue;
-        }
-        if idx > 0 && !tangled.ends_with('\n') {
-            tangled.push('\n');
         }
         let start_line = line_map.len() as u32 + 1;
         append_body(fence, &mut tangled, &mut line_map);
@@ -67,19 +64,21 @@ fn append_body(fence: &FenceMeta, tangled: &mut String, line_map: &mut Vec<u32>)
         return;
     }
     let open_content_line = fence.source_open_line.saturating_add(1);
-    let parts: Vec<&str> = fence.body.split('\n').collect();
-    for (offset, part) in parts.iter().enumerate() {
-        if offset > 0 {
-            tangled.push('\n');
-        }
-        tangled.push_str(part);
+    append_code_body(tangled, &fence.body);
+    for (offset, _) in fence.body.split_inclusive('\n').enumerate() {
         line_map.push(open_content_line + offset as u32);
     }
-    if fence.body.ends_with('\n') {
+}
+
+/// Append one extracted body, returning its byte range (excluding any separator).
+/// Highlighting uses this same join rule for its virtual executable module.
+pub(crate) fn append_code_body(tangled: &mut String, body: &str) -> std::ops::Range<usize> {
+    if !body.is_empty() && !tangled.is_empty() && !tangled.ends_with('\n') {
         tangled.push('\n');
-        let last_body_line = open_content_line + parts.len().saturating_sub(1) as u32;
-        line_map.push(last_body_line);
     }
+    let start = tangled.len();
+    tangled.push_str(body);
+    start..tangled.len()
 }
 
 /// Map a 1-based tangled line to a 1-based source line; falls back to the tangled line if unknown.
@@ -107,6 +106,27 @@ mod tests {
         let t = tangle(&doc);
         assert_eq!(t.tangled, "bonus = 3\noutput(\"x\", bonus)");
         assert_eq!(t.line_map.lines.len(), 2);
+    }
+
+    #[test]
+    fn trailing_blank_lines_and_empty_fences_do_not_shift_next_body() {
+        let source = "```dice\n```\n```dice\na = 1\n\n\n```\n```dice\n```\n```dice\nb = a + 1\n```\n```dice\n```\n";
+        let t = tangle(&parse(source).unwrap());
+        assert_eq!(t.tangled, "a = 1\n\nb = a + 1");
+        assert_eq!(t.line_map.lines, [4, 5, 11]);
+        assert_eq!(
+            t.fence_tangled_lines,
+            [(0, 0), (1, 2), (0, 0), (3, 3), (0, 0)]
+        );
+
+        // CR characters belong to the body and are preserved, not normalized.
+        let t = tangle(&parse(&source.replace('\n', "\r\n")).unwrap());
+        assert_eq!(t.tangled, "a = 1\r\n\r\n\r\nb = a + 1\r");
+        assert_eq!(t.line_map.lines, [4, 5, 6, 11]);
+        assert_eq!(
+            t.fence_tangled_lines,
+            [(0, 0), (1, 3), (0, 0), (4, 4), (0, 0)]
+        );
     }
 
     #[test]

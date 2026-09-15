@@ -114,25 +114,22 @@ fn charts_from_outputs(outputs: &[OutputEntry]) -> Vec<OutputChart> {
         .iter()
         .filter(|entry| output_entry_supports_chart(entry))
         .map(|entry| match entry {
-                OutputEntry::DieRoll { name, entries, .. } => {
-                    OutputChart::DieRollLine {
-                        title: name.clone(),
-                        entries: entries.clone(),
-                    }
-                }
-                OutputEntry::Outcomes { name, entries, .. }
-                | OutputEntry::Table { name, entries } => {
-                    let rows = rows_from_ordinal_entries(entries);
-                    OutputChart::OrdinalBar {
-                        title: name.clone(),
-                        rows,
-                    }
-                }
-                OutputEntry::Prob { name, value } => OutputChart::ProbBar {
+            OutputEntry::DieRoll { name, entries, .. } => OutputChart::DieRollLine {
+                title: name.clone(),
+                entries: entries.clone(),
+            },
+            OutputEntry::Outcomes { name, entries, .. } | OutputEntry::Table { name, entries } => {
+                let rows = rows_from_ordinal_entries(entries);
+                OutputChart::OrdinalBar {
                     title: name.clone(),
-                    rows: rows_from_prob(*value),
-                },
-            })
+                    rows,
+                }
+            }
+            OutputEntry::Prob { name, value } => OutputChart::ProbBar {
+                title: name.clone(),
+                rows: rows_from_prob(*value),
+            },
+        })
         .collect()
 }
 

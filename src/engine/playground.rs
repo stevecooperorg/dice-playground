@@ -3,21 +3,14 @@
 //! Applies dice notation desugar, parses with a restricted Starlark dialect (`load` disabled),
 //! and returns structured diagnostics plus formatted output tables.
 
-use std::path::Path;
-
 use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use starlark::analysis::{AstModuleLint, EvalMessage, EvalSeverity};
-use starlark::syntax::AstModule;
+use starlark::analysis::{EvalMessage, EvalSeverity};
 
-use super::desugar_if_needed;
-use super::literate::MAX_LITERATE_BYTES;
-use super::literate::{
-    is_literate, parse_literate, source_line_for_tangled, tangle_literate, weave_literate,
-    LiterateDocument, TangleResult, WeaveOptions,
-};
+use super::literate::{weave_literate, WeaveOptions};
 use super::output_html::format_eval_outputs_html_sections;
-use super::{eval_source_with_dialect, format_eval_result_text, OutputEntry, ProbFormat};
+use super::source::prepare_source;
+use super::{format_eval_result_text, OutputEntry, ProbFormat};
 
 /// Maximum script size accepted from the public playground API.
 pub const MAX_SOURCE_BYTES: usize = 64 * 1024;
@@ -105,29 +98,14 @@ pub struct EvalProgramResponse {
 /// # Ok::<(), anyhow::Error>(())
 /// ```
 pub fn check_source(path: &str, source: &str) -> anyhow::Result<CheckResult> {
-    let prepared = starlark_input(path, source)?;
-    let expanded = desugar_if_needed(path, &prepared.starlark)?;
-    let dialect = dice_dialect_public();
-    let diagnostics = match AstModule::parse(path, expanded, &dialect) {
-        Ok(ast) => ast
-            .lint(None)
+    let prepared = prepare_source(path, source)?;
+    let (_, messages) = prepared.check(path);
+    Ok(CheckResult {
+        diagnostics: messages
             .into_iter()
-            .map(EvalMessage::from)
-            .map(|msg| {
-                remap_diagnostic(
-                    diagnostic_from_eval_message(msg),
-                    prepared.line_map.as_ref(),
-                )
-            })
+            .map(diagnostic_from_eval_message)
             .collect(),
-        Err(e) => {
-            vec![remap_diagnostic(
-                diagnostic_from_eval_message(EvalMessage::from_error(Path::new(path), &e)),
-                prepared.line_map.as_ref(),
-            )]
-        }
-    };
-    Ok(CheckResult { diagnostics })
+    })
 }
 
 /// Check, then evaluate with guardrails (size limits, no `load`, output cap).
@@ -145,14 +123,16 @@ pub fn eval_program(
     source: &str,
     options: EvalProgramOptions,
 ) -> anyhow::Result<EvalProgramResponse> {
-    let prepared = starlark_input(path, source)?;
-    let check = check_source(path, source)?;
-    if check.has_errors() {
+    let prepared = prepare_source(path, source)?;
+    let (ast, messages) = prepared.check(path);
+    if messages
+        .iter()
+        .any(|m| matches!(m.severity, EvalSeverity::Error))
+    {
         bail!("fix parse/lint errors before running");
     }
-    let expanded = desugar_if_needed(path, &prepared.starlark)?;
-    let result =
-        eval_source_with_dialect(path, &expanded, &dice_dialect_public()).context("evaluate")?;
+    let ast = ast.context("checked source has no AST")?;
+    let result = prepared.eval(path, ast).context("evaluate")?;
     if result.outputs.len() > MAX_OUTPUT_COUNT {
         bail!("too many output() calls (max {MAX_OUTPUT_COUNT})");
     }
@@ -184,49 +164,6 @@ pub fn eval_program(
         report_html,
         outputs_html,
     })
-}
-
-struct PreparedSource {
-    starlark: String,
-    line_map: Option<super::literate::LineMap>,
-    literate: Option<(LiterateDocument, TangleResult)>,
-}
-
-fn starlark_input(_path: &str, source: &str) -> anyhow::Result<PreparedSource> {
-    if is_literate(source) {
-        if source.len() > MAX_LITERATE_BYTES {
-            bail!("source exceeds maximum size of {MAX_LITERATE_BYTES} bytes");
-        }
-        let doc = parse_literate(source).context("parse literate document")?;
-        let tangled = tangle_literate(&doc);
-        Ok(PreparedSource {
-            starlark: tangled.tangled.clone(),
-            line_map: Some(tangled.line_map.clone()),
-            literate: Some((doc, tangled)),
-        })
-    } else {
-        if source.len() > MAX_SOURCE_BYTES {
-            bail!("source exceeds maximum size of {MAX_SOURCE_BYTES} bytes");
-        }
-        Ok(PreparedSource {
-            starlark: source.to_owned(),
-            line_map: None,
-            literate: None,
-        })
-    }
-}
-
-fn remap_diagnostic(
-    d: SourceDiagnostic,
-    line_map: Option<&super::literate::LineMap>,
-) -> SourceDiagnostic {
-    let Some(map) = line_map else {
-        return d;
-    };
-    SourceDiagnostic {
-        line: source_line_for_tangled(map, d.line),
-        ..d
-    }
 }
 
 fn diagnostic_from_eval_message(msg: EvalMessage) -> SourceDiagnostic {
@@ -277,8 +214,12 @@ mod tests {
 
     #[test]
     fn eval_legacy_includes_outputs_html() {
-        let r = eval_program("legacy.dice", "output(\"d6\", 1d6)", EvalProgramOptions::default())
-            .expect("eval");
+        let r = eval_program(
+            "legacy.dice",
+            "output(\"d6\", 1d6)",
+            EvalProgramOptions::default(),
+        )
+        .expect("eval");
         assert!(r.report_html.is_empty());
         assert!(!r.outputs_html.is_empty());
         assert!(r.outputs_html.contains("<table>"));
@@ -345,6 +286,77 @@ mod tests {
                 && !r.text.contains("15/36"),
             "prob: {}",
             r.text
+        );
+    }
+
+    #[test]
+    fn leading_zero_dice_counts_evaluate_like_unpadded_counts() {
+        let padded = "output(\"two\", 02d6)\noutput(\"ability\", 04d6dl1)";
+        let ordinary = "output(\"two\", 2d6)\noutput(\"ability\", 4d6dl1)";
+        let padded = eval_program("padded.dice", padded, EvalProgramOptions::default()).unwrap();
+        let ordinary =
+            eval_program("ordinary.dice", ordinary, EvalProgramOptions::default()).unwrap();
+        assert_eq!(
+            serde_json::to_value(padded.outputs).unwrap(),
+            serde_json::to_value(ordinary.outputs).unwrap()
+        );
+    }
+
+    #[test]
+    fn literal_like_output_names_are_not_rewritten() {
+        let r = eval_program(
+            "name.dice",
+            r#"output("4d6dl1", d(6))"#,
+            EvalProgramOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(super::super::output_entry_name(&r.outputs[0]), "4d6dl1");
+    }
+
+    #[test]
+    fn parse_and_lint_columns_follow_shorthand_and_unicode() {
+        let line = "x = [\"é😀\", 2d6, 1..5]; @";
+        let r = check_source("bad.dice", line).unwrap();
+        assert!(r.has_errors());
+        assert_eq!(
+            r.diagnostics[0].column as usize,
+            line[..line.find('@').unwrap()].chars().count() + 1
+        );
+        let line = "x = [\"é😀\", 2d6, 1..5]; x";
+        let r = check_source("lint.dice", line).unwrap();
+        let warning = r
+            .diagnostics
+            .iter()
+            .find(|d| d.message.contains("ident-as-statement"))
+            .unwrap();
+        assert_eq!(warning.column as usize, line.chars().count());
+    }
+
+    #[test]
+    fn diagnostics_after_blank_and_empty_fences_use_original_document() {
+        for newline in ["\n", "\r\n"] {
+            let line = "x = [\"é😀\", 2d6, 1..5]; @";
+            let source = format!("```dice\n```\n```dice\ny = 1\n\n\n```\n```dice\n```\nLater.\n```dice\n{line}\n```\n```dice\n```\n").replace('\n', newline);
+            let r = check_source("bad.dice", &source).unwrap();
+            assert!(r.has_errors());
+            assert_eq!(r.diagnostics[0].line, 12);
+            assert_eq!(
+                r.diagnostics[0].column as usize,
+                line[..line.find('@').unwrap()].chars().count() + 1
+            );
+        }
+    }
+
+    #[test]
+    fn runtime_error_location_is_original_not_expanded() {
+        let line = "x = [\"é😀\", 2d6, 1..5]; d(0)";
+        let source = format!("# Title\n```dice\na = 1\n```\n\n```dice\n{line}\n```\n");
+        let error =
+            eval_program("runtime.dice", &source, EvalProgramOptions::default()).unwrap_err();
+        let column = line[..line.find("d(0)").unwrap()].chars().count() + 1;
+        assert!(
+            format!("{error:#}").contains(&format!("runtime.dice:7:{column}")),
+            "{error:#}"
         );
     }
 

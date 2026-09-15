@@ -11,8 +11,8 @@ use super::parse::LiterateDocument;
 use crate::engine::html_sanitize::sanitize_woven_html;
 use crate::engine::markdown_to_html;
 use crate::engine::output_html::format_output_section_html;
-use crate::engine::starlark_guest::{EvalResult, OutputEntry, ProbFormat};
 use crate::engine::starlark_guest::shared_sample_space_for_outputs;
+use crate::engine::starlark_guest::{EvalResult, OutputEntry, ProbFormat};
 
 /// Static site chrome when rendering full HTML pages.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -75,22 +75,26 @@ pub fn render_literate_document(
     source: &str,
     options: WeaveOptions,
 ) -> anyhow::Result<String> {
-    use crate::engine::playground::dice_dialect_public;
-    use crate::engine::{
-        desugar_if_needed, eval_source_with_dialect, parse_literate, tangle_literate,
-    };
+    use crate::engine::source::prepare_source;
+    use starlark::analysis::EvalMessage;
+    use std::path::Path;
 
     if !super::is_literate(source) {
         bail!("render requires a literate `.dice` file (executable fenced blocks)");
     }
-    if source.len() > super::MAX_LITERATE_BYTES {
-        bail!("source exceeds maximum literate size");
-    }
-    let doc = parse_literate(source).context("parse literate document")?;
-    let tangled = tangle_literate(&doc);
-    let expanded = desugar_if_needed(path, &tangled.tangled).context("desugar")?;
-    let eval = eval_source_with_dialect(path, &expanded, &dice_dialect_public()).context("eval")?;
-    let fragment = weave_literate(source, &doc, &tangled, &eval, options)?;
+    let prepared = prepare_source(path, source)?;
+    let (doc, tangled) = prepared
+        .literate
+        .as_ref()
+        .context("render requires literate source")?;
+    let ast = prepared.parse(path).map_err(|e| {
+        anyhow::anyhow!(
+            "{}",
+            prepared.map_message(EvalMessage::from_error(Path::new(path), &e))
+        )
+    })?;
+    let eval = prepared.eval(path, ast).context("eval")?;
+    let fragment = weave_literate(source, doc, tangled, &eval, options)?;
     let title = literate_document_title(source);
     let page = match options.static_layout {
         LiterateStaticLayout::Tutorial => wrap_static_tutorial_page(&title, &fragment),

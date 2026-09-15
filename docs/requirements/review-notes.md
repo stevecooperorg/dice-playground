@@ -103,6 +103,17 @@ These are evidence-backed observations at source baseline `2d00070`, not a compr
 
 The detailed source map distinguishes extracted decisions from this supplemental implementation evidence.
 
+## Shared-lexing follow-up (after the extraction baseline)
+
+The original implementation observations above are historical, not overwritten by later work. The highlighting-first simplification now shares native Starlark tokenization, dice/band recognition, source preparation, and mapped primary diagnostics across the public check/eval/LSP paths. The supervisor approved a narrow tangle correction: append extracted bodies once, add separators only after nonempty code lacking a newline, and keep line maps aligned with emitted text. Static rendering shares that preparation without changing report binding.
+
+Two limitations remain deliberate:
+
+- **Document detection precedence:** fence detection still runs before native Starlark lexing. Executable fence lines inside an otherwise valid triple-quoted legacy string can select literate mode. This is recorded by a regression, not silently changed; resolving legacy-string versus markdown-fence precedence needs a format decision.
+- **LSP AST features:** transformed/invalid buffers receive mapped parse/lint diagnostics but an inert comment-only AST to invalidate the upstream last-valid-AST cache. No complete literate/shorthand hover, navigation, or contextual completion is claimed. Unchanged successfully parsed Starlark uses its original AST. Secondary locations embedded in upstream diagnostic message prose are not separately mapped.
+
+The context-sensitive pool-versus-sum policy also remains compatibility debt, not a newly endorsed semantic design. See [the current pipeline](../design/architecture.md#shared-lexical-preparation-current-implementation).
+
 ## Approval checklist
 
 - [x] The [product purpose](product.md) represents what Dice Playground is for and the intended casual-designer audience.

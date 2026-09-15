@@ -32,7 +32,8 @@ pub fn format_output_section_html(
     let md = format_output_entry_markdown(entry, prob_format, shared_sample_denom);
     let table_html = sanitize_woven_html(&markdown_to_html(&md));
 
-    let mut section = format!(r#"<section class="dice-output" data-dice-output-name="{name_esc}">"#);
+    let mut section =
+        format!(r#"<section class="dice-output" data-dice-output-name="{name_esc}">"#);
     if let Some(kind) = chart_kind_for_entry(entry) {
         section.push_str(&format!(
             r#"<div class="dice-output-chart" data-dice-output="{name_esc}" data-dice-chart-kind="{}" role="img" aria-label="Chart for output {name_esc}"></div>"#,

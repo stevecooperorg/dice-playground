@@ -56,6 +56,33 @@ The recorded architecture continues the existing single Rust crate rather than i
 
 The document layer sits **around** the existing probability evaluator. Markdown prose is not added to the Starlark grammar. [Literate documents](literate-documents.md) describes detection, tangling, scope, and error locations; [the probability engine](probability-engine.md) describes evaluation.
 
+## Shared lexical preparation (current implementation)
+
+`src/engine/lex.rs` adapts **`starlark_syntax::lexer::Lexer`**, rather than maintaining a second Starlark scanner in the UI. Its source spans cover every original byte, including whitespace and newlines. Native tokens own identifiers, comments, raw/escaped/triple strings, keywords (including `lambda`), and numbers such as `1e6`, `0xFF`, and `.5`. Reserved words such as `while` are errors, not supported statements.
+
+Only two small spelling recognizers in `literals.rs` extend those tokens:
+
+| Shorthand | Lowered form |
+|---|---|
+| `d6`, `1d6` | `d(6)` |
+| `4d6dl1`, `4d6dh1`, `4d6kh2`, `4d6kl2` | Existing keep/drop helper calls |
+| `1..5`, `..5`, `5..` | `through(1, 5)`, `at_most(5)`, `at_least(5)` |
+
+Dice `d` may be uppercase; suffixes accept all-lowercase or all-uppercase spellings, not mixed case. Complete-token boundaries prevent rewriting `foo4d6`, `0x2d6`, quoted labels, comments, or incomplete suffixes. Leading-zero dice counts such as `02d6` remain supported for compatibility; ordinary leading-zero numbers still follow Starlark’s rejection rule. Bands remain unsigned integer literals with the existing signed-32-bit argument bound, not a new general expression operator. Native float spans can absorb range dots, so the adapter folds entire adjacent native spans for `1..5` rather than splitting ordinary floats. Lexical errors leave the unconsumed tail opaque and lossless; highlighting may therefore mark the rest of an unfinished script/fence as error text until it is repaired.
+
+`lowering.rs` generates ordinary built-in-call text only for recognized literals. `AstModule::parse` continues to own the real Starlark parser; there is no parser fork. Highlighting never needs to generate these calls. **The context-dependent auto-sum policy is retained compatibility debt**, isolated in `legacy_auto_sum`, not a recommended language design:
+
+| Input | Expansion |
+|---|---|
+| `2d6` | `dice_pool(2, 6)` |
+| `(2d6)` | `(sum(dice_pool(2, 6)))` |
+| `output(2d6)` | `output(sum(dice_pool(2, 6)))` |
+| `2d6.keep(5..)` | `dice_pool(2, 6).keep(at_least(5))` |
+
+`source.rs` shares preparation across check, public evaluation, static rendering, and LSP. Expansion offsets compose with the literate line map; generated-call interiors point to the original literal, and following text keeps its original columns. Check/lint and public runtime locations use one-based Unicode character columns; the LSP adapter converts diagnostic columns to zero-based UTF-16. Preparation errors retain their original fence line, and end-of-input spans map to the original code-body boundary. Native diagnostic *primary spans* are mapped; secondary locations embedded in upstream diagnostic prose are not a structured source-map API.
+
+`document_lex.rs` uses the engine's existing fence recognition and shared body-joining rule, then tokenizes a virtual concatenation of executable bodies. It projects token spans back onto code regions only, retaining multiline string and delimiter state even across fences. Prose, headings, and display-only fences have presentation categories, not dice semantics. The editor renders source spans directly, without reconstructing line breaks. Highlighting tolerates unclosed and display-only fences even when execution would reject the document; it does not change execution-mode detection or fence grammar. In an otherwise legacy script, display-only fences inside native strings do not activate that preview mode. The separately documented executable-fence precedence remains unchanged.
+
 ## The engine-facing API
 
 There is no HTTP API requirement. The browser and native tools make in-process calls.
@@ -114,7 +141,7 @@ Bundle work should use release measurements, not the much larger debug build. [W
 - **`dice lsp`** is the native stdio language-server path. The intended literate integration checks tangled code and maps diagnostics back; highlighting should distinguish prose and executable fences.
 - Documentation and other existing CLI commands remain supporting tools, not casualties of the migration.
 
-Literate-aware LSP behaviour is a requirement of the hardening phase, not a claim about the current LSP implementation. Full export details beyond HTML, and source/preview editor arrangements, remain open.
+The earlier extraction recorded literate-aware LSP behaviour as unfinished hardening. The current LSP now shares public parse/lint preparation (`load` disabled, types and top-level statements enabled) and mapped diagnostics. **It does not provide full literate or shorthand-aware navigation.** The upstream LSP assumes AST coordinates are original coordinates and retains its previous AST when given `None`. For transformed or invalid buffers the adapter therefore replaces that cache entry with an inert comment-only AST, never with the expanded AST. This removes stale user symbols and disables meaningful AST-backed hover/navigation/contextual completion there; unchanged successfully parsed Starlark retains the native AST path. Any generic environment completion is still the upstream server's behaviour, not literate analysis. Full source-mapped AST features require a separate design. Full export details beyond HTML, and source/preview editor arrangements, also remain open.
 
 ## Quality expectations
 

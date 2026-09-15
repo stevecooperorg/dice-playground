@@ -35,15 +35,11 @@ fn render_literate_document_produces_html_shell() {
 
 #[test]
 fn prob_table_lesson_weaves_html_table() {
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("docs/tutorial/10-tables.dice");
+    let path =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs/tutorial/10-tables.dice");
     let src = std::fs::read_to_string(&path).expect("read 10-tables");
-    let html = render_literate_document(
-        "10-tables.dice",
-        &src,
-        WeaveOptions::default(),
-    )
-    .expect("render");
+    let html =
+        render_literate_document("10-tables.dice", &src, WeaveOptions::default()).expect("render");
     assert!(
         html.contains("<table>"),
         "prob_table output should render as HTML table"

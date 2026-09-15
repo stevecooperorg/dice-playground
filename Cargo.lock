@@ -866,6 +866,7 @@ dependencies = [
  "starlark",
  "starlark_derive",
  "starlark_lsp",
+ "starlark_syntax",
  "tempfile",
  "tokio",
  "wasm-bindgen",

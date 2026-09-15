@@ -678,7 +678,12 @@ pub fn format_dist_pmf_gfm(
     let sample_denom = shared_sample_denom.or_else(|| infer_sample_space_denominator(entries));
     let rows = compress_pmf_for_display(entries);
     let multi = woven_table_multi_column(prob_format);
-    out.push_str(&distribution_gfm_table(&rows, sample_denom, prob_format, multi));
+    out.push_str(&distribution_gfm_table(
+        &rows,
+        sample_denom,
+        prob_format,
+        multi,
+    ));
     out
 }
 
@@ -700,7 +705,12 @@ pub fn format_ordinal_pmf_gfm(
         .map(|(label, p)| (label.clone(), *p))
         .collect();
     let multi = woven_table_multi_column(prob_format);
-    out.push_str(&distribution_gfm_table(&rows, sample_denom, prob_format, multi));
+    out.push_str(&distribution_gfm_table(
+        &rows,
+        sample_denom,
+        prob_format,
+        multi,
+    ));
     out
 }
 
@@ -722,7 +732,12 @@ pub fn format_prob_table_gfm(
         .map(|(label, p)| (label.clone(), *p))
         .collect();
     let multi = woven_table_multi_column(prob_format);
-    out.push_str(&distribution_gfm_table(&rows, sample_denom, prob_format, multi));
+    out.push_str(&distribution_gfm_table(
+        &rows,
+        sample_denom,
+        prob_format,
+        multi,
+    ));
     out
 }
 

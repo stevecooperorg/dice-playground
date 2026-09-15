@@ -30,6 +30,8 @@ output("two_d6", 2d6)
 
 **Mean** ≈ **7**.
 
+**Compatibility note:** shorthand still uses the existing context-sensitive rule. Inside `output(2d6)` or `(2d6)` it sums the dice; `2d6` on its own keeps a pool, and `2d6.keep(5..)` keeps pool behaviour for the method call. For unambiguous code, write `dice_pool(2, 6)` for separate dice and `sum(dice_pool(2, 6))` for a total. Dice-looking text in strings (including output names) and comments stays literal text.
+
 ## Stage 3: flat bonus (`2d6 + 3`)
 
 ```text

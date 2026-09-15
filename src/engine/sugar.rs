@@ -1,160 +1,81 @@
-//! Desugars tabletop dice literals (`2d6`, `4d6dl1`) into Starlark expressions.
-//!
-//! The playground accepts familiar notation; this pass rewrites it to `d()`, `dice_pool()`,
-//! and keep/drop helpers before parsing. See `docs/tutorial/05-dice-notation.md`.
+//! Compatibility APIs for lowering tabletop literals to ordinary Starlark calls.
+//! Recognition is shared with highlighting; strings, comments, and whole native
+//! tokens are never rewritten. See `docs/tutorial/05-dice-notation.dice`.
 
-use anyhow::Context;
-
-/// If `source` contains dice sugar, expand it; otherwise return `source` unchanged.
-///
-/// # Example
+/// Expand dice and inclusive integer-band shorthand, preserving all other text.
 ///
 /// ```
 /// use dice_playground::engine::desugar_if_needed;
-/// let out = desugar_if_needed("x.dice", "output(2d6)").unwrap();
-/// assert!(out.contains("dice_pool") || out.contains("d("));
-/// # Ok::<(), anyhow::Error>(())
+/// assert_eq!(desugar_if_needed("x.dice", "2d6.keep(5..)").unwrap(),
+///            "dice_pool(2, 6).keep(at_least(5))");
 /// ```
-pub fn desugar_if_needed(path: &str, source: &str) -> anyhow::Result<String> {
-    super::range_sugar::desugar_all(path, source)
+pub fn desugar_if_needed(_path: &str, source: &str) -> anyhow::Result<String> {
+    Ok(super::lowering::lower(source, true, true).source)
 }
 
-fn next_char(rest: &str) -> Option<(char, usize)> {
-    let ch = rest.chars().next()?;
-    Some((ch, ch.len_utf8()))
-}
-
-/// Byte length of a dice literal at the start of `rest`, if any (for syntax highlighting).
-///
-/// # Example
+/// Byte length of a complete dice spelling at a known token boundary.
+/// This compatibility helper does not track strings/comments; use `lex_source`
+/// or `lex_document` to highlight source safely.
 ///
 /// ```
 /// use dice_playground::engine::dice_literal_len_at;
 /// assert_eq!(dice_literal_len_at("2d6 + 1", None), Some(3));
 /// ```
 pub fn dice_literal_len_at(rest: &str, prev: Option<char>) -> Option<usize> {
-    try_parse_dice_expr(rest, prev).map(|(_, len)| len)
+    super::literals::dice_at(rest, prev).map(|(_, len)| len)
 }
 
-/// Replace tabletop dice literals (`4d6`, `4d6dl1`, `4d6kh2`, …) with Starlark stdlib calls.
-///
-/// # Example
+/// Expand only dice shorthand; keep the historical context-sensitive auto-sum policy.
 ///
 /// ```
 /// use dice_playground::engine::desugar;
-/// let out = desugar("pool.dice", "4d6dl1").unwrap();
-/// assert!(out.contains("drop_lowest"));
-/// # Ok::<(), anyhow::Error>(())
+/// assert_eq!(desugar("x.dice", "4d6dl1").unwrap(), "drop_lowest(4, 6, 1)");
 /// ```
 pub fn desugar(_path: &str, source: &str) -> anyhow::Result<String> {
-    let mut out = String::with_capacity(source.len());
-    let mut i = 0usize;
-    while i < source.len() {
-        let prev = source.get(..i).and_then(|s| s.chars().next_back());
-        if let Some((expr, len)) = try_parse_dice_expr(&source[i..], prev) {
-            out.push_str(&expr);
-            i += len;
-        } else {
-            let Some((ch, ch_len)) = next_char(&source[i..]) else {
-                break;
-            };
-            out.push(ch);
-            i += ch_len;
-        }
-    }
-    Ok(out)
-}
-
-fn try_parse_dice_expr(rest: &str, prev: Option<char>) -> Option<(String, usize)> {
-    let mut pos = 0usize;
-    let count = match parse_digits(rest, &mut pos) {
-        Some(c) => c,
-        None => {
-            if let Some(p) = prev {
-                if p.is_ascii_alphanumeric() || p == '_' {
-                    return None;
-                }
-            }
-            1
-        }
-    };
-    if rest.as_bytes().get(pos)? != &b'd' && rest.as_bytes().get(pos)? != &b'D' {
-        return None;
-    }
-    pos += 1;
-    let sides = parse_digits(rest, &mut pos)?;
-    let expanded = if let Some((op, n)) = parse_pool_suffix(rest, &mut pos) {
-        match op {
-            PoolSuffix::DropLowest => format!("drop_lowest({count}, {sides}, {n})"),
-            PoolSuffix::DropHighest => format!("drop_highest({count}, {sides}, {n})"),
-            PoolSuffix::KeepHighest => format!("keep_highest({count}, {sides}, {n})"),
-            PoolSuffix::KeepLowest => format!("keep_lowest({count}, {sides}, {n})"),
-        }
-    } else if count == 1 {
-        format!("d({sides})")
-    } else {
-        format!("dice_pool({count}, {sides})")
-    };
-    let needs_sum = |tail: &str| -> bool {
-        let tail = tail.trim_start();
-        if tail.is_empty() {
-            return false;
-        }
-        matches!(
-            tail.chars().next(),
-            Some('+' | '-' | '*' | '/' | ')' | ',' | ']' | '>' | '<' | '=')
-        )
-    };
-    let expanded = if expanded.starts_with("dice_pool(") && needs_sum(&rest[pos..]) {
-        format!("sum({expanded})")
-    } else {
-        expanded
-    };
-    Some((expanded, pos))
-}
-
-enum PoolSuffix {
-    DropLowest,
-    DropHighest,
-    KeepHighest,
-    KeepLowest,
-}
-
-fn parse_pool_suffix(rest: &str, pos: &mut usize) -> Option<(PoolSuffix, i32)> {
-    let tail = &rest[*pos..];
-    let (op, skip): (PoolSuffix, usize) = if tail.starts_with("dl") || tail.starts_with("DL") {
-        (PoolSuffix::DropLowest, 2)
-    } else if tail.starts_with("dh") || tail.starts_with("DH") {
-        (PoolSuffix::DropHighest, 2)
-    } else if tail.starts_with("kh") || tail.starts_with("KH") {
-        (PoolSuffix::KeepHighest, 2)
-    } else if tail.starts_with("kl") || tail.starts_with("KL") {
-        (PoolSuffix::KeepLowest, 2)
-    } else {
-        return None;
-    };
-    *pos += skip;
-    let n = parse_digits(rest, pos)?;
-    if n <= 0 {
-        return None;
-    }
-    Some((op, n))
-}
-
-fn parse_digits(s: &str, pos: &mut usize) -> Option<i32> {
-    let start = *pos;
-    while *pos < s.len() && s.as_bytes()[*pos].is_ascii_digit() {
-        *pos += 1;
-    }
-    if *pos == start {
-        return None;
-    }
-    s[start..*pos].parse().context("digit run").ok()
+    Ok(super::lowering::lower(source, true, false).source)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lexical_regressions_are_preserved() {
+        for source in [
+            r#"output("4d6dl1", d(6))"#,
+            "foo4d6",
+            "0x2d6",
+            "1.5d6",
+            "4d6dl",
+            "4d6dl0",
+            "4d6foo",
+            "4d6kh",
+            "4d6dL1",
+            "4d6.5",
+            "# don't lower 2d6 or 1..5",
+            "'4d6dl1'",
+            "r'4d6dl1'",
+            "'''4d6\n1..5'''",
+            "\"unterminated 4d6",
+            "2..d6",
+            "0x2..6",
+            "1..5.5",
+            "1..5e2",
+            "1...5",
+            "..",
+            "2147483648d6",
+        ] {
+            assert_eq!(
+                desugar_if_needed("t.dice", source).unwrap(),
+                source,
+                "{source:?}"
+            );
+        }
+        assert_eq!(
+            desugar_if_needed("t.dice", "# don't\n1..5\n2d6").unwrap(),
+            "# don't\nthrough(1, 5)\ndice_pool(2, 6)"
+        );
+    }
 
     #[test]
     fn desugar_4d6dl1_in_output() {

@@ -1,18 +1,7 @@
-//! Line-oriented syntax highlighting for `.dice` / Starlark (no external highlighter crates).
+//! Presentation only: engine token spans determine all language/document categories.
 
-use crate::engine::dice_literal_len_at;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TokenKind {
-    Plain,
-    Keyword,
-    String,
-    Number,
-    Comment,
-    Dice,
-    Identifier,
-    Operator,
-}
+pub use crate::engine::SourceTokenKind as TokenKind;
+use crate::engine::{lex_document, lex_source, SourceToken};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ColoredSpan {
@@ -29,192 +18,52 @@ impl ColoredSpan {
             TokenKind::Number => "tok-num",
             TokenKind::Comment => "tok-com",
             TokenKind::Dice => "tok-dice",
+            TokenKind::Band => "tok-band",
             TokenKind::Identifier => "tok-id",
             TokenKind::Operator => "tok-op",
+            TokenKind::Markdown => "tok-md",
+            TokenKind::Heading => "tok-heading",
+            TokenKind::Fence => "tok-fence",
+            TokenKind::Error => "tok-error",
         }
     }
 }
 
-fn is_keyword(word: &str) -> bool {
-    matches!(
-        word,
-        "and"
-            | "break"
-            | "continue"
-            | "def"
-            | "elif"
-            | "else"
-            | "False"
-            | "for"
-            | "if"
-            | "in"
-            | "load"
-            | "None"
-            | "not"
-            | "or"
-            | "pass"
-            | "return"
-            | "True"
-            | "while"
-    )
-}
-
-fn prev_char(line: &str, byte_index: usize) -> Option<char> {
-    if byte_index == 0 {
-        None
-    } else {
-        line.get(..byte_index).and_then(|s| s.chars().next_back())
-    }
-}
-
-fn push_span(spans: &mut Vec<ColoredSpan>, text: &str, kind: TokenKind) {
-    if text.is_empty() {
-        return;
-    }
-    if let Some(last) = spans.last_mut() {
-        if last.kind == kind {
+fn colored(source: &str, tokens: Vec<SourceToken>) -> Vec<ColoredSpan> {
+    let mut spans: Vec<ColoredSpan> = Vec::new();
+    for token in tokens {
+        let text = &source[token.range];
+        if let Some(last) = spans.last_mut().filter(|last| last.kind == token.kind) {
             last.text.push_str(text);
-            return;
+        } else {
+            spans.push(ColoredSpan {
+                text: text.into(),
+                kind: token.kind,
+            });
         }
-    }
-    spans.push(ColoredSpan {
-        text: text.to_string(),
-        kind,
-    });
-}
-
-fn next_char(rest: &str) -> Option<(char, usize)> {
-    let ch = rest.chars().next()?;
-    Some((ch, ch.len_utf8()))
-}
-
-fn highlight_code_segment(line: &str, spans: &mut Vec<ColoredSpan>) {
-    let bytes = line.as_bytes();
-    let mut i = 0usize;
-    while i < line.len() {
-        let prev = prev_char(line, i);
-        if let Some(len) = dice_literal_len_at(&line[i..], prev) {
-            push_span(spans, &line[i..i + len], TokenKind::Dice);
-            i += len;
-            continue;
-        }
-
-        let Some((ch, ch_len)) = next_char(&line[i..]) else {
-            break;
-        };
-
-        if ch == '#' {
-            push_span(spans, &line[i..], TokenKind::Comment);
-            break;
-        }
-
-        if ch == '\'' || ch == '"' {
-            let quote = ch;
-            let start = i;
-            i += ch_len;
-            while i < line.len() {
-                let Some((c, c_len)) = next_char(&line[i..]) else {
-                    break;
-                };
-                i += c_len;
-                if c == '\\' && i < line.len() {
-                    if let Some((_, esc_len)) = next_char(&line[i..]) {
-                        i += esc_len;
-                    }
-                    continue;
-                }
-                if c == quote {
-                    break;
-                }
-            }
-            push_span(spans, &line[start..i], TokenKind::String);
-            continue;
-        }
-
-        if ch.is_ascii_digit() {
-            let start = i;
-            i += ch_len;
-            while i < line.len() && bytes[i].is_ascii_digit() {
-                i += 1;
-            }
-            if i < line.len()
-                && bytes[i] == b'.'
-                && i + 1 < line.len()
-                && bytes[i + 1].is_ascii_digit()
-            {
-                i += 1;
-                while i < line.len() && bytes[i].is_ascii_digit() {
-                    i += 1;
-                }
-            }
-            push_span(spans, &line[start..i], TokenKind::Number);
-            continue;
-        }
-
-        if ch == '_' || ch.is_ascii_alphabetic() {
-            let start = i;
-            i += ch_len;
-            while i < line.len() {
-                let Some((c, c_len)) = next_char(&line[i..]) else {
-                    break;
-                };
-                if c == '_' || c.is_ascii_alphanumeric() {
-                    i += c_len;
-                } else {
-                    break;
-                }
-            }
-            let word = &line[start..i];
-            let kind = if is_keyword(word) {
-                TokenKind::Keyword
-            } else {
-                TokenKind::Identifier
-            };
-            push_span(spans, word, kind);
-            continue;
-        }
-
-        if ch.is_ascii_whitespace() {
-            let start = i;
-            i += ch_len;
-            while i < line.len() {
-                let Some((c, c_len)) = next_char(&line[i..]) else {
-                    break;
-                };
-                if c.is_ascii_whitespace() {
-                    i += c_len;
-                } else {
-                    break;
-                }
-            }
-            push_span(spans, &line[start..i], TokenKind::Plain);
-            continue;
-        }
-
-        push_span(spans, &line[i..i + ch_len], TokenKind::Operator);
-        i += ch_len;
-    }
-}
-
-/// Highlight a single line (no trailing newline).
-pub fn highlight_line(line: &str) -> Vec<ColoredSpan> {
-    if line.is_empty() {
-        return vec![ColoredSpan {
-            text: String::new(),
-            kind: TokenKind::Plain,
-        }];
-    }
-
-    let mut spans = Vec::new();
-    highlight_code_segment(line, &mut spans);
-
-    if spans.is_empty() {
-        spans.push(ColoredSpan {
-            text: String::new(),
-            kind: TokenKind::Plain,
-        });
     }
     spans
+}
+
+/// Highlight a whole document, preserving embedded/trailing newlines exactly.
+///
+/// ```
+/// use dice_playground::ui::highlight::highlight_document;
+/// let source = "```dice\n2d6\n```\n";
+/// assert_eq!(highlight_document(source).iter().map(|s| s.text.as_str()).collect::<String>(), source);
+/// ```
+pub fn highlight_document(source: &str) -> Vec<ColoredSpan> {
+    colored(source, lex_document(source))
+}
+
+/// Compatibility helper for script snippets. The editor uses document-level state.
+///
+/// ```
+/// use dice_playground::ui::highlight::{highlight_line, TokenKind};
+/// assert_eq!(highlight_line("d6")[0].kind, TokenKind::Dice);
+/// ```
+pub fn highlight_line(line: &str) -> Vec<ColoredSpan> {
+    colored(line, lex_source(line))
 }
 
 #[cfg(test)]
@@ -231,6 +80,28 @@ mod tests {
 
     fn has_kind(spans: &[ColoredSpan], kind: TokenKind) -> bool {
         spans.iter().any(|s| s.kind == kind)
+    }
+
+    #[test]
+    fn document_spans_preserve_backdrop_text_and_multiline_state() {
+        let source = "# Title\r\n```dice\r\nx = '''4d6\r\n..5'''\r\noutput(2d6.keep(5..))\r\n```\r\n```text\r\n4d6\r\n```\r\n\r\n";
+        let spans = highlight_document(source);
+        assert_eq!(
+            spans.iter().map(|s| s.text.as_str()).collect::<String>(),
+            source
+        );
+        assert_eq!(text_for_kind(&spans, TokenKind::Dice), "2d6");
+        assert_eq!(text_for_kind(&spans, TokenKind::Band), "5..");
+        assert!(has_kind(&spans, TokenKind::Heading));
+        assert!(has_kind(&spans, TokenKind::Markdown));
+        assert_eq!(
+            spans
+                .iter()
+                .find(|s| s.kind == TokenKind::Band)
+                .unwrap()
+                .class_name(),
+            "tok-band"
+        );
     }
 
     #[test]

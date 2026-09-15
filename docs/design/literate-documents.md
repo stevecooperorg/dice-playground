@@ -23,6 +23,8 @@ The extension alone does not mean that a file is markdown. A document containing
 
 The switch is intentionally automatic to keep existing scripts working. It does introduce a compatibility edge case: a formerly legacy file containing markdown-style bare fences could now be detected as literate.
 
+**Retained detection limitation:** fence detection precedes native Starlark lexing. A flush-left executable fence inside what would otherwise be a triple-quoted Starlark string can therefore select literate mode and execute its body. The shared lexer preserves native strings when tokenizing a script, but it does not override this document-mode precedence. Highlighting follows the same precedence. Changing it needs a separate format decision: treating markdown prose as Starlark could conversely let prose quotes hide real fences. Avoid fence-shaped executable blocks inside legacy multiline strings.
+
 ## Which code blocks execute?
 
 A *fence* is a line of backticks marking the beginning or end of a code block. The initial contract specifies:
@@ -86,7 +88,7 @@ The tangle pass extracts executable block bodies in document order. It returns:
 
 All extracted code is evaluated as **one Starlark module**. This is not a loop that evaluates each block separately. Variables, functions, and top-level statements share the same module during that Run.
 
-The detailed format’s joining rule is to preserve body newlines and add a single separator newline **only if the preceding body lacks one**. The shorter specification instead says “a single newline between bodies” without that qualification. The shared intent is ordered concatenation without joining two statements accidentally; the exact byte-level rule needs confirmation before treating it as a settled parser conformance requirement.
+The detailed format’s joining rule is to preserve body newlines and add a single separator newline **only if the preceding body lacks one**. The shorter historical specification instead said “a single newline between bodies” without that qualification. The shared-preparation change explicitly follows the detailed rule for extracted bodies: append each body once, ignore empty bodies for separators, and add a separator only after nonempty code lacking a newline. This fixes duplicated/phantom tangle lines and their shifted diagnostics; it does not change fence grammar. The existing extractor still omits the final fence-adjacent LF from each body and preserves CR characters. Source-line accounting follows the actual emitted bytes, including trailing blank lines and empty fences.
 
 An external line map is preferred to inserting `# line` comments into the program. The result then passes through the existing range/dice notation expansion and Starlark parser. Introducing prose does not require replacing the probability engine or changing the Starlark dependency.
 
@@ -96,7 +98,7 @@ The user edits the `.dice` document, not the tangled program. Check errors, pars
 
 The mapping contract includes column offsets, not only line numbers. Any additional changes introduced by desugaring need to be considered when preserving accurate columns. The intended LSP path also uses this mapping; the old architecture explicitly left detailed LSP integration to later hardening.
 
-Tests should include an error in a later fence after several prose paragraphs, so reporting a tangled line number cannot accidentally pass as correct.
+Tests include errors in later fences after prose, blank lines and empty fences, plus shorthand earlier on the same line and Unicode before the error. Expansion byte maps compose with the literate line map. See [shared lexical preparation](architecture.md#shared-lexical-preparation-current-implementation) for the current pipeline and bounded LSP support.
 
 ## Weave: combine prose with evaluated results
 

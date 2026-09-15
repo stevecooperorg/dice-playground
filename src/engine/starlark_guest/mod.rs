@@ -16,6 +16,7 @@ pub use docs::{
     dice_stdlib_docs, die_roll_type_docs, full_environment_docs, outcomes_type_docs,
     render_stdlib_reference_markdown,
 };
+pub(crate) use eval::eval_ast;
 pub use eval::{
     dice_dialect, dice_globals, eval_source, eval_source_with_dialect, format_eval_result_markdown,
     format_eval_result_text, format_output_entry_markdown, shared_sample_space_for_outputs,

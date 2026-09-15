@@ -4,15 +4,16 @@
 //! Tangle concatenates fence bodies into one Starlark module for a single eval per Run.
 //! See `docs/design/literate-documents.md` for the document contract and rationale.
 
-mod fence;
+pub(crate) mod fence;
 mod parse;
 mod tangle;
 mod weave;
+#[cfg(feature = "lsp")]
+pub(crate) use parse::ParseError as LiterateParseError;
 pub use parse::{parse as parse_literate, LiterateDocument};
+pub(crate) use tangle::append_code_body;
 pub use tangle::{tangle as tangle_literate, LineMap, TangleResult};
-pub use weave::{
-    render_literate_document, weave_literate, LiterateStaticLayout, WeaveOptions,
-};
+pub use weave::{render_literate_document, weave_literate, LiterateStaticLayout, WeaveOptions};
 
 pub use crate::engine::html_sanitize::sanitize_woven_html;
 

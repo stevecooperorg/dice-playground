@@ -12,12 +12,17 @@
 mod core;
 mod dice_pool;
 mod die_roll;
+mod document_lex;
 mod enumerate;
 mod face_spec;
 mod int_band;
+mod lex;
+mod literals;
+mod lowering;
 mod ordinal;
 mod poly_explode;
 mod range_sugar;
+mod source;
 mod sugar;
 
 mod html_sanitize;
@@ -33,21 +38,26 @@ mod starlark_guest;
 pub mod lsp;
 
 pub use core::{total_variation_distance, DicePool, DieRoll, PoolOp, MAX_JOINT_CELLS};
+pub use document_lex::lex_document;
 pub use face_spec::{FaceSpec, OptionalFaceSpec};
-pub use int_band::IntBand;
-pub use ordinal::{Outcomes, Scale};
 pub use html_sanitize::sanitize_woven_html;
+pub use int_band::IntBand;
+pub use lex::{lex_source, SourceToken, SourceTokenKind};
 pub use literate::{
     is_literate, parse_literate, render_literate_document, source_line_for_tangled,
-    tangle_literate, weave_literate, LineMap, LiterateDocument, LiterateStaticLayout,
-    WeaveOptions, MAX_LITERATE_BYTES,
+    tangle_literate, weave_literate, LineMap, LiterateDocument, LiterateStaticLayout, WeaveOptions,
+    MAX_LITERATE_BYTES,
 };
 pub use markdown_html::markdown_to_html;
 pub use markdown_page::{
     render_markdown_static_file, render_markdown_static_page, strip_yaml_frontmatter,
     MarkdownStaticLayout,
 };
-pub use output_chart::{chart_kind_for_entry, output_entry_name, output_entry_supports_chart, ChartKind, MAX_TABLE_CHART_ROWS};
+pub use ordinal::{Outcomes, Scale};
+pub use output_chart::{
+    chart_kind_for_entry, output_entry_name, output_entry_supports_chart, ChartKind,
+    MAX_TABLE_CHART_ROWS,
+};
 pub use output_html::{format_eval_outputs_html_sections, format_output_section_html};
 pub use playground::{
     check_source, dice_dialect_public, eval_program, CheckResult, EvalProgramOptions,
@@ -57,10 +67,9 @@ pub use poly_explode::{successes_dist, Counterbalance};
 pub use starlark_guest::{
     compress_pmf_for_display, dice_dialect, dice_globals, dice_stdlib_docs, die_roll_type_docs,
     eval_source, eval_source_with_dialect, format_eval_result_markdown, format_eval_result_text,
-    format_probability,
-    format_probability_with_denom, full_environment_docs, infer_sample_space_denominator,
-    outcomes_type_docs, render_stdlib_reference_markdown, EvalResult, OutputEntry, OutputStore,
-    ProbFormat, StarlarkDicePool, StarlarkDieRoll, StarlarkIntBand, StarlarkOutcomes,
-    StarlarkScale,
+    format_probability, format_probability_with_denom, full_environment_docs,
+    infer_sample_space_denominator, outcomes_type_docs, render_stdlib_reference_markdown,
+    EvalResult, OutputEntry, OutputStore, ProbFormat, StarlarkDicePool, StarlarkDieRoll,
+    StarlarkIntBand, StarlarkOutcomes, StarlarkScale,
 };
 pub use sugar::{desugar, desugar_if_needed, dice_literal_len_at};
