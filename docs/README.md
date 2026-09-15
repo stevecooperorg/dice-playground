@@ -15,6 +15,8 @@ Use the site header (or the sections below) for **Tutorial**, **Cookbook**, and 
 
 On a lesson or recipe, choose **Open this document in the playground** to load its complete source, including explanation and setup. The static page downloads the same-origin `.dice` source and hands it to the editor through browser storage, avoiding URL-length limits. If storage is unavailable, use **Download source** instead. Select **Run** (Shift+Enter) to read the woven report, with executable code and results together. **Files** manages scripts; **Diagnostics** lists errors.
 
+Categorical bar charts show each result or scale label together with its chance, such as **FAIL · 41%** or **3 · 23%**, directly above its horizontal bar. No hover is needed to identify a bar. All tracks run from 0% to 100%, so lengths are comparable across charts; long labels wrap. Percentages display up to two decimal places, with very small nonzero chances shown as **<0.01%** (and near-certain chances as **>99.99%**) rather than rounding to impossible or certain. Numeric dice distributions retain their line charts.
+
 ## Tutorial
 
 Start with [lesson 1](tutorial/01-one-die.html). The **32-lesson, eight-part

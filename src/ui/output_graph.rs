@@ -11,44 +11,6 @@ fn bottom_axis_ticks() -> TickLabels<f64> {
     TickLabels::aligned_floats().with_min_chars(3)
 }
 
-/// Bottom axis for categorical bars: outcome names at bar centers only.
-///
-/// Chartistry's `aligned_floats` also places "nice" ticks between categories (e.g. `1.5`)
-/// because we extend the x range for bar padding. Those in-between ticks are left blank so
-/// only outcome labels show, not stray numbers.
-fn ordinal_bottom_ticks(rows: &[BarRow]) -> TickLabels<f64> {
-    let labels: Vec<String> = rows.iter().map(|r| r.label.clone()).collect();
-    let min_chars = labels
-        .iter()
-        .map(|s| s.len())
-        .max()
-        .unwrap_or(3)
-        .clamp(3, 32);
-    TickLabels::aligned_floats()
-        .with_min_chars(min_chars)
-        .with_format(move |v: &f64, _fmt| {
-            if labels.len() == 1 {
-                return labels[0].clone();
-            }
-            let mut best_idx = 0usize;
-            let mut best_dist = f64::INFINITY;
-            for (i, _) in labels.iter().enumerate() {
-                let centre = (i + 1) as f64;
-                let dist = (v - centre).abs();
-                if dist < best_dist {
-                    best_dist = dist;
-                    best_idx = i;
-                }
-            }
-            // Label ticks at category centers; hide midway ticks (e.g. 1.5) without showing numbers.
-            if best_dist < 0.4 {
-                labels[best_idx].clone()
-            } else {
-                String::new()
-            }
-        })
-}
-
 fn chart_axes_only() -> [InnerLayout<f64, f64>; 2] {
     [
         AxisMarker::left_edge().into_inner(),
@@ -181,22 +143,28 @@ fn y_axis_max_prob(max: f64) -> f64 {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-struct BarChartDatum {
-    x: f64,
-    label: String,
-    prob: f64,
+/// Keep labels compact without rounding tiny, nonzero chances to zero.
+fn compact_prob_pct(p: f64) -> String {
+    if p > 0.0 && p < 0.0001 {
+        return "<0.01%".into();
+    }
+    if p > 0.9999 && p < 1.0 {
+        return ">99.99%".into();
+    }
+    let formatted = format_prob_pct(p);
+    match formatted.strip_suffix('%') {
+        Some(number) => format!("{}%", number.trim_end_matches('0').trim_end_matches('.')),
+        None => formatted,
+    }
 }
 
-fn bar_chart_data_from_rows(rows: &[BarRow]) -> Vec<BarChartDatum> {
-    rows.iter()
-        .enumerate()
-        .map(|(i, row)| BarChartDatum {
-            x: (i + 1) as f64,
-            label: row.label.clone(),
-            prob: row.prob,
-        })
-        .collect()
+/// Every track uses the same 0–100% scale, including single-outcome charts.
+fn bar_width_pct(p: f64) -> f64 {
+    if p.is_finite() {
+        p.clamp(0.0, 1.0) * 100.0
+    } else {
+        0.0
+    }
 }
 
 #[component]
@@ -241,45 +209,28 @@ fn DieRollLineChart(title: String, entries: Vec<(i64, f64)>) -> impl IntoView {
 
 #[component]
 fn OrdinalBarChart(title: String, rows: Vec<BarRow>) -> impl IntoView {
-    let data_vec = bar_chart_data_from_rows(&rows);
-    let y_max = y_axis_max_prob(max_prob_f64(rows.iter().map(|r| r.prob)));
-    let (data, _) = signal(data_vec);
-    let debug = Signal::from(false);
-
-    let left = TickLabels::aligned_floats()
-        .with_min_chars(5)
-        .with_format(|v: &f64, _| format_prob_pct(*v));
-    let tooltip = Tooltip::left_cursor()
-        .with_sort_by(TooltipSortBy::Descending)
-        .skip_missing(true);
-
-    let bar_colour = Colour::from_rgb(0x05, 0x96, 0x69);
-    let n = rows.len() as f64;
-    let series = Series::new(|d: &BarChartDatum| d.x)
-        .bar(
-            Bar::new(|d: &BarChartDatum| d.prob)
-                .with_name("P")
-                .with_colour(bar_colour)
-                .with_gap(0.28),
-        )
-        .with_x_range(0.5, n + 0.5)
-        .with_y_range(0.0, y_max);
-
     view! {
-        <div class="w-full min-w-0 dice-chartistry">
-            <h3 class="text-slate-300 font-semibold text-sm mb-2 m-0">{title}</h3>
-            <div class="w-full min-w-0">
-            <Chart
-                aspect_ratio=CHART_ASPECT
-                debug=debug
-                series=series
-                data=data
-                left=left
-                bottom=ordinal_bottom_ticks(&rows)
-                tooltip=tooltip
-                inner=chart_axes_only()
-            />
-            </div>
+        <div class="w-full min-w-0">
+            <h3 class="text-slate-300 font-semibold text-sm mb-2 m-0">{title.clone()}</h3>
+            <ul class="list-none p-0 m-0 space-y-3" aria-label=title>
+                {rows.into_iter().map(|row| {
+                    let chance = compact_prob_pct(row.prob);
+                    let width = format!("width: {}%;", bar_width_pct(row.prob));
+                    view! {
+                        <li>
+                            <div class="text-sm text-slate-200 mb-1" style="overflow-wrap: anywhere;">
+                                <span>{row.label}</span>
+                                <span class="text-slate-400">" · "</span>
+                                <span class="font-mono whitespace-nowrap">{chance}</span>
+                            </div>
+                            <div class="w-full h-2 rounded bg-slate-700 overflow-hidden" aria-hidden="true">
+                                <div class="h-full rounded bg-emerald-600" style=width></div>
+                            </div>
+                        </li>
+                    }
+                }).collect_view()}
+            </ul>
+            <p class="text-xs text-slate-400 mt-2 mb-0">"Bar scale: 0–100%"</p>
         </div>
     }
 }
@@ -348,6 +299,46 @@ mod tests {
             OutputChart::OrdinalBar { rows, .. } => assert_eq!(rows.len(), 2),
             _ => panic!("expected bar chart for outcomes"),
         }
+    }
+
+    #[test]
+    fn compact_percentages_preserve_useful_precision() {
+        for (prob, expected) in [
+            (0.41, "41%"),
+            (0.23, "23%"),
+            (0.125, "12.5%"),
+            (1.0 / 6.0, "16.67%"),
+            (0.0, "0%"),
+            (1.0, "100%"),
+            (0.00001, "<0.01%"),
+            (0.99999, ">99.99%"),
+            (-1.0, "-1"),
+        ] {
+            assert_eq!(compact_prob_pct(prob), expected);
+        }
+        assert_eq!(compact_prob_pct(f64::NAN), "NaN");
+    }
+
+    #[test]
+    fn bars_use_absolute_probability_and_safe_widths() {
+        assert_eq!(bar_width_pct(0.23), 23.0);
+        assert_eq!(bar_width_pct(0.0), 0.0);
+        assert_eq!(bar_width_pct(1.0), 100.0);
+        assert_eq!(bar_width_pct(-0.5), 0.0);
+        assert_eq!(bar_width_pct(2.0), 100.0);
+        assert_eq!(bar_width_pct(f64::NAN), 0.0);
+        assert_eq!(bar_width_pct(f64::INFINITY), 0.0);
+    }
+
+    #[test]
+    fn bar_rows_preserve_scale_labels_and_order() {
+        let entries = vec![("FAIL".into(), 0.41), ("3".into(), 0.23)];
+        let rows = rows_from_ordinal_entries(&entries);
+        assert_eq!(rows[0].label, "FAIL");
+        assert_eq!(compact_prob_pct(rows[0].prob), "41%");
+        assert_eq!(rows[1].label, "3");
+        assert_eq!(compact_prob_pct(rows[1].prob), "23%");
+        assert!(rows_from_ordinal_entries(&[]).is_empty());
     }
 
     #[test]
