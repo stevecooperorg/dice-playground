@@ -18,7 +18,7 @@ output("ignored_pool_sum", dice_pool(3, 6).ignore(1..4).sum())
 
 - `keep(5..)` drops non-matching faces (here 1–4), then **renormalizes** so only 5 and 6 remain.
 - `ignore(1..4)` is shorthand for `convert(1..4, 0)`: low faces still roll, but count as **0** when you sum.
-- Face specs use the same shapes as in [API conventions](../references/api-conventions.md): a single face, `[1, 2]`, ranges like `5..`, or `at_least(5)`.
+- Face specs use the same shapes as in [API conventions](../references/api-conventions.html): a single face, `[1, 2]`, ranges like `5..`, or `at_least(5)`.
 - `remove(1..4)` on a d6 is the same die as `keep(5..)`.
 
 ## `keep` vs `ignore` vs `p_ge`

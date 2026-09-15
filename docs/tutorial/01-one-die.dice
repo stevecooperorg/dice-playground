@@ -1,36 +1,60 @@
-# Your first die
+# One die: a map of possible damage
 
-## At the table
+**Part A · L01 · 5 minutes · No prerequisites**
 
-You roll one ordinary six-sided die and want to see how likely each face is.
+## The situation and question
 
-## Try it
+A weapon in our example rolls one six-sided damage die. We are modelling **only
+that die**, not whether an attack hits, armour, or critical hits. What damage
+values are possible, and how often does each occur?
 
-In the playground, open this file and click **Run** (or press **Shift+Enter**).
+This is a generic damage component, not a complete game rule.
 
-## The script
+## Predict
 
-```text
-output("one_d6", 1d6)
-```
+Is a 6 less likely than a 1? Can the average damage be a number the die never shows?
 
-- `1d6` is one fair die (faces 1 through 6); the tool expands it before running.
-- `output(...)` records the full distribution so it appears in the results.
+## Build
 
-This tool **counts** outcomes; it does not simulate thousands of rolls.
-
-## Reading the result
-
-The report shows a header with **mean** (average roll, 3.5 for one d6) and a small table: each face and its probability (about `0.166667` per face).
-
-## Try this
-
-- Change `1d6` to `1d20` in the code block below and run again.
+`d(6)` describes all six possible faces of a fair die; it does not roll a random
+sample. Parentheses pass information to a function: here, the number of sides.
+`output` presents a result. Its first argument is a title inside quotation marks;
+the comma separates that title from the value to report. A line beginning with
+`#` inside code is a comment for people, not an instruction.
 
 ```dice
-output("one_d6", 1d6)
+# Only the damage die, before other rules.
+output("One six-sided damage die", d(6))
 ```
 
-## Next
+## Run and read
 
-[Lesson 2: Adding two dice](02-two-dice.html)
+Open this **whole document** in the playground and select **Run** (Shift+Enter).
+The report shows a distribution: a map from results to their probabilities.
+The row for 6 has probability 1/6, about 16.67%. So does every other row.
+This is a deterministic calculation of the finite possibilities, not a simulation.
+
+The mean is 3.5: add 1 through 6 and divide by 6. It describes a long-run average,
+not a seventh face. The minimum is 1 and the maximum is 6.
+
+## Change one thing
+
+Change `d(6)` to `d(8)` and update the title. Predict the range first.
+**Check:** the range becomes 1–8, each face has probability 1/8, and the mean is 4.5.
+
+## Try it yourself
+
+Make a report for a four-sided damage die without copying the line above.
+**Answer check:** use `d(4)` as the second argument to `output`; the mean is 2.5
+and each face has probability 25%.
+
+## What you now know
+
+A roll value represents *all* possible results. A report title explains what
+those results mean at the table. Always check the range before trusting a mean.
+
+## Where next
+
+Continue to [two dice](02-two-dice.html). Later, the
+[damage rounding recipe](../cookbook/fireball-half-damage.html) transforms a
+whole damage distribution. That recipe is conditional on the save result.

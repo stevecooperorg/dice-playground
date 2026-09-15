@@ -1,29 +1,56 @@
-# Adding two dice
+# Two dice: totals are not equally likely
 
-## At the table
+**Part A · L02 · 5–10 minutes · Prerequisite: L01**
 
-You roll two six-sided dice and add them—classic 2d6.
+## The situation and question
 
-## Try it
+Our generic task rule adds two independent six-sided dice. Before deciding
+whether a task succeeds, what does its unmodified total look like? This is a
+building block, not a claim about a particular Traveller edition.
 
-In the playground, open this lesson in the playground and click **Run** (or press **Shift+Enter**).
+## Predict
 
-## The script
+Are a total of 2 and a total of 7 equally likely? Both are possible, but how many
+pairs of faces make each one?
 
-```text
-output("two_d6", 2d6)
-```
+## Build
 
-`2d6` means roll two six-sided dice and add them. The engine builds the combined distribution (2 is unlikely, 7 is most common).
-
-## Reading the result
-
-The report **mean** should be about **7**. The **text** tab’s table shows more weight on middle totals (6–8) and less on 2 or 12; **graph** makes the bell shape obvious.
-
-## Try this
-
-- In the editor, try `2d10` or `1d10 + 1d10` for the same roll.
+The `+` sign adds the results of independent dice. Each `d(6)` represents a fresh
+die. In tabletop notation this is **2d6**. We use explicit addition here so the
+script clearly reports a total rather than a collection of individual faces.
 
 ```dice
-output("two_d6", 2d6)
+output("Two independent d6 added", d(6) + d(6))
 ```
+
+## Run and read
+
+There are 6 × 6 = 36 equally likely ordered pairs. A 2 needs (1, 1), so it has
+probability 1/36. A 7 comes from (1, 6), (2, 5), (3, 4), (4, 3), (5, 2), or
+(6, 1): probability 6/36. The report's triangular shape reflects those counts;
+it is not a normal distribution.
+
+The range is 2–12 and the mean is 7. Unlike the previous lesson's 3.5, this mean
+is also a possible result. That coincidence is not a requirement for an average.
+
+## Change one thing
+
+Replace only the second die with `d(4)`. Will the maximum rise or fall?
+**Check:** the new range is 2–10 and the mean is 3.5 + 2.5 = 6.
+
+## Try it yourself
+
+Report the total of two four-sided dice. Explain why its middle total is most likely.
+**Answer check:** `d(4) + d(4)` ranges from 2 to 8; 5 has four of the sixteen pairs,
+so its probability is 1/4 and the mean is 5.
+
+## What you now know
+
+Equally likely faces do not imply equally likely totals. Count the underlying
+pairs when checking a small model.
+
+## Where next
+
+[Previous: one die](01-one-die.html) · [Next: modifiers](03-modifiers.html).
+The [ability-score recipe](../cookbook/ability-scores-4d6dl1.html) later asks
+what changes when you discard a die instead of adding all of them.

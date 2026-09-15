@@ -16,7 +16,7 @@ output("ability", 4d6dl1)
 
 Sugar expands `4d6dl1` to `drop_lowest(4, 6, 1)`, which returns the full distribution of ability scores.
 
-Lesson [5 — Dice notation](../tutorial/05-dice-notation.md) walks through `dl1`, `kh`, and related notation step by step.
+Lesson [5 — Dice notation](../tutorial/05-dice-notation.html) walks through `dl1`, `kh`, and related notation step by step.
 
 ```dice
 # Classic D&D ability score: 4d6 drop lowest.

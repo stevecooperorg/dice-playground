@@ -29,6 +29,8 @@ test: FORCE
 	cargo test
 
 check: FORCE
+	python3 bin/learning-site.py
+	node --test tests/open_document.test.cjs
 	cargo test
 	cargo clippy --all-targets -- -Dwarnings
 	cargo fmt --check

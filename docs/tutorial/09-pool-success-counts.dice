@@ -2,7 +2,7 @@
 
 ## At the table
 
-Pool games often ask: **how many** dice succeeded, or did **any** die show a particular face? Indie designs like [The Pool](../cookbook/the-pool.md) use “any natural 1”; other rules want “at least two 8+ on 5d10.”
+Pool games often ask: **how many** dice succeeded, or did **any** die show a particular face? Indie designs like [The Pool](../cookbook/the-pool.html) use “any natural 1”; other rules want “at least two 8+ on 5d10.”
 
 ## Try it
 
@@ -32,7 +32,7 @@ Use the same **face spec** as `keep` / `count`: int, `[faces]`, or ranges like `
 
 ## Try this
 
-- Match [The Pool](../cookbook/the-pool.md) with `dice_pool(n, 6).p_any(1)` in a loop.
+- Match [The Pool](../cookbook/the-pool.html) with `dice_pool(n, 6).p_any(1)` in a loop.
 - Output `5d10.count(8..)` and read how often you get 0, 1, … successes.
 
 ```dice

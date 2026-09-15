@@ -31,7 +31,7 @@ output("same_as_three_d6_highest", dice_pool(3, 6).order_stat(1))
 - Build `d(20) + dice_pool(2, 6)` and compare `order_stat(1)` to `dice_pool(3, 6).order_stat(1)`.
 - Add a flat bonus after you collapse the pool: `(dice_pool(1, 12) + dice_pool(2, 6)).sum() + 2`.
 
-More pool recipes: [cookbook index](../cookbook/README.md). Conventions: [API conventions](../references/api-conventions.md).
+More pool recipes: [cookbook index](../cookbook/index.html). Conventions: [API conventions](../references/api-conventions.html).
 
 ```dice
 pool = dice_pool(1, 12) + dice_pool(2, 6)

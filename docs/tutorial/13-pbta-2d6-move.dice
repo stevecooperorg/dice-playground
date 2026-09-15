@@ -46,7 +46,7 @@ With `STAT = 0`, the bands match the core rulebook: 15/36 miss, 15/36 partial, 6
 
 ## What’s next
 
-See the [user guide index](../README.md). Lesson 12 buckets the **natural d20** with `scale().step(...)`; PbtA totals use the same builder with bands on the **total**.
+See the [user guide index](../docs/index.html). Lesson 12 buckets the **natural d20** with `scale().step(...)`; PbtA totals use the same builder with bands on the **total**.
 
 ```dice
 # Powered by the Apocalypse: 2d6 + stat, then miss / partial / full success on the total.

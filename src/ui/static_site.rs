@@ -162,7 +162,26 @@ pub fn enhance_static_site_tree(root: &std::path::Path) -> anyhow::Result<usize>
             if entry.extension().is_some_and(|e| e == "html") {
                 let html = std::fs::read_to_string(&entry)
                     .with_context(|| format!("read {}", entry.display()))?;
-                let enhanced = inject_playground_load_links(&html)?;
+                // Published literate pages have a complete downloadable sibling.
+                // Never offer their dependent fences as standalone programs.
+                let source_path = entry.with_extension("dice");
+                let enhanced = if source_path.is_file() {
+                    if html.contains("data-dice-document") {
+                        html.clone()
+                    } else {
+                        let filename = source_path
+                            .file_name()
+                            .context("source filename")?
+                            .to_string_lossy();
+                        let href = html_escape_attr(&filename);
+                        let controls = format!(
+                            r#"<p data-dice-document><a href="{href}" class="open-dice-document">Open this document in the playground</a> · <a href="{href}" download>Download source</a><span role="status"></span></p><script src="../tutorial/open-document.js" defer></script>"#
+                        );
+                        html.replacen("<main>", &format!("<main>\n{controls}"), 1)
+                    }
+                } else {
+                    inject_playground_load_links(&html)?
+                };
                 if enhanced != html {
                     std::fs::write(&entry, enhanced)
                         .with_context(|| format!("write {}", entry.display()))?;
@@ -200,6 +219,27 @@ mod walkdir {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn published_document_gets_whole_source_link_not_snippets() {
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join("tutorial");
+        std::fs::create_dir(&dir).unwrap();
+        let page = dir.join("pilot.html");
+        std::fs::write(
+            &page,
+            "<main><pre><code>output(\"dependent\", total)</code></pre></main>",
+        )
+        .unwrap();
+        std::fs::write(dir.join("pilot.dice"), "# Complete source\n").unwrap();
+        enhance_static_site_tree(root.path()).unwrap();
+        let html = std::fs::read_to_string(&page).unwrap();
+        assert!(html.contains("href=\"pilot.dice\""));
+        assert!(html.contains("open-document.js"));
+        assert!(!html.contains("dice_playground_load="));
+        enhance_static_site_tree(root.path()).unwrap();
+        assert_eq!(html, std::fs::read_to_string(&page).unwrap());
+    }
 
     #[test]
     fn injects_link_into_fenced_pre() {

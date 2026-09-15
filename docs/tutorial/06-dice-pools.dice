@@ -29,7 +29,7 @@ output("highest_die", dice_pool(4, 6).order_stat(1))
 - Compare `dice_pool(2, 6).sum()` to `2d6` from [lesson 2](02-two-dice.html).
 - Try `order_stat(2)` on `dice_pool(3, 6)` for “second highest of three.”
 
-More pool recipes: [cookbook index](../cookbook/README.md). Conventions: [API conventions](../references/api-conventions.md).
+More pool recipes: [cookbook index](../cookbook/index.html). Conventions: [API conventions](../references/api-conventions.html).
 
 ```dice
 # Same total: explicit pool vs notation sugar.

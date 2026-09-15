@@ -15,8 +15,8 @@ fn user_guide_renders_from_readme() {
     assert!(html.contains("<strong>User guide</strong>"));
     assert!(html.contains("<h1>"));
     assert!(
-        html.contains("<table>"),
-        "user guide tutorial index should render as a table"
+        html.contains("href=\"../tutorial/index.html\""),
+        "user guide links to the manifest-generated tutorial index"
     );
 }
 

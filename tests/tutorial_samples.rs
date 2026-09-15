@@ -75,7 +75,7 @@ fn tutorial_02_two_d6() {
     assert_eq!(res.outputs.len(), 1);
     match &res.outputs[0] {
         OutputEntry::DieRoll { name, mean, .. } => {
-            assert_eq!(name, "two_d6");
+            assert_eq!(name, "Two independent d6 added");
             assert!((*mean - 7.0).abs() < 1e-9);
         }
         other => panic!("expected dist output, got {other:?}"),
@@ -95,26 +95,31 @@ fn tutorial_03_modifier_shift() {
                 name: n1, mean: m1, ..
             },
         ) => {
-            assert_eq!(n0, "roll_base");
-            assert_eq!(n1, "roll_plus_5");
+            assert_eq!(n0, "Before the modifier");
+            assert_eq!(n1, "After the modifier");
             (*m0, *m1)
         }
         other => panic!("expected two dist outputs, got {other:?}"),
     };
-    assert!((base_mean - 11.0).abs() < 1e-9);
-    assert!((shifted_mean - base_mean - 5.0).abs() < 1e-9);
+    assert!((base_mean - 7.0).abs() < 1e-9);
+    assert!((shifted_mean - base_mean - 2.0).abs() < 1e-9);
 }
 
 #[test]
 fn tutorial_04_success_chance() {
     let res = eval_sample(SAMPLE_PATHS[2]);
-    assert_eq!(res.outputs.len(), 1);
-    match &res.outputs[0] {
-        OutputEntry::Prob { name, value } => {
-            assert_eq!(name, "p_at_least_15");
-            assert!(*value > 0.0 && *value < 1.0);
+    assert_eq!(res.outputs.len(), 2);
+    for (output, expected_name, expected_value) in [
+        (&res.outputs[0], "Success: eight or more", 15.0 / 36.0),
+        (&res.outputs[1], "Exactly eight", 5.0 / 36.0),
+    ] {
+        match output {
+            OutputEntry::Prob { name, value } => {
+                assert_eq!(name, expected_name);
+                assert!((*value - expected_value).abs() < 1e-9);
+            }
+            other => panic!("expected prob output, got {other:?}"),
         }
-        other => panic!("expected prob output, got {other:?}"),
     }
 }
 

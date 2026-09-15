@@ -13,29 +13,20 @@ Use the site header (or the sections below) for **Tutorial**, **Cookbook**, and 
 
 ## Playground
 
-In the playground, each lesson and recipe includes a script to copy into the **editor** (or click **↗ Load in playground** on a script block in the tutorial or cookbook—build-time links open `/` with the script in the URL). Click **Run** (or press **Shift+Enter**) and read results under **Output**—**text**, **json**, or **graph**. Use the **Files** control to manage multiple scripts; **Diagnostics** lists parse and type errors with line numbers.
+On a lesson or recipe, choose **Open this document in the playground** to load its complete source, including explanation and setup. The static page downloads the same-origin `.dice` source and hands it to the editor through browser storage, avoiding URL-length limits. If storage is unavailable, use **Download source** instead. Select **Run** (Shift+Enter) to read the woven report, with executable code and results together. **Files** manages scripts; **Diagnostics** lists errors.
 
 ## Tutorial
 
-A **step-by-step** introduction to the language. Work through the lessons in order.
+Start with [lesson 1](tutorial/01-one-die.html). The first four lessons form a
+continuous pilot: read a die distribution, add dice, name a modifier, then build
+and independently check a success report. Each includes predictions, guided
+edits, and a transfer exercise with an answer check.
 
-| Lesson | Topic |
-|--------|--------|
-| [1. Your first die](tutorial/01-one-die.html) | One fair die |
-| [2. Adding two dice](tutorial/02-two-dice.html) | 2d6 |
-| [3. Flat bonuses (2d10 + 5)](tutorial/03-modifiers.html) | +5 to every total |
-| [4. Meet or beat a target](tutorial/04-success.html) | Success chance on a total |
-| [5. Dice notation](tutorial/05-dice-notation.html) | `1d4` … `4d6dl1` |
-| [6. Dice pools](tutorial/06-dice-pools.html) | Faces still separate; `order_stat` |
-| [7. Mixed dice pools](tutorial/07-mixed-dice-pools.html) | Join pools with `+`; 1d12 + 2d6 |
-| [8. Filtering faces](tutorial/08-restrict-faces.html) | `keep` / `remove` / `convert` / `ignore` |
-| [9. Pool success counts](tutorial/09-pool-success-counts.html) | `count`, `p_any`, `p_at_least` |
-| [10. Many checks at once](tutorial/10-tables.html) | Modifier grid |
-| [11. Ordered outcome labels](tutorial/11-ordered-outcomes.html) | Named bands on a roll |
-| [12. D&amp;D 5e d20 checks](tutorial/12-dnd5e-d20-check.html) | Nat 1/20, adv/dis, `scale().step` + `bucket` |
-| [13. PbtA 2d6 move](tutorial/13-pbta-2d6-move.html) | Miss / partial / full on total |
-
-Start with [lesson 1](tutorial/01-one-die.html): open the literate `.dice` in the playground and click **Run** to read the woven report.
+The [tutorial index](../tutorial/index.html) is generated from the content
+manifest and shows the current order, objectives, and review status. Later
+lessons retain the older sequence while the planned eight-part course is
+rewritten. Existing URLs retain their identities; future lessons must not reuse
+an old URL for a different topic.
 
 ## Cookbook
 

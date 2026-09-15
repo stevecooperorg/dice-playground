@@ -261,7 +261,7 @@ mod tests {
         let r =
             eval_program("02-two-dice.dice", &src, EvalProgramOptions::default()).expect("eval");
         assert_eq!(r.outputs.len(), 1);
-        assert!(r.text.contains("two_d6"));
+        assert!(r.text.contains("Two independent d6 added"));
     }
 
     #[test]

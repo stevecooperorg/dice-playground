@@ -32,7 +32,7 @@ Think of the script in four parts:
 
 **What number do I need on the d20?** Players often do that mental step: with DC 15 and +5, you need **10 or higher** on the die because 10 + 5 = 15. In the script that need is `T = DC - MOD`: faces below `T` fail (except nat 1 is still its own crit-fail band), faces `T` and above succeed (except nat 20 is still its own crit-success band).
 
-Put the scale in a Starlark **`def`** (e.g. `check_scale(DC, MOD)`) so one definition works for any DC and modifier. Names that start with `d20` right after `def` break parsing (`d20test` becomes `d(20)` + `test`); use `check_scale` or similar.
+Put the scale in a Starlark **`def`** (e.g. `check_scale(DC, MOD)`) so one definition works for any DC and modifier. Choose a descriptive function name such as `check_scale`; names like `d20test` also parse correctly.
 
 Crit steps use **`early=True`** so nat **1** and nat **20** match their crit labels even though they also fall in the fail and success ranges—without reordering the ladder so `p_at_least("SUCCESS")` still counts ordinary and critical successes. Declaration order: crit fail → fail → success → crit success; both crit steps use `early=True` and are listed before fail and success.
 
@@ -82,7 +82,7 @@ Builtin details: [standard library reference](../references/stdlib.md) (`scale`,
 
 [Powered by the Apocalypse (2d6 + stat)](13-pbta-2d6-move.html)—miss / partial / full on the **total** with `bucket`, the usual PbtA pattern.
 
-See the [user guide index](../README.md).
+See the [user guide index](../docs/index.html).
 
 ```dice
 # D&D 5e-style d20 check on the natural die: need T = DC - MOD on the face, then bucket (nat 1 / nat 20 crit bands).

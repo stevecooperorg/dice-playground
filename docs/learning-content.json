@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "pages": [
+    {"id":"L01","path":"tutorial/01-one-die.dice","part":"A — From a die to an answer","objective":"Read one probability row and check the range","status":"pilot","game":"Generic","mechanic":"Damage","scope":"component"},
+    {"id":"L02","path":"tutorial/02-two-dice.dice","part":"A — From a die to an answer","objective":"Count equally likely pairs behind a total","status":"pilot","game":"Generic","mechanic":"Totals","scope":"component"},
+    {"id":"L03","path":"tutorial/03-modifiers.dice","part":"A — From a die to an answer","objective":"Use names to parameterise a modifier","status":"pilot","game":"Generic","mechanic":"Totals","scope":"component"},
+    {"id":"L04","path":"tutorial/04-success.dice","part":"A — From a die to an answer","objective":"Build and check an inclusive target query","status":"pilot","game":"Generic","mechanic":"Target checks","scope":"house rule"},
+    {"id":"legacy-T05","path":"tutorial/05-dice-notation.dice","part":"Existing lessons — awaiting rewrite","destination":"L13","status":"legacy"},
+    {"id":"legacy-T06","path":"tutorial/06-dice-pools.dice","part":"Existing lessons — awaiting rewrite","destination":"L11–12","status":"legacy"},
+    {"id":"legacy-T07","path":"tutorial/07-mixed-dice-pools.dice","part":"Existing lessons — awaiting rewrite","destination":"L16","status":"legacy"},
+    {"id":"legacy-T08","path":"tutorial/08-restrict-faces.dice","part":"Existing lessons — awaiting rewrite","destination":"L19/L27","status":"legacy"},
+    {"id":"legacy-T09","path":"tutorial/09-pool-success-counts.dice","part":"Existing lessons — awaiting rewrite","destination":"L14–15","status":"legacy"},
+    {"id":"legacy-T10","path":"tutorial/10-tables.dice","part":"Existing lessons — awaiting rewrite","destination":"L07–08/L31","status":"legacy"},
+    {"id":"legacy-T11","path":"tutorial/11-ordered-outcomes.dice","part":"Existing lessons — awaiting rewrite","destination":"L09–10","status":"legacy"},
+    {"id":"legacy-T12","path":"tutorial/12-dnd5e-d20-check.dice","part":"Existing lessons — awaiting rewrite","destination":"L06/L12/L21–22","status":"legacy"},
+    {"id":"legacy-T13","path":"tutorial/13-pbta-2d6-move.dice","part":"Existing lessons — awaiting rewrite","destination":"L09–10","status":"legacy"},
+    {"id":"R03","path":"cookbook/ability-scores-4d6dl1.dice","game":"D&D","mechanic":"Keep/drop","scope":"component","status":"legacy"},
+    {"id":"R18","path":"cookbook/blades-in-the-dark.dice","game":"Blades in the Dark","mechanic":"Pools","scope":"scoped procedure","status":"legacy"},
+    {"id":"R20","path":"cookbook/brindlewood-bay-theorize.dice","game":"Brindlewood Bay","mechanic":"Graded outcomes","scope":"component","status":"source pending"},
+    {"id":"R23","path":"cookbook/cairn-blood-elk.dice","game":"Cairn 2e","mechanic":"Dependent saves","scope":"component","status":"pilot"},
+    {"id":"C01","path":"cookbook/count-high-faces.dice","game":"Generic","mechanic":"Pools","scope":"component","status":"legacy"},
+    {"id":"C09","path":"cookbook/exploding-dice.dice","game":"Generic","mechanic":"Explosions","scope":"bounded approximation","status":"legacy"},
+    {"id":"R04","path":"cookbook/fireball-half-damage.dice","game":"D&D","mechanic":"Damage","scope":"conditional component","status":"legacy"},
+    {"id":"R12","path":"cookbook/fudge-4df.dice","game":"Fudge/Fate","mechanic":"Custom dice","scope":"component","status":"legacy"},
+    {"id":"R26","path":"cookbook/rolemaster-open-ended.dice","game":"Rolemaster","mechanic":"Explosions","scope":"bounded approximation","status":"source pending"},
+    {"id":"R17","path":"cookbook/the-pool.dice","game":"The Pool","mechanic":"Pools","scope":"component","status":"legacy"}
+  ]
+}

@@ -1,102 +1,45 @@
-# Cairn 2e — Blood Elk horns vs armored PC
+# Cairn 2e — one Blood Elk hit
 
-## At the table
+**Advanced · R23 · Component: immediate injury categories, not a combat simulator**
 
-[*Cairn*](https://cairnrpg.com/) (2e) combat is swingy and armor matters. Attacks **automatically hit**; the attacker rolls weapon damage, the defender subtracts **Armor**, and whatever is left comes off **HP**.
+## Question and scope
 
-This recipe models one hit from a **Blood Elk** (horns **d8**) against a typical front-line PC:
+After one ordinary Blood Elk horns hit, how likely is each immediate injury
+category? The attack hits automatically. Armour reduces the d8 damage, HP absorbs
+what it can, and overflow reduces STR. A surviving victim then saves against
+**reduced** STR. At zero STR the victim dies before any save can help.
 
-| Stat | Value |
-|------|-------|
-| HP | 4 |
-| STR | 11 (for critical damage saves) |
-| Armor | 2 (1 worn + 1 shield) |
+This report flags a scar but does not resolve the scar table, recovery, aid,
+subsequent attacks, or the fictional consequences of goring. Impaired/enhanced
+attacks and multiple attackers are excluded.
 
-**Damage steps:**
+## Inputs
 
-1. Roll **d8**, subtract **2** Armor (results below 0 count as **0**).
-2. Subtract damage from **HP**.
-3. If HP lands on **exactly 0**, the PC takes a **Scar** keyed to **how much HP that hit removed** (after armor). Here that only happens on **4** damage—Scar entry **#4 (Broken Limb)**.
-4. If damage would push HP **below 0**, the leftover comes off **STR** instead. The PC immediately rolls a **STR save** (d20 ≤ STR after the loss; 1 always succeeds, 20 always fails). Failing means **Critical Damage**—out of the fight and dying without aid. A Blood Elk that inflicts Critical Damage is especially nasty: it **gores** the victim (fiction + Warden fallout).
+| Input | Default | Supported values |
+|---|---:|---|
+| HP before the hit | 4 | Positive integers; not an already incapacitated PC |
+| Armour | 2 | Integers 0–3 |
+| STR before the hit | 11 | Integers 1–20 |
+| Horns | d8 | Fixed ordinary Blood Elk attack |
 
-So on a single elk charge you might see: the horns **glance off armor** (no HP loss), **hit protection** chipped away (HP loss that reads more like guard fatigue than lasting injury), a **Scar** at 0 HP, **STR loss but still fighting** after a passed save, or **Critical Damage** after a failed save.
+## Model sketch
 
-## Try it
+The function receives a horn face and an independent **potential** save face.
+`def` defines a function; `return` supplies its answer. Indented `if` branches
+stop at the first applicable outcome. Passing `blood_elk_hit` by name lets
+`joint_classify` apply it to all 8 × 20 possible pairs.
 
-In the playground, open this recipe in the playground and click **Run**.
-
-## The script
-
-```text
-HP = 4
-ARMOR = 2
-STR = 11
-
-Scale = (
-    scale()
-    .step("NO_EFFECT")
-    .step("HIT_PROTECTION_LOSS")
-    .step("SCAR")
-    .step("STR_DOWN_OK")
-    .step("CRITICAL_DAMAGE")
-)
-
-def damage(horn):
-    d = horn - ARMOR
-    if d < 0:
-        return 0
-    return d
-
-def blood_elk_hit(horn, save):
-    dmg = damage(horn)
-    if dmg == 0:
-        return "NO_EFFECT"
-    if dmg < HP:
-        return "HIT_PROTECTION_LOSS"
-    if dmg == HP:
-        return "SCAR"
-    overflow = dmg - HP
-    new_str = STR - overflow
-    if save == 1:
-        return "STR_DOWN_OK"
-    if save == 20:
-        return "CRITICAL_DAMAGE"
-    if save <= new_str:
-        return "STR_DOWN_OK"
-    return "CRITICAL_DAMAGE"
-
-out = joint_classify(d(8), d(20), Scale, blood_elk_hit)
-output("blood_elk_horns", out)
-output("p_protection_loss_or_worse", out.p_at_least("HIT_PROTECTION_LOSS"))
-output("p_scar_or_worse", out.p_at_least("SCAR"))
-output("p_critical_damage", out.p_at_least("CRITICAL_DAMAGE"))
-```
-
-- **`joint_classify`** pairs each horns die result with a **d20 STR save** only when the rules require a save (high damage). Low-damage horns outcomes ignore the save roll in the label function, but the math still convolves correctly.
-- **`NO_EFFECT`**: horn **1–2** (0 after armor).
-- **`HIT_PROTECTION_LOSS`**: **1–3** HP lost (PC at 3, 2, or 1 HP)—in Cairn, HP is short-term staying power, not deep wounds.
-- **`SCAR`**: **4** HP lost → 0 HP exactly → **Broken Limb** on the [Scars table](https://cairnrpg.com/second-edition/players-guide/core-rules/#scars).
-- **`STR_DOWN_OK`**: **5–6** damage (**7–8** on the d8)—overflow hits STR, save passed (STR **10** or **9**).
-- **`CRITICAL_DAMAGE`**: same big hits, save failed—elk **Critical Damage** (goring) applies.
-
-### Horn die cheat sheet (after 2 Armor)
-
-| d8 | HP damage | Typical result |
-|----|-----------|----------------|
-| 1–2 | 0 | No effect |
-| 3 | 1 | Hit protection loss (3 HP left) |
-| 4 | 2 | Hit protection loss (2 HP left) |
-| 5 | 3 | Hit protection loss (1 HP left) |
-| 6 | 4 | Scar — Broken Limb |
-| 7 | 5 | STR 10, then save |
-| 8 | 6 | STR 9, then save |
+The potential save is ignored when damage does not require one. This preserves
+the relationship between damage and its save threshold; multiplying two
+separately displayed marginal probabilities would not preserve it.
 
 ```dice
-# Cairn 2e: Blood Elk horns (d8) vs PC with 4 HP, 2 Armor, STR 11.
-# Armor subtracts before HP; HP to exactly 0 → Scar; below 0 → STR loss + STR save.
 HP = 4
 ARMOR = 2
 STR = 11
+
+if HP < 1 or ARMOR < 0 or ARMOR > 3 or STR < 1 or STR > 20:
+    fail("Use positive HP, Armor 0–3, and STR 1–20")
 
 Scale = (
     scale()
@@ -105,24 +48,20 @@ Scale = (
     .step("SCAR")
     .step("STR_DOWN_OK")
     .step("CRITICAL_DAMAGE")
+    .step("DEATH")
 )
 
-def damage(horn):
-    d = horn - ARMOR
-    if d < 0:
-        return 0
-    return d
-
 def blood_elk_hit(horn, save):
-    dmg = damage(horn)
+    dmg = max(0, horn - ARMOR)
     if dmg == 0:
         return "NO_EFFECT"
     if dmg < HP:
         return "HIT_PROTECTION_LOSS"
     if dmg == HP:
         return "SCAR"
-    overflow = dmg - HP
-    new_str = STR - overflow
+    new_str = STR - (dmg - HP)
+    if new_str <= 0:
+        return "DEATH"
     if save == 1:
         return "STR_DOWN_OK"
     if save == 20:
@@ -137,3 +76,41 @@ output("p_protection_loss_or_worse", out.p_at_least("HIT_PROTECTION_LOSS"))
 output("p_scar_or_worse", out.p_at_least("SCAR"))
 output("p_critical_damage", out.p_at_least("CRITICAL_DAMAGE"))
 ```
+
+## Reading and checking the report
+
+| Default horn faces | Category | Independent check |
+|---|---|---:|
+| 1–2 | No effect | 1/4 |
+| 3–5 | HP loss only | 3/8 |
+| 6 | Scar triggered at exactly zero HP | 1/8 |
+| 7–8, passed save | STR loss, still fighting | (10 + 9)/160 = 19/160 |
+| 7–8, failed save | Critical damage | (10 + 11)/160 = 21/160 |
+| None | Death at zero STR | 0 |
+
+The default scar is keyed to 4 HP lost (Broken Limb), but its later rolls are
+outside this report. The last probability includes critical damage **or death**;
+the stable output identifier is retained for existing consumers.
+
+## Adaptations and boundaries
+
+Change STR to 1 while keeping HP 4 and armour 2: horns 7–8 now cause death,
+probability 1/4. Even a potential save of 1 cannot prevent it. With STR 2, only
+a horn face of 8 causes immediate death, probability 1/8. These boundary checks
+catch an error that the default inputs cannot expose.
+
+Do not chain this report into a second attack as if it preserved the remaining
+HP and STR. That needs a stateful model, not just these outcome labels.
+
+## Rules dossier
+
+Cairn second edition, online Player’s Guide: **Saves**, **Armor**, **Attacking &
+Damage**, **Critical Damage**, **Attribute Loss**, and **Scars**;
+[core rules](https://cairnrpg.com/second-edition/players-guide/core-rules/).
+Warden’s Guide: [Blood Elk](https://cairnrpg.com/second-edition/wardens-guide/bestiary/#blood-elk).
+The online text was source-checked during this rewrite; no printing-specific
+page numbers are implied. Rules are paraphrased, not a replacement for the game.
+Independent human rules review and beginner/browser review remain pending.
+
+Related: [modifiers](../tutorial/03-modifiers.html) introduces named inputs;
+[ordered outcomes](../tutorial/11-ordered-outcomes.html) explains the label ladder.

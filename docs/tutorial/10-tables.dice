@@ -22,7 +22,7 @@ output("success_grid", prob_table(rows))
 
 Starlark supports **list comprehensions** like Python: the two `for` clauses walk every modifier and target and build one `(label, probability)` tuple per pair.
 
-Equivalent with nested loops (lists are immutable, so you concatenate instead of `.append`):
+Equivalent with nested loops (this version concatenates lists; `.append` is also supported):
 
 ```text
 rows = []
@@ -60,7 +60,7 @@ One block `output success_grid: Table` with a row per modifier/target pair (labe
 
 [Ordered outcome labels](11-ordered-outcomes.html)—named success bands instead of only numeric totals.
 
-See the [user guide index](../README.md) and [standard library reference](../references/stdlib.md) for builtins.
+See the [user guide index](../docs/index.html) and [standard library reference](../references/stdlib.md) for builtins.
 
 ```dice
 # Success probability: 2d10 + modifier >= target (one table).

@@ -1,37 +1,65 @@
-# Meet or beat a target
+# Success: include the target itself
 
-## At the table
+**Part A · L04 · 5–10 minutes · Prerequisite: L03**
 
-You roll 2d10 with a +3 bonus and need a total of **15 or higher** to succeed. You want one number: how often that happens.
+## The situation and question
 
-## Try it
+Our generic task succeeds when two d6 plus a modifier total **8 or more**.
+With no modifier, what is the chance of success? This completes our small
+invented task rule; named games may add exceptions and different difficulties.
 
-In the playground, open this lesson in the playground and click **Run** (or press **Shift+Enter**).
+## Predict
 
-## The script
+Is success more or less likely than half? Does rolling exactly 8 count?
 
-```text
-roll = 2d10 + 3
-output("p_at_least_15", roll.p_ge(15))
-```
+## Build
 
-- `p_ge(15)` is the probability the roll is **≥ 15** (meet or beat the target).
-- The output is a single probability, not a full table.
+A dot asks a value to perform an operation. `total.p_ge(target)` asks for the
+probability of a result **greater than or equal to** the target. The target is
+included. `total.pmf(target)` asks for **exactly** that result instead.
 
-## Reading the result
-
-In the **text** tab, a line like `output p_at_least_15: P=0.…` is your success chance (between 0 and 1).
-
-## Try this
-
-- Change `15` to your game’s difficulty class and run again.
-- Change the `3` modifier and run again.
-
-This lesson is about the **total** after the roll. Pool games (“any die shows a 1”) use `p_any` on a `DicePool` in [lesson 9](09-pool-success-counts.html).
-
-Builtin details: [function reference](../references/stdlib.md).
+A probability is a number from 0 to 1: 0 means impossible, 1 means certain,
+and 0.5 means 50%. The report can format it as a percentage; do not multiply
+by 100 before passing it to a probability report.
 
 ```dice
-roll = 2d10 + 3
-output("p_at_least_15", roll.p_ge(15))
+modifier = 0
+target = 8
+total = d(6) + d(6) + modifier
+output("Success: eight or more", total.p_ge(target))
+output("Exactly eight", total.pmf(target))
 ```
+
+## Run and read
+
+Totals 8, 9, 10, 11, and 12 have 5, 4, 3, 2, and 1 pairs respectively.
+Success therefore has probability 15/36, about 41.67%. Exactly 8 has probability
+5/36, about 13.89%. These outputs are **different questions**, not categories
+that should add to 100%: exactly eight is already included in success.
+
+## Change one thing
+
+Set `modifier = 2`. **Check:** success becomes 26/36, about 72.22%, because
+the unmodified dice now need only 6 or more. Update titles if you change the target.
+
+## Part A checkpoint: try it yourself
+
+Without copying this script, report the success chance for one d8 plus 2,
+meeting or beating a target of 7. Name both parameters and explain the answer.
+
+**Solution reasoning:** the die itself needs 5, 6, 7, or 8. Four of eight faces
+succeed, so the answer is 1/2. Use `d(8) + modifier` and ask `.p_ge(target)`.
+Exactly 7 after the bonus is only 1/8. As boundary checks, target 3 is certain
+and target 11 is impossible.
+
+## What you now know
+
+Specify the event before selecting a query. An inclusive threshold is not an
+exact result, and a plausible average alone does not answer a success question.
+
+## Where next
+
+[Previous: modifiers](03-modifiers.html) · [Existing notation guide](05-dice-notation.html).
+Part A is the rewrite pilot; the remaining lessons currently retain the older
+sequence. The [pool-count recipe](../cookbook/count-high-faces.html) later asks
+how often *individual faces* match, rather than querying their sum.

@@ -314,5 +314,5 @@ output("grid", prob_table(rows))
 - **Detection:** at least one executable fence — opening line is ` ``` ` or ` ```dice ` (info string empty or exactly `dice`).
 - **Tangle:** fence bodies concatenated in file order → one Starlark module per Run.
 - **Weave:** prose → HTML (sanitized); each fence’s `output()` blocks appear below that fence in the report.
-- **Static site:** `dice render path.dice -o out.html` (add `--layout cookbook` under `dist/cookbook/`).
+- **Static site:** `dice render path.dice -o out.html` (add `--layout cookbook` under `dist/cookbook/`). Executable fences display their source before their results. For rewritten learning pages, use exactly one executable fence so loops/helpers cannot confuse the current static output binding. Do not maintain a second display-only copy. `docs/learning-content.json` owns the published inventory/order and review status. The site build publishes complete `.dice` downloads and page-level playground links; dependent fences are not standalone snippets. The first four lessons and Cairn recipe are rewrite pilots, not completion of the proposed 32-lesson course.
 - **Legacy mode:** a file with no executable fences is plain Starlark (entire file evaluated as today).

@@ -224,6 +224,11 @@ fn weave_document(
                 let mut j = i + 1;
                 while j < lines.len() {
                     if is_closing_fence(lines[j], open.tick_count) {
+                        // Render the very source we execute, not a separately maintained
+                        // display-only copy. Escape before sanitizing so code stays text.
+                        html.push_str("<pre><code class=\"language-dice\">");
+                        html.push_str(&escape_html_text(&lines[i + 1..j].join("\n")));
+                        html.push_str("\n</code></pre>\n");
                         append_fence_outputs(
                             &mut html,
                             bound,
@@ -349,6 +354,8 @@ mod tests {
         assert!(html.contains("<table>"));
         assert!(html.contains("data-dice-output=\"one_d6\""));
         assert!(html.contains("dice-output-chart"));
+        assert!(html.contains("<code class=\"language-dice\">"));
+        assert!(html.contains("output(\"one_d6\", 1d6)"));
     }
 
     #[test]
